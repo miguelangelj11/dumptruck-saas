@@ -1,29 +1,28 @@
-import { Geist, Geist_Mono } from "next/font/google"
-
+import { Inter } from "next/font/google"
 import "@workspace/ui/globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
-import { cn } from "@workspace/ui/lib/utils";
+import { Toaster } from "sonner"
+import { NextIntlClientProvider } from "next-intl"
+import { getLocale, getMessages } from "next-intl/server"
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'})
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
-const fontMono = Geist_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
-})
+export const metadata = {
+  title: "DumpTruckBoss — Run Your Business Smarter",
+  description: "DumpTruckBoss helps you manage tickets, dispatch drivers, send invoices, and track revenue — all in one place.",
+  manifest: "/manifest.json",
+}
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale()
+  const messages = await getMessages()
+
   return (
-    <html
-      lang="en"
-      suppressHydrationWarning
-      className={cn("antialiased", fontMono.variable, "font-sans", geist.variable)}
-    >
-      <body>
-        <ThemeProvider>{children}</ThemeProvider>
+    <html lang={locale} suppressHydrationWarning className={inter.variable}>
+      <body className="bg-white font-sans antialiased">
+        <NextIntlClientProvider messages={messages}>
+          {children}
+          <Toaster position="top-right" richColors />
+        </NextIntlClientProvider>
       </body>
     </html>
   )

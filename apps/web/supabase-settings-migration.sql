@@ -1,0 +1,28 @@
+-- Settings hub additions to companies table
+-- Run this in your Supabase SQL editor
+
+ALTER TABLE companies
+  ADD COLUMN IF NOT EXISTS city                          text,
+  ADD COLUMN IF NOT EXISTS state                         text,
+  ADD COLUMN IF NOT EXISTS zip                           text,
+  ADD COLUMN IF NOT EXISTS email                         text,
+  ADD COLUMN IF NOT EXISTS website                       text,
+  ADD COLUMN IF NOT EXISTS ein                           text,
+  ADD COLUMN IF NOT EXISTS invoice_notes                 text,
+  ADD COLUMN IF NOT EXISTS invoice_payment_instructions  text,
+  ADD COLUMN IF NOT EXISTS invoice_number_prefix         text    DEFAULT 'INV-',
+  ADD COLUMN IF NOT EXISTS invoice_starting_number       integer DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS invoice_due_days              integer DEFAULT 30,
+  ADD COLUMN IF NOT EXISTS invoice_show_truck            boolean DEFAULT true,
+  ADD COLUMN IF NOT EXISTS invoice_show_time             boolean DEFAULT true,
+  ADD COLUMN IF NOT EXISTS invoice_show_ticket_num       boolean DEFAULT true,
+  ADD COLUMN IF NOT EXISTS invoice_show_material         boolean DEFAULT true,
+  ADD COLUMN IF NOT EXISTS invoice_email_signature       text,
+  ADD COLUMN IF NOT EXISTS notification_email            text,
+  ADD COLUMN IF NOT EXISTS notify_new_ticket             boolean DEFAULT true,
+  ADD COLUMN IF NOT EXISTS notify_ticket_approved        boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS notify_invoice_sent           boolean DEFAULT true,
+  ADD COLUMN IF NOT EXISTS notify_payment_received       boolean DEFAULT true,
+  ADD COLUMN IF NOT EXISTS notify_invoice_overdue        boolean DEFAULT true,
+  ADD COLUMN IF NOT EXISTS notify_document_expiring      boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS notify_missing_tickets        boolean DEFAULT true;

@@ -1,0 +1,182 @@
+'use client'
+
+import {
+  Document, Page, View, Text, Image, StyleSheet,
+} from '@react-pdf/renderer'
+import type { Invoice, InvoiceLineItem } from '@/lib/types'
+
+export type TicketPhoto = {
+  ticketNumber: string | null
+  imageUrl: string
+  date: string
+  driverName: string | null
+  jobName: string
+}
+
+type CompanyInfo = {
+  name: string
+  address: string | null
+  phone: string | null
+  logo_url: string | null
+}
+
+type Props = {
+  invoice: Invoice & { invoice_line_items?: InvoiceLineItem[] }
+  company: CompanyInfo
+  ticketPhotos: TicketPhoto[]
+}
+
+const s = StyleSheet.create({
+  page: { fontFamily: 'Helvetica', fontSize: 10, color: '#1a1a1a', padding: 40 },
+  row: { flexDirection: 'row' },
+  flex1: { flex: 1 },
+  mb4: { marginBottom: 4 },
+  mb8: { marginBottom: 8 },
+  mb16: { marginBottom: 16 },
+  mb24: { marginBottom: 24 },
+  bold: { fontFamily: 'Helvetica-Bold' },
+  gray: { color: '#6b7280' },
+  small: { fontSize: 8.5 },
+  // Header
+  companyName: { fontSize: 18, fontFamily: 'Helvetica-Bold', color: '#1e3a2a' },
+  // Invoice title
+  invoiceTitle: { fontSize: 22, fontFamily: 'Helvetica-Bold', color: '#1e3a2a', textAlign: 'right' },
+  // Section header
+  sectionLabel: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+  // Table
+  tableHeader: { flexDirection: 'row', backgroundColor: '#1e3a2a', color: '#fff', fontSize: 8, fontFamily: 'Helvetica-Bold', paddingVertical: 6, paddingHorizontal: 8 },
+  tableRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#f3f4f6', paddingVertical: 5, paddingHorizontal: 8 },
+  tableRowAlt: { backgroundColor: '#f9fafb' },
+  colDate: { width: '12%' },
+  colDriver: { width: '18%' },
+  colTruck: { width: '10%' },
+  colDesc: { width: '25%' },
+  colQty: { width: '10%', textAlign: 'right' },
+  colRate: { width: '12%', textAlign: 'right' },
+  colAmt: { width: '13%', textAlign: 'right' },
+  // Totals
+  totalRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 4 },
+  totalLabel: { width: 100, textAlign: 'right', color: '#6b7280' },
+  totalValue: { width: 80, textAlign: 'right', fontFamily: 'Helvetica-Bold' },
+  // Divider
+  divider: { borderTopWidth: 1, borderTopColor: '#e5e7eb', marginVertical: 12 },
+  // Photo page
+  photoHeader: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#1e3a2a', marginBottom: 4 },
+  photoSubtitle: { fontSize: 9, color: '#6b7280', marginBottom: 16 },
+  photoImage: { width: '100%', objectFit: 'contain', flex: 1 },
+  exhibitLabel: { position: 'absolute', bottom: 40, right: 40, fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#6b7280' },
+})
+
+const fmt = (v: number) => `$${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
+  const lineItems = invoice.invoice_line_items ?? []
+  const exhibitLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+  return (
+    <Document title={`Invoice ${invoice.invoice_number}`}>
+      {/* PAGE 1: Invoice summary */}
+      <Page size="LETTER" style={s.page}>
+        {/* Header */}
+        <View style={[s.row, s.mb24]}>
+          <View style={s.flex1}>
+            {company.logo_url && (
+              <Image src={company.logo_url} style={{ width: 48, height: 48, marginBottom: 8, objectFit: 'contain' }} />
+            )}
+            <Text style={s.companyName}>{company.name}</Text>
+            {company.address && <Text style={[s.small, s.gray, s.mb4]}>{company.address}</Text>}
+            {company.phone && <Text style={[s.small, s.gray]}>{company.phone}</Text>}
+          </View>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={s.invoiceTitle}>INVOICE</Text>
+            <Text style={[s.mb4]}># {invoice.invoice_number}</Text>
+            <Text style={[s.small, s.gray]}>Date: {invoice.created_at?.split('T')[0]}</Text>
+            {invoice.due_date && <Text style={[s.small, s.gray]}>Due: {invoice.due_date}</Text>}
+            {invoice.date_from && invoice.date_to && (
+              <Text style={[s.small, s.gray]}>Period: {invoice.date_from} – {invoice.date_to}</Text>
+            )}
+          </View>
+        </View>
+
+        {/* Bill To */}
+        <View style={s.mb24}>
+          <Text style={s.sectionLabel}>Bill To</Text>
+          <Text style={[s.bold]}>{invoice.client_name}</Text>
+          {invoice.client_address && <Text style={[s.small, s.gray]}>{invoice.client_address}</Text>}
+        </View>
+
+        {/* Line Items Table */}
+        <View style={s.mb16}>
+          <View style={s.tableHeader}>
+            <Text style={s.colDate}>Date</Text>
+            <Text style={s.colDriver}>Driver</Text>
+            <Text style={s.colTruck}>Truck</Text>
+            <Text style={s.colDesc}>Description</Text>
+            <Text style={s.colQty}>Qty</Text>
+            <Text style={s.colRate}>Rate</Text>
+            <Text style={s.colAmt}>Amount</Text>
+          </View>
+          {lineItems.map((item, i) => (
+            <View key={item.id} style={[s.tableRow, i % 2 === 1 ? s.tableRowAlt : {}]}>
+              <Text style={s.colDate}>{item.line_date ?? ''}</Text>
+              <Text style={s.colDriver}>{item.driver_name ?? ''}</Text>
+              <Text style={s.colTruck}>{item.truck_number ?? ''}</Text>
+              <Text style={s.colDesc}>{[item.material, item.ticket_number ? `#${item.ticket_number}` : null].filter(Boolean).join(' · ')}</Text>
+              <Text style={s.colQty}>{item.quantity ?? ''}</Text>
+              <Text style={s.colRate}>{item.rate ? `${item.rate_type === 'hr' ? '/hr' : '/ld'} $${item.rate}` : ''}</Text>
+              <Text style={s.colAmt}>{fmt(item.amount)}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Totals */}
+        <View style={{ alignItems: 'flex-end' }}>
+          <View style={s.totalRow}>
+            <Text style={s.totalLabel}>Subtotal</Text>
+            <Text style={s.totalValue}>{fmt(invoice.total)}</Text>
+          </View>
+          <View style={[s.totalRow, { borderTopWidth: 1.5, borderTopColor: '#1e3a2a', paddingTop: 4 }]}>
+            <Text style={[s.totalLabel, s.bold]}>Total Due</Text>
+            <Text style={[s.totalValue, s.bold, { color: '#1e3a2a', fontSize: 12 }]}>{fmt(invoice.total)}</Text>
+          </View>
+        </View>
+
+        {/* Footer */}
+        {(invoice.payment_terms || invoice.notes) && (
+          <>
+            <View style={s.divider} />
+            {invoice.payment_terms && (
+              <Text style={[s.small, s.gray, s.mb4]}><Text style={s.bold}>Payment Terms: </Text>{invoice.payment_terms}</Text>
+            )}
+            {invoice.notes && (
+              <Text style={[s.small, s.gray]}><Text style={s.bold}>Notes: </Text>{invoice.notes}</Text>
+            )}
+          </>
+        )}
+        <View style={[s.divider]} />
+        <Text style={[s.small, s.gray, { textAlign: 'center' }]}>
+          Thank you for your business. Make checks payable to {company.name}.
+        </Text>
+        {ticketPhotos.length > 0 && (
+          <Text style={[s.small, s.gray, { textAlign: 'center', marginTop: 4 }]}>
+            See attached Exhibit{ticketPhotos.length > 1 ? 's' : ''} A{ticketPhotos.length > 1 ? `–${exhibitLetters[ticketPhotos.length - 1]}` : ''} for supporting ticket photos.
+          </Text>
+        )}
+      </Page>
+
+      {/* PAGES 2+: Ticket Photos */}
+      {ticketPhotos.map((photo, i) => (
+        <Page key={i} size="LETTER" style={s.page}>
+          <Text style={s.photoHeader}>
+            Supporting Ticket {photo.ticketNumber ? `— #${photo.ticketNumber}` : ''}
+          </Text>
+          <Text style={s.photoSubtitle}>
+            {photo.date} · {photo.driverName ?? 'Driver'} · {photo.jobName}
+          </Text>
+          <Image src={photo.imageUrl} style={s.photoImage} />
+          <Text style={s.exhibitLabel}>Exhibit {exhibitLetters[i]}</Text>
+        </Page>
+      ))}
+    </Document>
+  )
+}

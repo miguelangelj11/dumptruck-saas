@@ -1,0 +1,159 @@
+'use client'
+
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import {
+  LayoutDashboard,
+  FileText,
+  Truck,
+  Users,
+  Receipt,
+  TrendingUp,
+  Settings,
+  LogOut,
+  Menu,
+  X,
+  Clipboard,
+} from 'lucide-react'
+import { useState } from 'react'
+import Image from 'next/image'
+import { createClient } from '@/lib/supabase/client'
+import { clearCompanyIdCache } from '@/lib/get-company-id'
+import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
+import LanguageSelector from '@/components/language-selector'
+
+type Props = {
+  user: { email?: string; user_metadata?: { company_name?: string } }
+  logoUrl?: string | null
+}
+
+export default function Sidebar({ user, logoUrl }: Props) {
+  const pathname = usePathname()
+  const router = useRouter()
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
+  const t = useTranslations('nav')
+
+  const nav = [
+    { href: '/dashboard', icon: LayoutDashboard, label: t('dashboard') },
+    { href: '/dashboard/dispatch', icon: Clipboard, label: t('dispatch') },
+    { href: '/dashboard/tickets', icon: FileText, label: t('tickets') },
+    { href: '/dashboard/contractors', icon: Truck, label: t('subcontractors') },
+    { href: '/dashboard/drivers', icon: Users, label: t('drivers') },
+    { href: '/dashboard/invoices', icon: Receipt, label: t('invoices') },
+    { href: '/dashboard/revenue', icon: TrendingUp, label: t('revenue') },
+    { href: '/dashboard/settings', icon: Settings, label: t('settings') },
+  ]
+
+  const companyName = user.user_metadata?.company_name ?? 'My Company'
+
+  async function handleLogout() {
+    setLoggingOut(true)
+    clearCompanyIdCache()
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/')
+    router.refresh()
+  }
+
+  const SidebarContent = () => (
+    <div className="flex h-full flex-col">
+      {/* Logo */}
+      <div className="flex items-center gap-2.5 px-5 py-5 border-b border-white/10">
+        <div className="h-8 w-8 rounded-lg overflow-hidden shrink-0 bg-[var(--hf-sidebar-accent)] flex items-center justify-center">
+          {logoUrl
+            ? <Image src={logoUrl} alt="Company logo" width={32} height={32} className="object-cover w-full h-full" />
+            : <Truck className="h-4 w-4 text-white" />
+          }
+        </div>
+        <div>
+          <span className="text-base font-bold text-white">DumpTruckBoss</span>
+          <p className="text-[10px] text-white/40 -mt-0.5 leading-tight truncate max-w-[120px]">{companyName}</p>
+        </div>
+      </div>
+
+      {/* Nav links */}
+      <nav className="flex-1 py-4 px-3 space-y-0.5">
+        {nav.map(({ href, icon: Icon, label }) => {
+          const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
+          return (
+            <Link
+              key={href}
+              href={href}
+              onClick={() => setMobileOpen(false)}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+                active
+                  ? 'bg-white/15 text-white'
+                  : 'text-white/60 hover:text-white hover:bg-white/8'
+              }`}
+            >
+              <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-[var(--hf-sidebar-highlight)]' : ''}`} />
+              {label}
+            </Link>
+          )
+        })}
+      </nav>
+
+      {/* User / logout */}
+      <div className="px-3 py-4 border-t border-white/10">
+        <div className="flex items-center gap-3 px-2 mb-2">
+          <div className="h-8 w-8 rounded-full overflow-hidden bg-[var(--hf-sidebar-accent)] flex items-center justify-center text-xs font-bold text-white shrink-0">
+            {logoUrl
+              ? <Image src={logoUrl} alt="Company logo" width={32} height={32} className="object-cover w-full h-full" />
+              : companyName.slice(0, 2).toUpperCase()
+            }
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-white truncate">{companyName}</p>
+            <p className="text-[10px] text-white/40 truncate">{user.email}</p>
+          </div>
+        </div>
+        <LanguageSelector />
+        <button
+          onClick={handleLogout}
+          disabled={loggingOut}
+          className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-white/50 hover:text-white hover:bg-white/8 transition-all"
+        >
+          <LogOut className="h-4 w-4" />
+          {loggingOut ? t('signingOut') : t('signOut')}
+        </button>
+      </div>
+    </div>
+  )
+
+  return (
+    <>
+      {/* Mobile hamburger */}
+      <button
+        className="md:hidden fixed top-4 left-4 z-50 h-9 w-9 rounded-lg bg-[var(--hf-sidebar-bg)] flex items-center justify-center text-white shadow-lg"
+        onClick={() => setMobileOpen(!mobileOpen)}
+        aria-label="Toggle sidebar"
+      >
+        {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+      </button>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-40 bg-black/60"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Mobile sidebar */}
+      <aside
+        className={`md:hidden fixed top-0 left-0 z-40 h-full w-64 bg-[var(--hf-sidebar-bg)] transition-transform duration-300 ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <SidebarContent />
+      </aside>
+
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex flex-col w-60 shrink-0 bg-[var(--hf-sidebar-bg)] h-screen sticky top-0">
+        <SidebarContent />
+      </aside>
+    </>
+  )
+}

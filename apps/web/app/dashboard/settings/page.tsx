@@ -1,0 +1,1471 @@
+'use client'
+
+import { useState, useEffect, useRef } from 'react'
+import Image from 'next/image'
+import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
+import {
+  Loader2, Plus, Trash2, Building2, Upload, X, Palette, Globe,
+  FileText, Users, Bell, CreditCard, Shield, Download,
+  Check, AlertTriangle, Mail, Lock, Eye, EyeOff, Truck, Clock,
+  Hash, Package,
+} from 'lucide-react'
+import type { ClientCompany } from '@/lib/types'
+import LanguageSelector from '@/components/language-selector'
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type CompanyRow = {
+  id: string
+  name: string
+  address: string | null
+  phone: string | null
+  logo_url: string | null
+  primary_color: string | null
+  accent_color: string | null
+}
+
+type CompanyExtRow = CompanyRow & {
+  invoice_prefix: string | null
+  invoice_starting_number: number | null
+  default_due_days: number | null
+  default_invoice_notes: string | null
+  default_payment_instructions: string | null
+  invoice_show_truck: boolean | null
+  invoice_show_time: boolean | null
+  invoice_show_ticket_number: boolean | null
+  invoice_show_material: boolean | null
+  notification_email: string | null
+  notify_new_ticket: boolean | null
+  notify_ticket_approved: boolean | null
+  notify_invoice_sent: boolean | null
+  notify_payment_received: boolean | null
+  notify_invoice_overdue: boolean | null
+  notify_document_expiring: boolean | null
+  notify_missing_tickets: boolean | null
+}
+
+type DriverRow = {
+  id: string
+  name: string
+  email: string | null
+  status: string
+  created_at: string
+}
+
+type TruckRow = {
+  id: string
+  truck_number: string
+  notes: string | null
+  created_at: string
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const THEME_PRESETS = [
+  { label: 'Forest Green',  primary: '#1e3a2a', accent: '#2d7a4f' },
+  { label: 'Ocean Blue',    primary: '#1e3a5a', accent: '#2d5a7a' },
+  { label: 'Midnight Navy', primary: '#1a1f35', accent: '#2d3a6a' },
+  { label: 'Burnt Orange',  primary: '#5a2e1e', accent: '#8a4a2a' },
+  { label: 'Deep Purple',   primary: '#2e1e5a', accent: '#4a2d8a' },
+  { label: 'Charcoal',      primary: '#2a2a2a', accent: '#4a4a4a' },
+  { label: 'Burgundy',      primary: '#5a1e2e', accent: '#8a2a42' },
+  { label: 'Slate',         primary: '#1e2e3a', accent: '#2d4a5a' },
+]
+
+const DUE_DAYS_OPTIONS = [0, 15, 30, 45, 60]
+
+// ─── CSV helper ───────────────────────────────────────────────────────────────
+
+function downloadCSV(rows: Record<string, unknown>[], filename: string) {
+  if (!rows.length) { toast.error('No data to export'); return }
+  const headers = Object.keys(rows[0]!)
+  const escape = (v: unknown) => {
+    const s = v == null ? '' : String(v)
+    return s.includes(',') || s.includes('"') || s.includes('\n')
+      ? `"${s.replace(/"/g, '""')}"` : s
+  }
+  const csv = [headers.join(','), ...rows.map(r => headers.map(h => escape(r[h])).join(','))].join('\n')
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([csv], { type: 'text/csv' })),
+    download: filename,
+  })
+  a.click()
+  URL.revokeObjectURL(a.href)
+}
+
+// ─── Small shared components ──────────────────────────────────────────────────
+
+function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!on)}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${on ? 'bg-[#2d7a4f]' : 'bg-gray-200'}`}
+    >
+      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${on ? 'translate-x-6' : 'translate-x-1'}`} />
+    </button>
+  )
+}
+
+function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <div className="px-6 py-4 border-b border-gray-100">
+      <h2 className="font-semibold text-sm text-gray-900">{title}</h2>
+      {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}
+    </div>
+  )
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default function SettingsPage() {
+  const supabase = createClient()
+
+  const [loading, setLoading] = useState(true)
+
+  // ── Company / profile state ─────────────────────────────────────────────
+  const [saving,         setSaving]         = useState(false)
+  const [userId,         setUserId]         = useState('')
+  const [email,          setEmail]          = useState('')
+  const [companyId,      setCompanyId]      = useState('')
+  const [companyName,    setCompanyName]    = useState('')
+  const [companyAddress, setCompanyAddress] = useState('')
+  const [companyPhone,   setCompanyPhone]   = useState('')
+
+  // ── Logo / branding state ───────────────────────────────────────────────
+  const [logoUrl,       setLogoUrl]       = useState<string | null>(null)
+  const [logoPreview,   setLogoPreview]   = useState<string | null>(null)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const logoInputRef = useRef<HTMLInputElement>(null)
+
+  const [primaryColor, setPrimaryColor] = useState('#1e3a2a')
+  const [accentColor,  setAccentColor]  = useState('#2d7a4f')
+  const [savingTheme,  setSavingTheme]  = useState(false)
+
+  // ── Client companies state ──────────────────────────────────────────────
+  const [clientCompanies, setClientCompanies] = useState<ClientCompany[]>([])
+  const [newCompanyName,  setNewCompanyName]  = useState('')
+  const [addingCompany,   setAddingCompany]   = useState(false)
+  const [deletingId,      setDeletingId]      = useState<string | null>(null)
+
+  // ── Trucks state ────────────────────────────────────────────────────────
+  const [trucks,          setTrucks]          = useState<TruckRow[]>([])
+  const [newTruckNum,     setNewTruckNum]     = useState('')
+  const [newTruckNotes,   setNewTruckNotes]   = useState('')
+  const [addingTruck,     setAddingTruck]     = useState(false)
+  const [deletingTruckId, setDeletingTruckId] = useState<string | null>(null)
+
+  // ── Invoice settings state ───────────────────────────────────────────────
+  const [invPrefix,     setInvPrefix]     = useState('INV-')
+  const [invStartNum,   setInvStartNum]   = useState(1000)
+  const [invDueDays,    setInvDueDays]    = useState(30)
+  const [invNotes,      setInvNotes]      = useState('')
+  const [invPayInstr,   setInvPayInstr]   = useState('')
+  const [invShowTruck,  setInvShowTruck]  = useState(true)
+  const [invShowTime,   setInvShowTime]   = useState(true)
+  const [invShowTicket, setInvShowTicket] = useState(true)
+  const [invShowMat,    setInvShowMat]    = useState(true)
+  const [invSignature,  setInvSignature]  = useState('')
+  const [savingInvoice, setSavingInvoice] = useState(false)
+
+  // ── Notifications state ──────────────────────────────────────────────────
+  const [notifEmail,      setNotifEmail]      = useState('')
+  const [notifyNewTicket, setNotifyNewTicket] = useState(true)
+  const [notifyApproved,  setNotifyApproved]  = useState(false)
+  const [notifyInvSent,   setNotifyInvSent]   = useState(true)
+  const [notifyPayment,   setNotifyPayment]   = useState(true)
+  const [notifyOverdue,   setNotifyOverdue]   = useState(true)
+  const [notifyExpiring,  setNotifyExpiring]  = useState(true)
+  const [notifyMissing,   setNotifyMissing]   = useState(false)
+  const [savingNotify,    setSavingNotify]    = useState(false)
+
+  // ── Team state ───────────────────────────────────────────────────────────
+  const [drivers,       setDrivers]       = useState<DriverRow[]>([])
+  const [inviteEmail,   setInviteEmail]   = useState('')
+  const [inviteRole,    setInviteRole]    = useState('Driver')
+  const [sendingInvite, setSendingInvite] = useState(false)
+
+  // ── Security state ───────────────────────────────────────────────────────
+  const [newEmail,     setNewEmail]     = useState('')
+  const [savingEmail,  setSavingEmail]  = useState(false)
+  const [newPwd,       setNewPwd]       = useState('')
+  const [confirmPwd,   setConfirmPwd]   = useState('')
+  const [showPwd,      setShowPwd]      = useState(false)
+  const [savingPwd,    setSavingPwd]    = useState(false)
+  const [twoFA,        setTwoFA]        = useState(false)
+  const [delDataInput, setDelDataInput] = useState('')
+  const [delAccInput,  setDelAccInput]  = useState('')
+
+  // ── Export state ─────────────────────────────────────────────────────────
+  const today      = new Date().toISOString().split('T')[0]!
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]!
+  const [expStart,  setExpStart]  = useState(monthStart)
+  const [expEnd,    setExpEnd]    = useState(today)
+  const [exporting, setExporting] = useState<string | null>(null)
+
+  // ── Init ─────────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    async function init() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setLoading(false); return }
+      setUserId(user.id)
+      setEmail(user.email ?? '')
+
+      const { data: co, error } = await supabase
+        .from('companies')
+        .select('id, name, address, phone, logo_url, primary_color, accent_color')
+        .eq('owner_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (error) console.error('[settings] company fetch:', error.message)
+
+      if (co) {
+        const c = co as CompanyRow
+        setCompanyId(c.id)
+        setCompanyName(c.name ?? '')
+        setCompanyAddress(c.address ?? '')
+        setCompanyPhone(c.phone ?? '')
+        setLogoUrl(c.logo_url ?? null)
+        setPrimaryColor(c.primary_color ?? '#1e3a2a')
+        setAccentColor(c.accent_color ?? '#2d7a4f')
+        setNotifEmail(user.email ?? '')
+
+        // Extended columns — silently ignored if migration hasn't run
+        const { data: ext } = await supabase
+          .from('companies')
+          .select([
+            'invoice_prefix', 'invoice_starting_number', 'default_due_days',
+            'default_invoice_notes', 'default_payment_instructions',
+            'invoice_show_truck', 'invoice_show_time',
+            'invoice_show_ticket_number', 'invoice_show_material',
+            'notification_email',
+            'notify_new_ticket', 'notify_ticket_approved', 'notify_invoice_sent',
+            'notify_payment_received', 'notify_invoice_overdue',
+            'notify_document_expiring', 'notify_missing_tickets',
+          ].join(','))
+          .eq('id', c.id)
+          .maybeSingle()
+
+        if (ext) {
+          const x = ext as Partial<CompanyExtRow>
+          if (x.invoice_prefix              != null) setInvPrefix(x.invoice_prefix)
+          if (x.invoice_starting_number     != null) setInvStartNum(x.invoice_starting_number)
+          if (x.default_due_days            != null) setInvDueDays(x.default_due_days)
+          if (x.default_invoice_notes       != null) setInvNotes(x.default_invoice_notes ?? '')
+          if (x.default_payment_instructions != null) setInvPayInstr(x.default_payment_instructions ?? '')
+          if (x.invoice_show_truck          != null) setInvShowTruck(x.invoice_show_truck)
+          if (x.invoice_show_time           != null) setInvShowTime(x.invoice_show_time)
+          if (x.invoice_show_ticket_number  != null) setInvShowTicket(x.invoice_show_ticket_number)
+          if (x.invoice_show_material       != null) setInvShowMat(x.invoice_show_material)
+          if (x.notification_email          != null) setNotifEmail(x.notification_email ?? user.email ?? '')
+          if (x.notify_new_ticket           != null) setNotifyNewTicket(x.notify_new_ticket)
+          if (x.notify_ticket_approved      != null) setNotifyApproved(x.notify_ticket_approved)
+          if (x.notify_invoice_sent         != null) setNotifyInvSent(x.notify_invoice_sent)
+          if (x.notify_payment_received     != null) setNotifyPayment(x.notify_payment_received)
+          if (x.notify_invoice_overdue      != null) setNotifyOverdue(x.notify_invoice_overdue)
+          if (x.notify_document_expiring    != null) setNotifyExpiring(x.notify_document_expiring)
+          if (x.notify_missing_tickets      != null) setNotifyMissing(x.notify_missing_tickets)
+        }
+
+        const { data: driversData } = await supabase
+          .from('drivers')
+          .select('id, name, email, status, created_at')
+          .eq('company_id', c.id)
+          .order('name')
+        setDrivers(driversData ?? [])
+
+        fetchTrucks(c.id)
+      } else {
+        setCompanyName(user.user_metadata?.company_name ?? '')
+        setNotifEmail(user.email ?? '')
+      }
+
+      fetchClientCompanies(user.id)
+      setLoading(false)
+    }
+    init()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // ── Handlers ─────────────────────────────────────────────────────────────
+
+  async function fetchClientCompanies(uid: string) {
+    const { data } = await supabase
+      .from('client_companies')
+      .select('*')
+      .eq('company_id', uid)
+      .order('name')
+    setClientCompanies(data ?? [])
+  }
+
+  async function fetchTrucks(cid: string) {
+    const { data } = await supabase
+      .from('trucks')
+      .select('id, truck_number, notes, created_at')
+      .eq('company_id', cid)
+      .order('truck_number')
+    setTrucks(data ?? [])
+  }
+
+  async function handleSaveCompany(e: React.FormEvent) {
+    e.preventDefault()
+    if (!companyName.trim()) { toast.error('Company name is required'); return }
+    setSaving(true)
+
+    if (companyId) {
+      const { error } = await supabase
+        .from('companies')
+        .update({
+          name:    companyName.trim(),
+          address: companyAddress.trim() || null,
+          phone:   companyPhone.trim() || null,
+        })
+        .eq('id', companyId)
+      if (error) { toast.error('Failed to save: ' + error.message); setSaving(false); return }
+    } else {
+      const { data, error } = await supabase
+        .from('companies')
+        .insert({
+          owner_id: userId,
+          name:     companyName.trim(),
+          address:  companyAddress.trim() || null,
+          phone:    companyPhone.trim() || null,
+        })
+        .select('id')
+        .maybeSingle()
+      if (error) { toast.error('Failed to create company: ' + error.message); setSaving(false); return }
+      if (data?.id) setCompanyId(data.id)
+    }
+
+    await supabase.auth.updateUser({ data: { company_name: companyName.trim() } })
+    toast.success('Company info saved')
+    setSaving(false)
+  }
+
+  function handleLogoFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) { toast.error('Logo must be under 5MB'); return }
+    setLogoPreview(URL.createObjectURL(file))
+  }
+
+  async function handleLogoUpload() {
+    const file = logoInputRef.current?.files?.[0]
+    if (!file || !companyId) { toast.error('Save company info first, then upload a logo'); return }
+    setUploadingLogo(true)
+    const ext  = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+    const path = `${companyId}/logo.${ext}`
+    const { error: uploadErr } = await supabase.storage
+      .from('company-logos')
+      .upload(path, file, { upsert: true, contentType: file.type })
+    if (uploadErr) { toast.error('Upload failed: ' + uploadErr.message); setUploadingLogo(false); return }
+    const { data: { publicUrl } } = supabase.storage.from('company-logos').getPublicUrl(path)
+    const { error: updateErr } = await supabase.from('companies').update({ logo_url: publicUrl }).eq('id', companyId)
+    if (updateErr) {
+      toast.error('Failed to save logo URL: ' + updateErr.message)
+    } else {
+      setLogoUrl(publicUrl)
+      setLogoPreview(null)
+      toast.success('Logo uploaded')
+    }
+    setUploadingLogo(false)
+  }
+
+  async function handleRemoveLogo() {
+    if (!companyId) return
+    await supabase.from('companies').update({ logo_url: null }).eq('id', companyId)
+    setLogoUrl(null)
+    setLogoPreview(null)
+    if (logoInputRef.current) logoInputRef.current.value = ''
+    toast.success('Logo removed')
+  }
+
+  function applyThemePreview(primary: string, accent: string) {
+    document.documentElement.style.setProperty('--hf-sidebar-bg', primary)
+    document.documentElement.style.setProperty('--hf-sidebar-accent', accent)
+    setPrimaryColor(primary)
+    setAccentColor(accent)
+  }
+
+  async function handleSaveTheme() {
+    if (!companyId) { toast.error('Save company info first'); return }
+    setSavingTheme(true)
+    const { error } = await supabase
+      .from('companies')
+      .update({ primary_color: primaryColor, accent_color: accentColor })
+      .eq('id', companyId)
+    if (error) toast.error('Failed to save theme: ' + error.message)
+    else toast.success('Theme saved')
+    setSavingTheme(false)
+  }
+
+  async function handleAddCompany(e: React.FormEvent) {
+    e.preventDefault()
+    if (!newCompanyName.trim()) return
+    setAddingCompany(true)
+    const { error } = await supabase
+      .from('client_companies')
+      .insert({ name: newCompanyName.trim(), company_id: userId })
+    if (error) { toast.error(error.message); setAddingCompany(false); return }
+    toast.success(`"${newCompanyName.trim()}" added`)
+    setNewCompanyName('')
+    setAddingCompany(false)
+    fetchClientCompanies(userId)
+  }
+
+  async function handleDeleteCompany(id: string, name: string) {
+    if (!confirm(`Remove "${name}" from your list?`)) return
+    setDeletingId(id)
+    const { error } = await supabase.from('client_companies').delete().eq('id', id)
+    if (error) toast.error('Failed to remove: ' + error.message)
+    else {
+      toast.success(`"${name}" removed`)
+      setClientCompanies(prev => prev.filter(c => c.id !== id))
+    }
+    setDeletingId(null)
+  }
+
+  async function handleAddTruck(e: React.FormEvent) {
+    e.preventDefault()
+    if (!newTruckNum.trim() || !companyId) return
+    setAddingTruck(true)
+    const { error } = await supabase
+      .from('trucks')
+      .insert({ company_id: companyId, truck_number: newTruckNum.trim(), notes: newTruckNotes.trim() || null })
+    if (error) { toast.error(error.message); setAddingTruck(false); return }
+    toast.success(`Truck ${newTruckNum.trim()} added`)
+    setNewTruckNum('')
+    setNewTruckNotes('')
+    fetchTrucks(companyId)
+    setAddingTruck(false)
+  }
+
+  async function handleDeleteTruck(id: string, num: string) {
+    if (!confirm(`Remove truck ${num}?`)) return
+    setDeletingTruckId(id)
+    const { error } = await supabase.from('trucks').delete().eq('id', id)
+    if (error) toast.error(error.message)
+    else { toast.success(`Truck ${num} removed`); setTrucks(prev => prev.filter(t => t.id !== id)) }
+    setDeletingTruckId(null)
+  }
+
+  async function handleSaveInvoice(e: React.FormEvent) {
+    e.preventDefault()
+    if (!companyId) { toast.error('Save company info first'); return }
+    setSavingInvoice(true)
+    const { error } = await supabase.from('companies').update({
+      invoice_prefix:               invPrefix || 'INV-',
+      invoice_starting_number:      invStartNum,
+      default_due_days:             invDueDays,
+      default_invoice_notes:        invNotes || null,
+      default_payment_instructions: invPayInstr || null,
+      invoice_show_truck:           invShowTruck,
+      invoice_show_time:            invShowTime,
+      invoice_show_ticket_number:   invShowTicket,
+      invoice_show_material:        invShowMat,
+    }).eq('id', companyId)
+    if (error) toast.error(error.message)
+    else toast.success('Invoice settings saved')
+    setSavingInvoice(false)
+  }
+
+  async function handleSaveNotify(e: React.FormEvent) {
+    e.preventDefault()
+    if (!companyId) { toast.error('Save company info first'); return }
+    setSavingNotify(true)
+    const { error } = await supabase.from('companies').update({
+      notification_email:       notifEmail || null,
+      notify_new_ticket:        notifyNewTicket,
+      notify_ticket_approved:   notifyApproved,
+      notify_invoice_sent:      notifyInvSent,
+      notify_payment_received:  notifyPayment,
+      notify_invoice_overdue:   notifyOverdue,
+      notify_document_expiring: notifyExpiring,
+      notify_missing_tickets:   notifyMissing,
+    }).eq('id', companyId)
+    if (error) toast.error(error.message)
+    else toast.success('Notification preferences saved')
+    setSavingNotify(false)
+  }
+
+  async function handleSendInvite(e: React.FormEvent) {
+    e.preventDefault()
+    if (!inviteEmail.trim() || !companyId) return
+    setSendingInvite(true)
+    const { error } = await supabase.from('drivers').insert({
+      company_id: companyId,
+      name:       inviteEmail.split('@')[0] ?? inviteEmail,
+      email:      inviteEmail.trim(),
+      status:     'inactive',
+    })
+    if (error) toast.error(error.message)
+    else {
+      toast.success(`Invite created for ${inviteEmail}`)
+      setInviteEmail('')
+      const { data } = await supabase.from('drivers').select('id, name, email, status, created_at').eq('company_id', companyId).order('name')
+      setDrivers(data ?? [])
+    }
+    setSendingInvite(false)
+  }
+
+  async function handleRemoveDriver(id: string, name: string) {
+    if (!confirm(`Remove ${name}?`)) return
+    const { error } = await supabase.from('drivers').delete().eq('id', id)
+    if (error) toast.error(error.message)
+    else { toast.success(`${name} removed`); setDrivers(prev => prev.filter(d => d.id !== id)) }
+  }
+
+  async function handleChangeEmail(e: React.FormEvent) {
+    e.preventDefault()
+    if (!newEmail.trim()) return
+    setSavingEmail(true)
+    const { error } = await supabase.auth.updateUser({ email: newEmail.trim() })
+    if (error) toast.error(error.message)
+    else { toast.success('Confirmation sent — check your inbox'); setNewEmail('') }
+    setSavingEmail(false)
+  }
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault()
+    if (newPwd !== confirmPwd) { toast.error('Passwords do not match'); return }
+    if (newPwd.length < 8) { toast.error('Password must be at least 8 characters'); return }
+    setSavingPwd(true)
+    const { error } = await supabase.auth.updateUser({ password: newPwd })
+    if (error) toast.error(error.message)
+    else { toast.success('Password updated'); setNewPwd(''); setConfirmPwd('') }
+    setSavingPwd(false)
+  }
+
+  async function handleExport(type: 'tickets' | 'invoices' | 'payments' | 'expenses') {
+    setExporting(type)
+    try {
+      if (type === 'tickets') {
+        const { data } = await supabase.from('loads').select('*')
+          .eq('company_id', userId).gte('date', expStart).lte('date', expEnd).order('date', { ascending: false })
+        downloadCSV((data ?? []) as Record<string, unknown>[], `tickets_${expStart}_${expEnd}.csv`)
+      } else if (type === 'invoices') {
+        const { data } = await supabase.from('invoices').select('*')
+          .eq('company_id', userId).order('created_at', { ascending: false })
+        downloadCSV((data ?? []) as Record<string, unknown>[], `invoices_${today}.csv`)
+      } else if (type === 'payments') {
+        const { data } = await supabase.from('payments').select('*')
+          .eq('company_id', userId).order('payment_date', { ascending: false })
+        downloadCSV((data ?? []) as Record<string, unknown>[], `payments_${today}.csv`)
+      } else if (type === 'expenses') {
+        const { data } = await supabase.from('expenses').select('*')
+          .eq('company_id', userId).gte('date', expStart).lte('date', expEnd).order('date', { ascending: false })
+        downloadCSV((data ?? []) as Record<string, unknown>[], `expenses_${expStart}_${expEnd}.csv`)
+      }
+    } catch { toast.error('Export failed') }
+    setExporting(null)
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-40">
+        <Loader2 className="h-6 w-6 animate-spin text-[#2d7a4f]" />
+      </div>
+    )
+  }
+
+  const inputCls = 'w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]'
+  const btnPrimary = 'inline-flex items-center gap-2 rounded-lg bg-[#2d7a4f] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors disabled:opacity-50'
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+
+      {/* Page header */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+        <p className="text-sm text-gray-500 mt-0.5">Manage your account and company preferences</p>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          1. COMPANY INFORMATION
+      ═══════════════════════════════════════════════════════════════════ */}
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <SectionHeader title="Company Information" subtitle="Appears on invoices and documents" />
+        <form onSubmit={handleSaveCompany} className="p-6 space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Company Name <span className="text-red-400">*</span>
+            </label>
+            <input
+              required
+              value={companyName}
+              onChange={e => setCompanyName(e.target.value)}
+              className={inputCls}
+              placeholder="SALAO TRANSPORT INC"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Company Address</label>
+            <textarea
+              value={companyAddress}
+              onChange={e => setCompanyAddress(e.target.value)}
+              rows={3}
+              className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+              placeholder="123 Main St, City, State 12345"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone Number</label>
+            <input
+              type="tel"
+              value={companyPhone}
+              onChange={e => setCompanyPhone(e.target.value)}
+              className={inputCls}
+              placeholder="(555) 123-4567"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+            <input
+              value={email}
+              disabled
+              className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
+            />
+            <p className="text-xs text-gray-400 mt-1">To change your email, use Account Security below.</p>
+          </div>
+          <button type="submit" disabled={saving} className={btnPrimary}>
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+            {saving ? 'Saving…' : 'Save Changes'}
+          </button>
+        </form>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          2. CLIENT COMPANIES
+      ═══════════════════════════════════════════════════════════════════ */}
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <SectionHeader
+          title="Client Companies"
+          subtitle='These appear in the ticket form dropdown under "Working Under (Company)"'
+        />
+        <div className="p-6 space-y-4">
+          <form onSubmit={handleAddCompany} className="flex gap-2">
+            <input
+              value={newCompanyName}
+              onChange={e => setNewCompanyName(e.target.value)}
+              placeholder="Add a company name…"
+              className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+            />
+            <button
+              type="submit"
+              disabled={addingCompany || !newCompanyName.trim()}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#2d7a4f] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors disabled:opacity-50"
+            >
+              {addingCompany ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              Add
+            </button>
+          </form>
+
+          {clientCompanies.length === 0 ? (
+            <div className="text-center py-8 border-2 border-dashed border-gray-100 rounded-xl">
+              <Building2 className="h-8 w-8 text-gray-200 mx-auto mb-2" />
+              <p className="text-sm text-gray-400">No client companies added yet</p>
+              <p className="text-xs text-gray-300 mt-0.5">Add the contractors and companies your drivers work under</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-gray-50 border border-gray-100 rounded-xl overflow-hidden">
+              {clientCompanies.map(c => (
+                <li key={c.id} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="h-7 w-7 rounded-lg bg-[#1e3a2a]/10 flex items-center justify-center">
+                      <Building2 className="h-3.5 w-3.5 text-[#2d7a4f]" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-900">{c.name}</span>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteCompany(c.id, c.name)}
+                    disabled={deletingId === c.id}
+                    className="p-1.5 text-gray-300 hover:text-red-500 transition-colors disabled:opacity-50"
+                    aria-label={`Remove ${c.name}`}
+                  >
+                    {deletingId === c.id
+                      ? <Loader2 className="h-4 w-4 animate-spin" />
+                      : <Trash2 className="h-4 w-4" />}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          3. BRANDING
+      ═══════════════════════════════════════════════════════════════════ */}
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <SectionHeader title="Company Branding" subtitle="Your logo appears on invoices and in the sidebar" />
+        <div className="p-6">
+          <div className="flex items-start gap-5">
+            <div className="h-20 w-20 rounded-xl border-2 border-dashed border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center shrink-0">
+              {(logoPreview ?? logoUrl) ? (
+                <Image
+                  src={logoPreview ?? logoUrl!}
+                  alt="Company logo"
+                  width={80}
+                  height={80}
+                  className="object-contain w-full h-full"
+                />
+              ) : (
+                <Upload className="h-6 w-6 text-gray-300" />
+              )}
+            </div>
+            <div className="flex-1 space-y-3">
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-1">Company Logo</p>
+                <p className="text-xs text-gray-400">PNG, JPG, or SVG · Max 5MB · Recommended 200×200px</p>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => logoInputRef.current?.click()}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  {logoUrl || logoPreview ? 'Change Logo' : 'Upload Logo'}
+                </button>
+                {logoPreview && (
+                  <button
+                    type="button"
+                    onClick={handleLogoUpload}
+                    disabled={uploadingLogo || !companyId}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#2d7a4f] px-3 py-2 text-xs font-semibold text-white hover:bg-[#245f3e] transition-colors disabled:opacity-50"
+                  >
+                    {uploadingLogo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                    {uploadingLogo ? 'Uploading…' : 'Save Logo'}
+                  </button>
+                )}
+                {(logoUrl || logoPreview) && !uploadingLogo && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLogoPreview(null)
+                      if (logoInputRef.current) logoInputRef.current.value = ''
+                      if (logoUrl) handleRemoveLogo()
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" /> Remove
+                  </button>
+                )}
+              </div>
+              {!companyId && (
+                <p className="text-xs text-amber-500">Save your company info before uploading a logo.</p>
+              )}
+            </div>
+          </div>
+          <input
+            ref={logoInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/svg+xml,image/webp"
+            className="hidden"
+            onChange={handleLogoFileChange}
+          />
+        </div>
+      </div>
+
+      {/* Appearance */}
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <SectionHeader title="Appearance" subtitle="Customize your sidebar and accent colors" />
+        <div className="p-6 space-y-5">
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-3">Color Theme</p>
+            <div className="flex flex-wrap gap-3">
+              {THEME_PRESETS.map(preset => {
+                const isActive = primaryColor === preset.primary
+                return (
+                  <button
+                    key={preset.primary}
+                    type="button"
+                    title={preset.label}
+                    onClick={() => applyThemePreview(preset.primary, preset.accent)}
+                    className={`relative h-9 w-9 rounded-full transition-transform hover:scale-110 focus:outline-none ${isActive ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : ''}`}
+                    style={{ backgroundColor: preset.primary }}
+                  >
+                    {isActive && (
+                      <span className="absolute inset-0 flex items-center justify-center text-white text-xs font-bold">✓</span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-6">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">Sidebar Background</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={primaryColor}
+                  onChange={e => applyThemePreview(e.target.value, accentColor)}
+                  className="h-9 w-16 rounded cursor-pointer border border-gray-200"
+                />
+                <span className="text-xs text-gray-400 font-mono">{primaryColor}</span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">Accent Color</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={accentColor}
+                  onChange={e => applyThemePreview(primaryColor, e.target.value)}
+                  className="h-9 w-16 rounded cursor-pointer border border-gray-200"
+                />
+                <span className="text-xs text-gray-400 font-mono">{accentColor}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs text-gray-400">
+            <Palette className="h-3.5 w-3.5" />
+            Changes preview live on the sidebar
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSaveTheme}
+            disabled={savingTheme || !companyId}
+            className="inline-flex items-center gap-2 rounded-lg bg-[var(--hf-sidebar-accent)] px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {savingTheme && <Loader2 className="h-4 w-4 animate-spin" />}
+            {savingTheme ? 'Saving…' : 'Save Theme'}
+          </button>
+        </div>
+      </div>
+
+      {/* Language */}
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <SectionHeader title="Language" subtitle="Choose your preferred display language" />
+        <div className="p-6">
+          <div className="flex items-center gap-3">
+            <Globe className="h-4 w-4 text-gray-400" />
+            <div className="border border-gray-200 rounded-lg px-3 py-2 bg-gray-50">
+              <LanguageSelector companyId={companyId} />
+            </div>
+          </div>
+          <p className="text-xs text-gray-400 mt-3">
+            Changing the language will also update how invoices are printed.
+          </p>
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          4. TRUCK MANAGEMENT
+      ═══════════════════════════════════════════════════════════════════ */}
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <SectionHeader title="Truck Management" subtitle="Track your fleet — truck numbers appear in dispatch and tickets" />
+        <div className="p-6 space-y-4">
+          <form onSubmit={handleAddTruck} className="space-y-3">
+            <div className="flex gap-2">
+              <input
+                value={newTruckNum}
+                onChange={e => setNewTruckNum(e.target.value)}
+                placeholder="Truck number (e.g. SA07)"
+                className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+              />
+              <input
+                value={newTruckNotes}
+                onChange={e => setNewTruckNotes(e.target.value)}
+                placeholder="Assigned driver (optional)"
+                className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+              />
+              <button
+                type="submit"
+                disabled={addingTruck || !newTruckNum.trim() || !companyId}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#2d7a4f] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors disabled:opacity-50 shrink-0"
+              >
+                {addingTruck ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                Add
+              </button>
+            </div>
+          </form>
+
+          {trucks.length === 0 ? (
+            <div className="text-center py-8 border-2 border-dashed border-gray-100 rounded-xl">
+              <Truck className="h-8 w-8 text-gray-200 mx-auto mb-2" />
+              <p className="text-sm text-gray-400">No trucks added yet</p>
+              <p className="text-xs text-gray-300 mt-0.5">Add truck numbers to track your fleet</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-gray-50 border border-gray-100 rounded-xl overflow-hidden">
+              {trucks.map(t => (
+                <li key={t.id} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="h-7 w-7 rounded-lg bg-[#1e3a2a]/10 flex items-center justify-center">
+                      <Truck className="h-3.5 w-3.5 text-[#2d7a4f]" />
+                    </div>
+                    <div>
+                      <span className="text-sm font-semibold text-gray-900">#{t.truck_number}</span>
+                      {t.notes && <span className="text-xs text-gray-400 ml-2">{t.notes}</span>}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteTruck(t.id, t.truck_number)}
+                    disabled={deletingTruckId === t.id}
+                    className="p-1.5 text-gray-300 hover:text-red-500 transition-colors disabled:opacity-50"
+                    aria-label={`Remove truck ${t.truck_number}`}
+                  >
+                    {deletingTruckId === t.id
+                      ? <Loader2 className="h-4 w-4 animate-spin" />
+                      : <Trash2 className="h-4 w-4" />}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          5. INVOICE SETTINGS
+      ═══════════════════════════════════════════════════════════════════ */}
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <SectionHeader title="Invoice Settings" subtitle="Defaults applied to all new invoices" />
+        <form onSubmit={handleSaveInvoice} className="p-6 space-y-6">
+
+          {/* Numbering */}
+          <div>
+            <p className="text-sm font-semibold text-gray-800 mb-3">Invoice Numbering</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Number Prefix
+                  <span className="text-xs text-gray-400 font-normal ml-1">e.g. &quot;INV-&quot;</span>
+                </label>
+                <input
+                  value={invPrefix}
+                  onChange={e => setInvPrefix(e.target.value)}
+                  maxLength={10}
+                  placeholder="INV-"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Starting Number</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={invStartNum}
+                  onChange={e => setInvStartNum(Number(e.target.value))}
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Default Due Days</label>
+                <select
+                  value={invDueDays}
+                  onChange={e => setInvDueDays(Number(e.target.value))}
+                  className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                >
+                  {DUE_DAYS_OPTIONS.map(d => (
+                    <option key={d} value={d}>{d === 0 ? 'Due on receipt' : `Net ${d}`}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="mt-2 px-3 py-2 bg-gray-50 rounded-lg">
+              <p className="text-xs text-gray-500">
+                Preview: <span className="font-mono font-semibold text-gray-700">{invPrefix}{String(invStartNum).padStart(4, '0')}</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Column toggles */}
+          <div>
+            <p className="text-sm font-semibold text-gray-800 mb-1">Show / Hide Invoice Columns</p>
+            <p className="text-xs text-gray-400 mb-3">Toggle which columns appear on printed invoices</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {([
+                { icon: Truck,   label: 'Show Truck # column',  val: invShowTruck,  set: setInvShowTruck  },
+                { icon: Clock,   label: 'Show Time column',      val: invShowTime,   set: setInvShowTime   },
+                { icon: Hash,    label: 'Show Ticket # column',  val: invShowTicket, set: setInvShowTicket },
+                { icon: Package, label: 'Show Material column',  val: invShowMat,    set: setInvShowMat    },
+              ] as const).map(({ icon: Icon, label, val, set }) => (
+                <label
+                  key={label}
+                  className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors"
+                >
+                  <span className="flex items-center gap-2 text-sm text-gray-700">
+                    <Icon className="h-4 w-4 text-gray-400" />{label}
+                  </span>
+                  <Toggle on={val} onChange={set} />
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Default Invoice Notes / Terms
+            </label>
+            <p className="text-xs text-gray-400 mb-1.5">Appears at the bottom of every invoice</p>
+            <textarea
+              value={invNotes}
+              onChange={e => setInvNotes(e.target.value)}
+              rows={3}
+              placeholder="e.g. Thank you for your business. Payment due within 30 days."
+              className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+            />
+          </div>
+
+          {/* Payment instructions */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Default Payment Instructions
+            </label>
+            <p className="text-xs text-gray-400 mb-1.5">How clients should pay you</p>
+            <textarea
+              value={invPayInstr}
+              onChange={e => setInvPayInstr(e.target.value)}
+              rows={2}
+              placeholder="e.g. Make checks payable to SALAO TRANSPORT INC"
+              className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+            />
+          </div>
+
+          {/* Email signature */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Signature</label>
+            <p className="text-xs text-gray-400 mb-1.5">Appended to invoice emails</p>
+            <textarea
+              value={invSignature}
+              onChange={e => setInvSignature(e.target.value)}
+              rows={3}
+              placeholder={'e.g. Thank you,\nMiguel\nSALAO TRANSPORT INC'}
+              className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+            />
+          </div>
+
+          <button type="submit" disabled={savingInvoice || !companyId} className={btnPrimary}>
+            {savingInvoice && <Loader2 className="h-4 w-4 animate-spin" />}
+            {savingInvoice ? 'Saving…' : 'Save Invoice Settings'}
+          </button>
+        </form>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          6. NOTIFICATIONS
+      ═══════════════════════════════════════════════════════════════════ */}
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <SectionHeader title="Email Notifications" subtitle="Choose what events send you an email alert" />
+        <form onSubmit={handleSaveNotify} className="p-6 space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Notification Email Address
+            </label>
+            <p className="text-xs text-gray-400 mb-1.5">Where alerts are sent — defaults to your account email</p>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="email"
+                value={notifEmail}
+                onChange={e => setNotifEmail(e.target.value)}
+                placeholder={email}
+                className="w-full rounded-lg border border-gray-200 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+              />
+            </div>
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold text-gray-800 mb-3">Notify me when…</p>
+            <div className="divide-y divide-gray-50 border border-gray-100 rounded-xl overflow-hidden">
+              {([
+                { label: 'New ticket submitted by driver', val: notifyNewTicket, set: setNotifyNewTicket },
+                { label: 'Ticket approved',                val: notifyApproved,  set: setNotifyApproved  },
+                { label: 'Invoice sent to client',         val: notifyInvSent,   set: setNotifyInvSent   },
+                { label: 'Payment received',               val: notifyPayment,   set: setNotifyPayment   },
+                { label: 'Invoice overdue (15+ days)',     val: notifyOverdue,   set: setNotifyOverdue   },
+                { label: 'Document expiring soon',         val: notifyExpiring,  set: setNotifyExpiring  },
+                { label: 'Driver has missing tickets',     val: notifyMissing,   set: setNotifyMissing   },
+              ] as const).map(({ label, val, set }) => (
+                <label
+                  key={label}
+                  className="flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 cursor-pointer transition-colors"
+                >
+                  <span className="text-sm text-gray-700">{label}</span>
+                  <Toggle on={val} onChange={set} />
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <button type="submit" disabled={savingNotify || !companyId} className={btnPrimary}>
+            {savingNotify && <Loader2 className="h-4 w-4 animate-spin" />}
+            {savingNotify ? 'Saving…' : 'Save Notifications'}
+          </button>
+        </form>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          7. TEAM MEMBERS
+      ═══════════════════════════════════════════════════════════════════ */}
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <SectionHeader title="Team Members" subtitle="Manage drivers and staff who access the platform" />
+        <div className="p-6 space-y-6">
+
+          {/* Role descriptions */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {[
+              { role: 'Admin',      color: 'bg-purple-100 text-purple-700', desc: 'Full access to everything' },
+              { role: 'Dispatcher', color: 'bg-blue-100 text-blue-700',    desc: 'Tickets, dispatch, and drivers' },
+              { role: 'Driver',     color: 'bg-green-100 text-green-700',  desc: 'Submit tickets only' },
+              { role: 'Accountant', color: 'bg-amber-100 text-amber-700',  desc: 'Invoices and revenue only' },
+            ].map(r => (
+              <div key={r.role} className="flex items-start gap-3 bg-gray-50 rounded-xl p-3">
+                <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 mt-0.5 ${r.color}`}>{r.role}</span>
+                <p className="text-xs text-gray-600">{r.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Invite form */}
+          <form onSubmit={handleSendInvite} className="space-y-4 border-t border-gray-100 pt-5">
+            <p className="text-sm font-semibold text-gray-800">Add Team Member</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="email"
+                    required
+                    value={inviteEmail}
+                    onChange={e => setInviteEmail(e.target.value)}
+                    placeholder="driver@email.com"
+                    className="w-full rounded-lg border border-gray-200 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Role</label>
+                <select
+                  value={inviteRole}
+                  onChange={e => setInviteRole(e.target.value)}
+                  className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20"
+                >
+                  {['Admin', 'Dispatcher', 'Driver', 'Accountant'].map(r => <option key={r}>{r}</option>)}
+                </select>
+              </div>
+            </div>
+            <button type="submit" disabled={sendingInvite || !companyId} className={btnPrimary}>
+              {sendingInvite ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              {sendingInvite ? 'Adding…' : 'Add Member'}
+            </button>
+            <p className="text-xs text-gray-400">
+              The team member must sign up with this email address to access the platform.
+            </p>
+          </form>
+
+          {/* Driver list */}
+          {drivers.length > 0 && (
+            <div className="border-t border-gray-100 pt-5">
+              <p className="text-sm font-semibold text-gray-800 mb-3">
+                Current Members
+                <span className="text-xs text-gray-400 font-normal ml-2">
+                  {drivers.filter(d => d.status === 'active').length} active · {drivers.filter(d => d.status !== 'active').length} pending
+                </span>
+              </p>
+              <div className="divide-y divide-gray-50 border border-gray-100 rounded-xl overflow-hidden">
+                {drivers.map(d => (
+                  <div key={d.id} className="flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
+                        style={{ backgroundColor: primaryColor }}
+                      >
+                        {d.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{d.name}</p>
+                        <p className="text-xs text-gray-400">
+                          {d.email ?? 'No email'} · Joined {new Date(d.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        d.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                      }`}>
+                        {d.status === 'active' ? 'Driver' : 'Pending'}
+                      </span>
+                      <button
+                        onClick={() => handleRemoveDriver(d.id, d.name)}
+                        className="p-1.5 text-gray-300 hover:text-red-500 transition-colors"
+                        aria-label={`Remove ${d.name}`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          8. DATA EXPORT
+      ═══════════════════════════════════════════════════════════════════ */}
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <SectionHeader title="Data Export" subtitle="Download your data as CSV files" />
+        <div className="p-6 space-y-5">
+
+          {/* Date range */}
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-3">Date Range (for tickets and expenses)</p>
+            <div className="flex flex-wrap items-end gap-4">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1.5">From</label>
+                <input
+                  type="date"
+                  value={expStart}
+                  onChange={e => setExpStart(e.target.value)}
+                  className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1.5">To</label>
+                <input
+                  type="date"
+                  value={expEnd}
+                  onChange={e => setExpEnd(e.target.value)}
+                  className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Export cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {([
+              { key: 'tickets'  as const, icon: FileText,   title: 'Tickets / Loads',  desc: `${expStart} → ${expEnd}`,  iconColor: 'text-blue-600',   bg: 'bg-blue-50'   },
+              { key: 'invoices' as const, icon: CreditCard, title: 'Invoices',          desc: 'Full history',             iconColor: 'text-green-600',  bg: 'bg-green-50'  },
+              { key: 'payments' as const, icon: Check,      title: 'Driver Payments',   desc: 'Full history',             iconColor: 'text-purple-600', bg: 'bg-purple-50' },
+              { key: 'expenses' as const, icon: Building2,  title: 'Expenses',          desc: `${expStart} → ${expEnd}`,  iconColor: 'text-amber-600',  bg: 'bg-amber-50'  },
+            ]).map(({ key, icon: Icon, title, desc, iconColor, bg }) => (
+              <div key={key} className="border border-gray-100 rounded-xl p-4 flex items-start gap-3">
+                <div className={`h-9 w-9 rounded-xl ${bg} flex items-center justify-center shrink-0`}>
+                  <Icon className={`h-4 w-4 ${iconColor}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 text-sm">{title}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
+                </div>
+                <button
+                  onClick={() => handleExport(key)}
+                  disabled={exporting !== null}
+                  className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                >
+                  {exporting === key ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                  {exporting === key ? 'Exporting…' : 'CSV'}
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Export all */}
+          <div className="flex items-center justify-between border-t border-gray-100 pt-4">
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Export Everything</p>
+              <p className="text-xs text-gray-400 mt-0.5">Downloads all four CSVs at once</p>
+            </div>
+            <button
+              onClick={async () => {
+                setExporting('all')
+                await handleExport('tickets')
+                await handleExport('invoices')
+                await handleExport('payments')
+                await handleExport('expenses')
+                toast.success('All exports downloaded')
+                setExporting(null)
+              }}
+              disabled={exporting !== null}
+              className={btnPrimary}
+            >
+              {exporting === 'all' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              {exporting === 'all' ? 'Exporting…' : 'Export All'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          9. ACCOUNT SECURITY
+      ═══════════════════════════════════════════════════════════════════ */}
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <SectionHeader title="Change Email Address" subtitle="A confirmation link will be sent to your new address" />
+        <form onSubmit={handleChangeEmail} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Current Email</label>
+            <input value={email} disabled className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">New Email Address</label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="email"
+                required
+                value={newEmail}
+                onChange={e => setNewEmail(e.target.value)}
+                placeholder="newemail@example.com"
+                className="w-full rounded-lg border border-gray-200 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+              />
+            </div>
+          </div>
+          <button type="submit" disabled={savingEmail || !newEmail.trim()} className={btnPrimary}>
+            {savingEmail && <Loader2 className="h-4 w-4 animate-spin" />}
+            {savingEmail ? 'Sending…' : 'Update Email'}
+          </button>
+        </form>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <SectionHeader title="Change Password" subtitle="Must be at least 8 characters" />
+        <form onSubmit={handleChangePassword} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">New Password</label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type={showPwd ? 'text' : 'password'}
+                required
+                value={newPwd}
+                onChange={e => setNewPwd(e.target.value)}
+                placeholder="••••••••"
+                className="w-full rounded-lg border border-gray-200 pl-9 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPwd(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm New Password</label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type={showPwd ? 'text' : 'password'}
+                required
+                value={confirmPwd}
+                onChange={e => setConfirmPwd(e.target.value)}
+                placeholder="••••••••"
+                className="w-full rounded-lg border border-gray-200 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+              />
+            </div>
+            {confirmPwd && newPwd !== confirmPwd && (
+              <p className="text-xs text-red-500 mt-1">Passwords do not match</p>
+            )}
+          </div>
+          <button type="submit" disabled={savingPwd || !newPwd || newPwd !== confirmPwd} className={btnPrimary}>
+            {savingPwd && <Loader2 className="h-4 w-4 animate-spin" />}
+            {savingPwd ? 'Saving…' : 'Update Password'}
+          </button>
+        </form>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <SectionHeader title="Two-Factor Authentication" subtitle="Add an extra layer of security to your account" />
+        <div className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-700">Authenticator App (TOTP)</p>
+              <p className="text-xs text-gray-400 mt-0.5">Use Google Authenticator or Authy</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className={`text-xs font-medium ${twoFA ? 'text-green-600' : 'text-gray-400'}`}>
+                {twoFA ? 'Enabled' : 'Disabled'}
+              </span>
+              <Toggle on={twoFA} onChange={v => { setTwoFA(v); toast(v ? '2FA setup coming soon' : '2FA disabled') }} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Danger Zone */}
+      <div className="bg-white rounded-xl border-2 border-red-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-red-100 flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 text-red-500" />
+          <h2 className="font-semibold text-sm text-red-700">Danger Zone</h2>
+        </div>
+        <div className="p-6 space-y-6">
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Delete All Data</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Permanently removes all tickets, invoices, and dispatch records. Your account stays active. This cannot be undone.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                value={delDataInput}
+                onChange={e => setDelDataInput(e.target.value)}
+                placeholder='Type "DELETE" to confirm'
+                className="flex-1 rounded-lg border border-red-200 px-3 py-2 text-sm focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-200"
+              />
+              <button
+                onClick={() => {
+                  if (delDataInput !== 'DELETE') { toast.error('Type DELETE to confirm'); return }
+                  toast.error('Please contact support to delete your data.')
+                  setDelDataInput('')
+                }}
+                disabled={delDataInput !== 'DELETE'}
+                className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Delete Data
+              </button>
+            </div>
+          </div>
+
+          <div className="border-t border-red-100" />
+
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Delete Account</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Permanently deletes your account and all data. This action cannot be undone.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                value={delAccInput}
+                onChange={e => setDelAccInput(e.target.value)}
+                placeholder={`Type "${companyName || 'company name'}" to confirm`}
+                className="flex-1 rounded-lg border border-red-200 px-3 py-2 text-sm focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-200"
+              />
+              <button
+                onClick={() => {
+                  if (delAccInput !== companyName) { toast.error(`Type "${companyName}" to confirm`); return }
+                  toast.error('Please contact support to delete your account.')
+                  setDelAccInput('')
+                }}
+                disabled={!companyName || delAccInput !== companyName}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Delete Account
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  )
+}
