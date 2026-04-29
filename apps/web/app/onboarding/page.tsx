@@ -173,7 +173,9 @@ function SidebarPreview({ themeIdx }: { themeIdx: number }) {
 }
 
 function Confetti() {
-  const pieces = useMemo(() => Array.from({ length: 50 }, (_, i) => ({
+  // Use fewer particles on mobile to reduce compositor load
+  const count = typeof window !== 'undefined' && window.innerWidth < 768 ? 20 : 50
+  const pieces = useMemo(() => Array.from({ length: count }, (_, i) => ({
     id: i,
     left: Math.random() * 100,
     delay: Math.random() * 1.5,
@@ -181,7 +183,7 @@ function Confetti() {
     color: ['#2d7a4f','#4ade80','#3b82f6','#f59e0b','#ec4899','#8b5cf6','#f97316'][i % 7]!,
     size: 7 + Math.random() * 7,
     rotate: Math.random() > 0.5,
-  })), [])
+  })), [count])
 
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden z-50">
@@ -200,6 +202,7 @@ function Confetti() {
             animationFillMode: 'forwards',
             animationDelay: `${p.delay}s`,
             animationDuration: `${p.duration}s`,
+            willChange: 'transform, opacity',
           }}
         />
       ))}
@@ -269,6 +272,13 @@ export default function OnboardingPage() {
   const isLastStep    = currentIdx === totalVisible - 1
 
   // ── Init ─────────────────────────────────────────────────────────────────
+  // Redirect to dashboard after completion — cleaned up on unmount
+  useEffect(() => {
+    if (!done) return
+    const t = setTimeout(() => router.push('/dashboard'), 3000)
+    return () => clearTimeout(t)
+  }, [done])
+
   useEffect(() => {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser()
@@ -411,7 +421,6 @@ export default function OnboardingPage() {
       await supabase.from('companies').update({ onboarding_completed: true }).eq('id', companyId)
       setDone(true)
       setSaving(false)
-      setTimeout(() => router.push('/dashboard'), 3000)
     } else {
       setStep(targetStepId)
       setSaving(false)

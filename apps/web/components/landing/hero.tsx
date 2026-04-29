@@ -14,7 +14,7 @@ const TABS = [
 
 function DispatchMockup() {
   return (
-    <div style={{ padding: '16px', animation: 'fadeInMockup 0.35s ease both' }}>
+    <div style={{ padding: '16px', animation: 'fadeInMockup 0.35s ease both', willChange: 'transform, opacity' }}>
       {/* Header row */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
         <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>Dispatch Board</span>
@@ -56,7 +56,7 @@ function DispatchMockup() {
 
 function TicketsMockup() {
   return (
-    <div style={{ padding: '16px', animation: 'fadeInMockup 0.35s ease both' }}>
+    <div style={{ padding: '16px', animation: 'fadeInMockup 0.35s ease both', willChange: 'transform, opacity' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
         <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>Tickets</span>
         <span style={{ fontSize: '11px', background: 'rgba(45,122,79,0.3)', color: '#4ade80', padding: '2px 8px', borderRadius: '99px' }}>+ New Ticket</span>
@@ -90,7 +90,7 @@ function TicketsMockup() {
 
 function InvoiceMockup() {
   return (
-    <div style={{ padding: '16px', animation: 'fadeInMockup 0.35s ease both' }}>
+    <div style={{ padding: '16px', animation: 'fadeInMockup 0.35s ease both', willChange: 'transform, opacity' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
         <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>Invoice #INV-2024-089</span>
         <span style={{ fontSize: '11px', background: 'rgba(74,222,128,0.15)', color: '#4ade80', padding: '2px 8px', borderRadius: '99px' }}>Draft</span>
@@ -143,7 +143,7 @@ function RevenueMockup() {
   const bars = [38, 55, 42, 70, 58, 85, 65, 50, 78, 60, 90, 72]
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
   return (
-    <div style={{ padding: '16px', animation: 'fadeInMockup 0.35s ease both' }}>
+    <div style={{ padding: '16px', animation: 'fadeInMockup 0.35s ease both', willChange: 'transform, opacity' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
         <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>Revenue Dashboard</span>
         <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>2024</span>
@@ -184,7 +184,7 @@ function RevenueMockup() {
 
 function DriversMockup() {
   return (
-    <div style={{ padding: '16px', animation: 'fadeInMockup 0.35s ease both' }}>
+    <div style={{ padding: '16px', animation: 'fadeInMockup 0.35s ease both', willChange: 'transform, opacity' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
         <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>Drivers</span>
         <span style={{ fontSize: '11px', background: 'rgba(45,122,79,0.3)', color: '#4ade80', padding: '2px 8px', borderRadius: '99px' }}>+ Add Driver</span>
@@ -224,11 +224,14 @@ const MOCKUPS: Record<string, React.ReactNode> = {
 
 export default function Hero() {
   const [activeTab, setActiveTab] = useState('dispatch')
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null)
+  const sectionRef = useRef<HTMLElement>(null)
+  const visibleRef = useRef(true)
 
   const startTimer = () => {
     if (timerRef.current) clearInterval(timerRef.current)
     timerRef.current = setInterval(() => {
+      if (!visibleRef.current) return
       setActiveTab(prev => {
         const idx = TABS.findIndex(t => t.id === prev)
         return TABS[(idx + 1) % TABS.length]!.id
@@ -238,6 +241,15 @@ export default function Hero() {
 
   useEffect(() => {
     startTimer()
+    // Pause auto-rotation when the hero scrolls off-screen
+    if (typeof IntersectionObserver !== 'undefined' && sectionRef.current) {
+      const obs = new IntersectionObserver(
+        ([entry]) => { visibleRef.current = entry!.isIntersecting },
+        { threshold: 0.1 },
+      )
+      obs.observe(sectionRef.current)
+      return () => { obs.disconnect(); if (timerRef.current) clearInterval(timerRef.current) }
+    }
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [])
 
@@ -248,6 +260,7 @@ export default function Hero() {
 
   return (
     <section
+      ref={sectionRef}
       style={{
         background: '#0f1923',
         paddingTop: '96px',
@@ -261,7 +274,7 @@ export default function Hero() {
         {/* Badge */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '28px' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(45,122,79,0.2)', border: '1px solid rgba(45,122,79,0.4)', borderRadius: '99px', padding: '6px 16px' }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#2d7a4f', animation: 'pulse 2s infinite' }} />
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#2d7a4f', animation: 'pulse 2s infinite', willChange: 'transform, opacity' }} />
             <span style={{ fontSize: '12px', fontWeight: 500, color: '#4ade80' }}>Built for dirt &amp; aggregate haulers</span>
           </div>
         </div>

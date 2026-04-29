@@ -25,7 +25,10 @@ export default function SocialProof() {
       </div>
 
       <div className="overflow-hidden">
-        <div className="flex animate-[marquee_20s_linear_infinite] whitespace-nowrap">
+        <div
+          className="flex animate-[marquee_20s_linear_infinite] whitespace-nowrap"
+          style={{ willChange: 'transform', transform: 'translateZ(0)' }}
+        >
           {[...companies, ...companies].map((name, i) => (
             <span key={i} className="inline-flex items-center gap-2 mx-8 text-white/30 text-sm font-medium">
               <span className="h-1 w-1 rounded-full bg-white/20" />

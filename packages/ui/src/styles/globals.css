@@ -123,23 +123,33 @@
 }
 
 @keyframes marquee {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
+  from { transform: translateX(0) translateZ(0); }
+  to   { transform: translateX(-50%) translateZ(0); }
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50%       { transform: translateY(-8px); }
+  0%, 100% { transform: translateY(0) translateZ(0); }
+  50%       { transform: translateY(-8px) translateZ(0); }
 }
 
 @keyframes confettiFall {
-  from { transform: translateY(-20px) rotate(0deg); opacity: 1; }
-  to   { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+  from { transform: translateY(-20px) rotate(0deg) translateZ(0); opacity: 1; }
+  to   { transform: translateY(110vh) rotate(720deg) translateZ(0); opacity: 0; }
 }
 
 @keyframes fadeInMockup {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(8px) translateZ(0); }
+  to   { opacity: 1; transform: translateY(0) translateZ(0); }
+}
+
+/* Respect the user's motion preferences — disable all animations */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 @layer base {

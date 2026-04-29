@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, Pencil, Trash2, Loader2, FileText, Camera, X, ImageIcon, ChevronLeft, ChevronRight, Search, Filter, CheckCircle2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -65,7 +65,8 @@ export default function TicketsPage() {
   const [contractors, setContractors] = useState<Contractor[]>([])
 
   // Filters
-  const [search, setSearch]         = useState('')
+  const [search, setSearch]               = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [filterContractor, setFilterContractor] = useState('')
   const [filterTruck, setFilterTruck]     = useState('')
@@ -144,12 +145,27 @@ export default function TicketsPage() {
 
   useEffect(() => { fetchData() }, [])
 
-  const drivers    = [...new Set(loads.map(l => l.driver_name))].filter(Boolean)
-  const trucks     = [...new Set(loads.map(l => l.truck_number).filter(Boolean))] as string[]
+  // Debounce search input so the filter doesn't run on every keystroke
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 200)
+    return () => clearTimeout(t)
+  }, [search])
 
-  const driverPendingCount = loads.filter(l => l.source === 'driver' && l.status === 'pending').length
+  const drivers = useMemo(
+    () => [...new Set(loads.map(l => l.driver_name))].filter(Boolean),
+    [loads],
+  )
+  const trucks = useMemo(
+    () => [...new Set(loads.map(l => l.truck_number).filter(Boolean))] as string[],
+    [loads],
+  )
 
-  const filtered = loads.filter(l => {
+  const driverPendingCount = useMemo(
+    () => loads.filter(l => l.source === 'driver' && l.status === 'pending').length,
+    [loads],
+  )
+
+  const filtered = useMemo(() => loads.filter(l => {
     if (sourceFilter === 'office' && l.source === 'driver') return false
     if (sourceFilter === 'driver' && l.source !== 'driver') return false
     if (filterStatus && l.status !== filterStatus) return false
@@ -158,14 +174,14 @@ export default function TicketsPage() {
     if (filterDriver && l.driver_name !== filterDriver) return false
     if (filterFrom && l.date < filterFrom) return false
     if (filterTo && l.date > filterTo) return false
-    if (search) {
-      const q = search.toLowerCase()
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase()
       const match = [l.job_name, l.driver_name, l.truck_number, l.client_company, l.load_type, l.origin, l.destination]
         .some(v => v?.toLowerCase().includes(q))
       if (!match) return false
     }
     return true
-  })
+  }), [loads, sourceFilter, filterStatus, filterContractor, filterTruck, filterDriver, filterFrom, filterTo, debouncedSearch])
 
   function updateRow(id: string, updates: Partial<TicketRow>) {
     setTicketRows(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r))
@@ -323,7 +339,10 @@ export default function TicketsPage() {
     return slipPhotos.length > 0 ? slipPhotos : (l.image_url ? [l.image_url] : [])
   }
 
-  const activeFilters = [filterStatus, filterContractor, filterTruck, filterDriver, filterFrom, filterTo].filter(Boolean).length
+  const activeFilters = useMemo(
+    () => [filterStatus, filterContractor, filterTruck, filterDriver, filterFrom, filterTo].filter(Boolean).length,
+    [filterStatus, filterContractor, filterTruck, filterDriver, filterFrom, filterTo],
+  )
 
   return (
     <div className="p-6 md:p-8 max-w-screen-xl">

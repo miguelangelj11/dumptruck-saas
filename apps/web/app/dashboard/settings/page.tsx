@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import {
@@ -121,6 +122,7 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }
 
 export default function SettingsPage() {
   const supabase = createClient()
+  const router = useRouter()
 
   const [loading, setLoading] = useState(true)
 
@@ -187,15 +189,27 @@ export default function SettingsPage() {
   const [sendingInvite, setSendingInvite] = useState(false)
 
   // ── Security state ───────────────────────────────────────────────────────
-  const [newEmail,     setNewEmail]     = useState('')
-  const [savingEmail,  setSavingEmail]  = useState(false)
-  const [newPwd,       setNewPwd]       = useState('')
-  const [confirmPwd,   setConfirmPwd]   = useState('')
-  const [showPwd,      setShowPwd]      = useState(false)
-  const [savingPwd,    setSavingPwd]    = useState(false)
-  const [twoFA,        setTwoFA]        = useState(false)
-  const [delDataInput, setDelDataInput] = useState('')
-  const [delAccInput,  setDelAccInput]  = useState('')
+  const [newEmail,        setNewEmail]        = useState('')
+  const [emailCurrentPwd, setEmailCurrentPwd] = useState('')
+  const [showEmailPwd,    setShowEmailPwd]    = useState(false)
+  const [savingEmail,     setSavingEmail]     = useState(false)
+  const [newPwd,          setNewPwd]          = useState('')
+  const [confirmPwd,      setConfirmPwd]      = useState('')
+  const [currentPwd,      setCurrentPwd]      = useState('')
+  const [showPwd,         setShowPwd]         = useState(false)
+  const [showCurrentPwd,  setShowCurrentPwd]  = useState(false)
+  const [savingPwd,       setSavingPwd]       = useState(false)
+  const [mfaEnabled,   setMfaEnabled]   = useState(false)
+  const [mfaFactorId,  setMfaFactorId]  = useState<string | null>(null)
+  const [mfaStep,      setMfaStep]      = useState<'idle' | 'enrolling'>('idle')
+  const [mfaQrCode,    setMfaQrCode]    = useState('')
+  const [mfaSecret,    setMfaSecret]    = useState('')
+  const [mfaCode,      setMfaCode]      = useState('')
+  const [mfaLoading,   setMfaLoading]   = useState(false)
+  const [delDataInput,    setDelDataInput]    = useState('')
+  const [delAccInput,     setDelAccInput]     = useState('')
+  const [deletingData,    setDeletingData]    = useState(false)
+  const [deletingAccount, setDeletingAccount] = useState(false)
 
   // ── Export state ─────────────────────────────────────────────────────────
   const today      = new Date().toISOString().split('T')[0]!
@@ -283,6 +297,11 @@ export default function SettingsPage() {
         setCompanyName(user.user_metadata?.company_name ?? '')
         setNotifEmail(user.email ?? '')
       }
+
+      // Load existing MFA factor
+      const { data: factors } = await supabase.auth.mfa.listFactors()
+      const totp = factors?.totp?.find((f: { status: string }) => f.status === 'verified')
+      if (totp) { setMfaEnabled(true); setMfaFactorId(totp.id) }
 
       fetchClientCompanies(user.id)
       setLoading(false)
@@ -496,19 +515,36 @@ export default function SettingsPage() {
     e.preventDefault()
     if (!inviteEmail.trim() || !companyId) return
     setSendingInvite(true)
-    const { error } = await supabase.from('drivers').insert({
+
+    const { error: dbError } = await supabase.from('drivers').insert({
       company_id: companyId,
       name:       inviteEmail.split('@')[0] ?? inviteEmail,
       email:      inviteEmail.trim(),
       status:     'inactive',
     })
-    if (error) toast.error(error.message)
-    else {
-      toast.success(`Invite created for ${inviteEmail}`)
-      setInviteEmail('')
-      const { data } = await supabase.from('drivers').select('id, name, email, status, created_at').eq('company_id', companyId).order('name')
-      setDrivers(data ?? [])
+
+    if (dbError) {
+      toast.error(dbError.message)
+      setSendingInvite(false)
+      return
     }
+
+    const res  = await fetch('/api/invite', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email: inviteEmail.trim() }),
+    })
+    const json = await res.json()
+
+    if (!res.ok) {
+      toast.error(`Member added but invite email failed: ${json.error}`)
+    } else {
+      toast.success(`Invite sent to ${inviteEmail}`)
+    }
+
+    setInviteEmail('')
+    const { data } = await supabase.from('drivers').select('id, name, email, status, created_at').eq('company_id', companyId).order('name')
+    setDrivers(data ?? [])
     setSendingInvite(false)
   }
 
@@ -521,23 +557,114 @@ export default function SettingsPage() {
 
   async function handleChangeEmail(e: React.FormEvent) {
     e.preventDefault()
-    if (!newEmail.trim()) return
+    if (!newEmail.trim() || !emailCurrentPwd) return
     setSavingEmail(true)
+
+    const { error: authErr } = await supabase.auth.signInWithPassword({ email, password: emailCurrentPwd })
+    if (authErr) { toast.error('Incorrect password'); setSavingEmail(false); return }
+
     const { error } = await supabase.auth.updateUser({ email: newEmail.trim() })
     if (error) toast.error(error.message)
-    else { toast.success('Confirmation sent — check your inbox'); setNewEmail('') }
+    else {
+      toast.success('Confirmation sent — check your current inbox to approve the change')
+      setNewEmail('')
+      setEmailCurrentPwd('')
+    }
     setSavingEmail(false)
   }
 
   async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault()
+    if (!currentPwd) { toast.error('Enter your current password'); return }
     if (newPwd !== confirmPwd) { toast.error('Passwords do not match'); return }
     if (newPwd.length < 8) { toast.error('Password must be at least 8 characters'); return }
     setSavingPwd(true)
+
+    const { error: authErr } = await supabase.auth.signInWithPassword({ email, password: currentPwd })
+    if (authErr) { toast.error('Incorrect current password'); setSavingPwd(false); return }
+
     const { error } = await supabase.auth.updateUser({ password: newPwd })
     if (error) toast.error(error.message)
-    else { toast.success('Password updated'); setNewPwd(''); setConfirmPwd('') }
+    else { toast.success('Password updated'); setCurrentPwd(''); setNewPwd(''); setConfirmPwd('') }
     setSavingPwd(false)
+  }
+
+  async function handleMfaEnable() {
+    setMfaLoading(true)
+    const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp' })
+    if (error) { toast.error(error.message); setMfaLoading(false); return }
+    setMfaFactorId(data.id)
+    setMfaQrCode(data.totp.qr_code)
+    setMfaSecret(data.totp.secret)
+    setMfaStep('enrolling')
+    setMfaLoading(false)
+  }
+
+  async function handleMfaVerify(e: React.FormEvent) {
+    e.preventDefault()
+    if (!mfaFactorId || mfaCode.length !== 6) return
+    setMfaLoading(true)
+    const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: mfaFactorId, code: mfaCode })
+    if (error) { toast.error(error.message); setMfaLoading(false); return }
+    setMfaEnabled(true)
+    setMfaStep('idle')
+    setMfaCode('')
+    toast.success('Two-factor authentication enabled')
+    setMfaLoading(false)
+  }
+
+  async function handleMfaDisable() {
+    if (!mfaFactorId) return
+    setMfaLoading(true)
+    const { error } = await supabase.auth.mfa.unenroll({ factorId: mfaFactorId })
+    if (error) { toast.error(error.message); setMfaLoading(false); return }
+    setMfaEnabled(false)
+    setMfaFactorId(null)
+    setMfaQrCode('')
+    setMfaSecret('')
+    setMfaStep('idle')
+    toast.success('Two-factor authentication disabled')
+    setMfaLoading(false)
+  }
+
+  async function handleDeleteData() {
+    setDeletingData(true)
+    try {
+      const res = await fetch('/api/account/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'data' }),
+      })
+      const json = await res.json()
+      if (!res.ok) { toast.error(json.error ?? 'Failed to delete data'); return }
+      await supabase.auth.signOut()
+      router.push('/')
+    } catch {
+      toast.error('An unexpected error occurred')
+    } finally {
+      setDeletingData(false)
+      setDelDataInput('')
+    }
+  }
+
+  async function handleDeleteAccount() {
+    setDeletingAccount(true)
+    try {
+      const res = await fetch('/api/account/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'account' }),
+      })
+      const json = await res.json()
+      if (!res.ok) { toast.error(json.error ?? 'Failed to delete account'); return }
+      await supabase.auth.signOut()
+      router.push('/')
+    } catch {
+      toast.error('An unexpected error occurred')
+    } finally {
+      setDeletingAccount(false)
+      setDelAccInput('')
+    }
   }
 
   async function handleExport(type: 'tickets' | 'invoices' | 'payments' | 'expenses') {
@@ -601,7 +728,7 @@ export default function SettingsPage() {
               value={companyName}
               onChange={e => setCompanyName(e.target.value)}
               className={inputCls}
-              placeholder="SALAO TRANSPORT INC"
+              placeholder="ACME TRUCKING LLC"
             />
           </div>
           <div>
@@ -867,26 +994,26 @@ export default function SettingsPage() {
         <SectionHeader title="Truck Management" subtitle="Track your fleet — truck numbers appear in dispatch and tickets" />
         <div className="p-6 space-y-4">
           <form onSubmit={handleAddTruck} className="space-y-3">
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input
                 value={newTruckNum}
                 onChange={e => setNewTruckNum(e.target.value)}
                 placeholder="Truck number (e.g. SA07)"
-                className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                className="w-full sm:flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
               />
               <input
                 value={newTruckNotes}
                 onChange={e => setNewTruckNotes(e.target.value)}
                 placeholder="Assigned driver (optional)"
-                className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                className="w-full sm:flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
               />
               <button
                 type="submit"
                 disabled={addingTruck || !newTruckNum.trim() || !companyId}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-[#2d7a4f] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors disabled:opacity-50 shrink-0"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#2d7a4f] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors disabled:opacity-50 shrink-0"
               >
                 {addingTruck ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                Add
+                Add Truck
               </button>
             </div>
           </form>
@@ -1030,7 +1157,7 @@ export default function SettingsPage() {
               value={invPayInstr}
               onChange={e => setInvPayInstr(e.target.value)}
               rows={2}
-              placeholder="e.g. Make checks payable to SALAO TRANSPORT INC"
+              placeholder="e.g. Make checks payable to ACME TRUCKING LLC"
               className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
             />
           </div>
@@ -1043,7 +1170,7 @@ export default function SettingsPage() {
               value={invSignature}
               onChange={e => setInvSignature(e.target.value)}
               rows={3}
-              placeholder={'e.g. Thank you,\nMiguel\nSALAO TRANSPORT INC'}
+              placeholder={'e.g. Thank you,\nJohn Smith\nACME TRUCKING LLC'}
               className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
             />
           </div>
@@ -1306,11 +1433,28 @@ export default function SettingsPage() {
           9. ACCOUNT SECURITY
       ═══════════════════════════════════════════════════════════════════ */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <SectionHeader title="Change Email Address" subtitle="A confirmation link will be sent to your new address" />
+        <SectionHeader title="Change Email Address" subtitle="Confirm with your password — a verification link will be sent to your current address" />
         <form onSubmit={handleChangeEmail} className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Current Email</label>
             <input value={email} disabled className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Current Password</label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type={showEmailPwd ? 'text' : 'password'}
+                required
+                value={emailCurrentPwd}
+                onChange={e => setEmailCurrentPwd(e.target.value)}
+                placeholder="••••••••"
+                className="w-full rounded-lg border border-gray-200 pl-9 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+              />
+              <button type="button" onClick={() => setShowEmailPwd(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                {showEmailPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">New Email Address</label>
@@ -1326,7 +1470,7 @@ export default function SettingsPage() {
               />
             </div>
           </div>
-          <button type="submit" disabled={savingEmail || !newEmail.trim()} className={btnPrimary}>
+          <button type="submit" disabled={savingEmail || !newEmail.trim() || !emailCurrentPwd} className={btnPrimary}>
             {savingEmail && <Loader2 className="h-4 w-4 animate-spin" />}
             {savingEmail ? 'Sending…' : 'Update Email'}
           </button>
@@ -1336,6 +1480,23 @@ export default function SettingsPage() {
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <SectionHeader title="Change Password" subtitle="Must be at least 8 characters" />
         <form onSubmit={handleChangePassword} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Current Password</label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type={showCurrentPwd ? 'text' : 'password'}
+                required
+                value={currentPwd}
+                onChange={e => setCurrentPwd(e.target.value)}
+                placeholder="••••••••"
+                className="w-full rounded-lg border border-gray-200 pl-9 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+              />
+              <button type="button" onClick={() => setShowCurrentPwd(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                {showCurrentPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">New Password</label>
             <div className="relative">
@@ -1374,7 +1535,7 @@ export default function SettingsPage() {
               <p className="text-xs text-red-500 mt-1">Passwords do not match</p>
             )}
           </div>
-          <button type="submit" disabled={savingPwd || !newPwd || newPwd !== confirmPwd} className={btnPrimary}>
+          <button type="submit" disabled={savingPwd || !currentPwd || !newPwd || newPwd !== confirmPwd} className={btnPrimary}>
             {savingPwd && <Loader2 className="h-4 w-4 animate-spin" />}
             {savingPwd ? 'Saving…' : 'Update Password'}
           </button>
@@ -1383,19 +1544,89 @@ export default function SettingsPage() {
 
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <SectionHeader title="Two-Factor Authentication" subtitle="Add an extra layer of security to your account" />
-        <div className="p-6">
+        <div className="p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-700">Authenticator App (TOTP)</p>
               <p className="text-xs text-gray-400 mt-0.5">Use Google Authenticator or Authy</p>
             </div>
             <div className="flex items-center gap-3">
-              <span className={`text-xs font-medium ${twoFA ? 'text-green-600' : 'text-gray-400'}`}>
-                {twoFA ? 'Enabled' : 'Disabled'}
+              <span className={`text-xs font-medium ${mfaEnabled ? 'text-green-600' : 'text-gray-400'}`}>
+                {mfaEnabled ? 'Enabled' : 'Disabled'}
               </span>
-              <Toggle on={twoFA} onChange={v => { setTwoFA(v); toast(v ? '2FA setup coming soon' : '2FA disabled') }} />
+              {mfaEnabled ? (
+                <button
+                  onClick={handleMfaDisable}
+                  disabled={mfaLoading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 text-red-600 text-xs font-medium hover:bg-red-50 transition-colors disabled:opacity-50"
+                >
+                  {mfaLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+                  Disable
+                </button>
+              ) : mfaStep === 'idle' ? (
+                <button
+                  onClick={handleMfaEnable}
+                  disabled={mfaLoading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-medium hover:bg-gray-700 transition-colors disabled:opacity-50"
+                >
+                  {mfaLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+                  Enable
+                </button>
+              ) : null}
             </div>
           </div>
+
+          {mfaStep === 'enrolling' && (
+            <div className="border border-gray-100 rounded-xl p-5 space-y-4 bg-gray-50">
+              <p className="text-sm font-medium text-gray-700">Scan this QR code with your authenticator app</p>
+              {mfaQrCode && (
+                <img
+                  src={mfaQrCode}
+                  alt="2FA QR code"
+                  className="w-40 h-40 rounded-lg border border-gray-200 bg-white p-1"
+                />
+              )}
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Or enter this key manually:</p>
+                <code className="block text-xs font-mono bg-white border border-gray-200 rounded-lg px-3 py-2 break-all text-gray-800 select-all">
+                  {mfaSecret}
+                </code>
+              </div>
+              <form onSubmit={handleMfaVerify} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Enter the 6-digit code from your app</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]{6}"
+                    maxLength={6}
+                    value={mfaCode}
+                    onChange={e => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="000000"
+                    className="w-36 rounded-lg border border-gray-200 px-3 py-2 text-sm font-mono tracking-widest focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
+                    autoComplete="one-time-code"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="submit"
+                    disabled={mfaLoading || mfaCode.length !== 6}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 transition-colors disabled:opacity-50"
+                  >
+                    {mfaLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Verify &amp; Enable
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setMfaStep('idle'); setMfaCode(''); setMfaQrCode(''); setMfaSecret('') }}
+                    className="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1410,7 +1641,7 @@ export default function SettingsPage() {
             <div>
               <p className="text-sm font-semibold text-gray-900">Delete All Data</p>
               <p className="text-xs text-gray-500 mt-0.5">
-                Permanently removes all tickets, invoices, and dispatch records. Your account stays active. This cannot be undone.
+                Cancels your subscription and permanently removes all tickets, invoices, dispatch records, and company data. This cannot be undone.
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -1418,18 +1649,16 @@ export default function SettingsPage() {
                 value={delDataInput}
                 onChange={e => setDelDataInput(e.target.value)}
                 placeholder='Type "DELETE" to confirm'
-                className="flex-1 rounded-lg border border-red-200 px-3 py-2 text-sm focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-200"
+                disabled={deletingData}
+                className="flex-1 rounded-lg border border-red-200 px-3 py-2 text-sm focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-200 disabled:opacity-50"
               />
               <button
-                onClick={() => {
-                  if (delDataInput !== 'DELETE') { toast.error('Type DELETE to confirm'); return }
-                  toast.error('Please contact support to delete your data.')
-                  setDelDataInput('')
-                }}
-                disabled={delDataInput !== 'DELETE'}
-                className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                onClick={handleDeleteData}
+                disabled={delDataInput !== 'DELETE' || deletingData}
+                className="flex items-center gap-1.5 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                Delete Data
+                {deletingData && <Loader2 className="h-4 w-4 animate-spin" />}
+                {deletingData ? 'Deleting…' : 'Delete Data'}
               </button>
             </div>
           </div>
@@ -1440,7 +1669,7 @@ export default function SettingsPage() {
             <div>
               <p className="text-sm font-semibold text-gray-900">Delete Account</p>
               <p className="text-xs text-gray-500 mt-0.5">
-                Permanently deletes your account and all data. This action cannot be undone.
+                Cancels your subscription and permanently deletes your account, all data, and all records. This cannot be undone.
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -1448,18 +1677,16 @@ export default function SettingsPage() {
                 value={delAccInput}
                 onChange={e => setDelAccInput(e.target.value)}
                 placeholder={`Type "${companyName || 'company name'}" to confirm`}
-                className="flex-1 rounded-lg border border-red-200 px-3 py-2 text-sm focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-200"
+                disabled={deletingAccount}
+                className="flex-1 rounded-lg border border-red-200 px-3 py-2 text-sm focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-200 disabled:opacity-50"
               />
               <button
-                onClick={() => {
-                  if (delAccInput !== companyName) { toast.error(`Type "${companyName}" to confirm`); return }
-                  toast.error('Please contact support to delete your account.')
-                  setDelAccInput('')
-                }}
-                disabled={!companyName || delAccInput !== companyName}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                onClick={handleDeleteAccount}
+                disabled={!companyName || delAccInput !== companyName || deletingAccount}
+                className="flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                Delete Account
+                {deletingAccount && <Loader2 className="h-4 w-4 animate-spin" />}
+                {deletingAccount ? 'Deleting…' : 'Delete Account'}
               </button>
             </div>
           </div>

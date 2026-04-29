@@ -46,7 +46,7 @@ export default async function DashboardPage() {
   const [loadsRes, invoicesRes, companyRes, activityRes] = await Promise.all([
     supabase.from('loads').select('id, rate, status, driver_name, job_name, date, created_at').eq('company_id', uid).gte('date', sixMonthsAgoStr).order('created_at', { ascending: false }),
     supabase.from('invoices').select('id, status, total, created_at').eq('company_id', uid),
-    supabase.from('companies').select('id, name, address, phone, email, logo_url, primary_color').eq('owner_id', uid).maybeSingle(),
+    supabase.from('companies').select('id, name, address, phone, email, logo_url, primary_color, onboarding_completed').eq('owner_id', uid).maybeSingle(),
     supabase.from('activity_feed').select('id, type, message, created_at').eq('company_id', uid).order('created_at', { ascending: false }).limit(8),
   ])
 
@@ -58,13 +58,14 @@ export default async function DashboardPage() {
 
   // ── Setup completion banner ───────────────────────────────────────────────
   const co = companyRes.data as Record<string, unknown> | null
+  // If the onboarding wizard was completed, never show the banner regardless of field state.
+  // logo_url and primary_color are cosmetic — not required for the business to function.
+  const onboardingCompleted = co?.onboarding_completed === true
   const setupChecks = [
     !!(co?.name),
     !!(co?.address),
     !!(co?.phone),
     !!(co?.email),
-    !!(co?.logo_url),
-    !!(co?.primary_color),
   ]
 
   // ── Batch 2: dispatch counts + driver count (needs companyId) ───────────────
@@ -84,6 +85,7 @@ export default async function DashboardPage() {
   const setupDone  = allSetupChecks.filter(Boolean).length
   const setupTotal = allSetupChecks.length
   const setupPct   = Math.round((setupDone / setupTotal) * 100)
+  const showSetupBanner = !onboardingCompleted && setupPct < 100
 
   // ── Stat calculations ─────────────────────────────────────────────────────
   const thisWeekTickets = loads.filter(l => l.date >= thisWeekStartStr && l.date <= todayStr).length
@@ -168,7 +170,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Incomplete setup banner */}
-      {setupPct < 100 && (
+      {showSetupBanner && (
         <Link
           href="/dashboard/settings"
           className="flex items-center gap-4 bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 mb-6 hover:bg-amber-100 transition-colors group"
@@ -181,7 +183,7 @@ export default async function DashboardPage() {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-amber-900">Finish setting up your account</p>
             <p className="text-xs text-amber-700 mt-0.5">
-              {setupTotal - setupDone} item{setupTotal - setupDone !== 1 ? 's' : ''} remaining — add your logo, contact info, and first driver to complete setup.
+              {setupTotal - setupDone} item{setupTotal - setupDone !== 1 ? 's' : ''} remaining — add your company contact info and first driver to complete setup.
             </p>
             <div className="mt-2 h-1.5 w-48 bg-amber-200 rounded-full overflow-hidden">
               <div className="h-full bg-amber-500 rounded-full" style={{ width: `${setupPct}%` }} />
