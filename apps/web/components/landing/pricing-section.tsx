@@ -113,7 +113,7 @@ export default function PricingSection() {
   const [billing, setBilling] = useState<Billing>('monthly')
 
   return (
-    <section className="bg-gray-50" id="pricing" style={{ paddingTop: '48px', paddingBottom: '48px', overflow: 'visible' }}>
+    <section className="bg-gray-50 py-12 md:py-16" id="pricing" style={{ overflow: 'visible' }}>
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" style={{ overflow: 'visible' }}>
 
         {/* Heading */}
@@ -139,19 +139,8 @@ export default function PricingSection() {
           <span className="text-xs font-semibold bg-[#2d7a4f] text-white px-2 py-0.5 rounded-full">Save 20%</span>
         </div>
 
-        {/* Cards */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1fr',
-            gap: '24px',
-            alignItems: 'start',
-            maxWidth: '1100px',
-            margin: '0 auto',
-            paddingTop: '20px',
-            overflow: 'visible',
-          }}
-        >
+        {/* Cards — single col on mobile, 3 cols on lg+ */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-[1100px] mx-auto pt-5 overflow-visible items-start">
           {tiers.map((tier) => {
             const isDarkGreen = tier.style === 'dark-green'
             const isNavy = tier.style === 'navy'

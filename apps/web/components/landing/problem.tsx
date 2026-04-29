@@ -18,9 +18,9 @@ const painPoints = [
 
 export default function Problem() {
   return (
-    <section className="py-24 bg-white" id="problem">
+    <section className="py-16 md:py-24 bg-white" id="problem">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
+        <div className="text-center mb-10 md:mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
             Sound familiar?
           </h2>
@@ -33,7 +33,7 @@ export default function Problem() {
           {painPoints.map((p) => (
             <div
               key={p.title}
-              className="rounded-2xl border border-gray-200 p-8 hover:shadow-lg hover:border-gray-300 transition-all duration-200"
+              className="rounded-2xl border border-gray-200 p-5 md:p-8 hover:shadow-lg hover:border-gray-300 transition-all duration-200"
             >
               <div className="text-4xl mb-4">{p.emoji}</div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">{p.title}</h3>

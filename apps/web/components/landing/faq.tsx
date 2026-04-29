@@ -38,9 +38,9 @@ export default function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(null)
 
   return (
-    <section className="py-24 bg-white" id="faq">
+    <section className="py-16 md:py-24 bg-white" id="faq">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
+        <div className="text-center mb-10 md:mb-16">
           <p className="text-sm font-semibold text-[#2d7a4f] uppercase tracking-wider mb-3">FAQ</p>
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
             Frequently asked questions
@@ -61,7 +61,7 @@ export default function FAQ() {
             >
               <button
                 onClick={() => setOpenIndex(openIndex === i ? null : i)}
-                className="w-full flex items-center justify-between px-6 py-5 text-left hover:bg-gray-50 transition-colors"
+                className="w-full flex items-center justify-between px-4 py-4 sm:px-6 sm:py-5 text-left hover:bg-gray-50 transition-colors"
               >
                 <span className="font-semibold text-gray-900 text-sm pr-4">{faq.q}</span>
                 <ChevronDown
@@ -71,7 +71,7 @@ export default function FAQ() {
                 />
               </button>
               {openIndex === i && (
-                <div className="px-6 pb-5">
+                <div className="px-4 pb-4 sm:px-6 sm:pb-5">
                   <p className="text-gray-500 text-sm leading-relaxed">{faq.a}</p>
                 </div>
               )}

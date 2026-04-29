@@ -9,7 +9,7 @@ type Tab = typeof tabs[number]
 function DashboardMockup() {
   return (
     <div className="flex-1 p-5 space-y-4">
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
         {[
           { label: 'Total Loads', val: '1,284', color: 'bg-[#2d7a4f]/20' },
           { label: 'Revenue', val: '$84,320', color: 'bg-blue-500/20' },
@@ -167,9 +167,9 @@ export default function Screenshots() {
   const [active, setActive] = useState<Tab>('Dashboard')
 
   return (
-    <section className="py-24 bg-gray-50" id="screenshots">
+    <section className="py-16 md:py-24 bg-gray-50" id="screenshots">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8 md:mb-12">
           <p className="text-sm font-semibold text-[#2d7a4f] uppercase tracking-wider mb-3">Product</p>
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
             See it in action
@@ -179,20 +179,22 @@ export default function Screenshots() {
           </p>
         </div>
 
-        <div className="flex justify-center gap-1 mb-8 bg-white rounded-xl border border-gray-200 p-1 w-fit mx-auto">
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActive(tab)}
-              className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
-                active === tab
-                  ? 'bg-[#0f1923] text-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-900'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
+        <div className="overflow-x-auto mb-8 -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="flex justify-center gap-1 bg-white rounded-xl border border-gray-200 p-1 w-max mx-auto">
+            {tabs.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActive(tab)}
+                className={`px-3 sm:px-5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+                  active === tab
+                    ? 'bg-[#0f1923] text-white shadow-sm'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="max-w-4xl mx-auto">

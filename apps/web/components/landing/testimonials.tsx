@@ -24,9 +24,9 @@ const testimonials = [
 
 export default function Testimonials() {
   return (
-    <section className="py-24 bg-[#0f1923]" id="testimonials">
+    <section className="py-16 md:py-24 bg-[#0f1923]" id="testimonials">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
+        <div className="text-center mb-10 md:mb-16">
           <p className="text-sm font-semibold text-[#4ade80] uppercase tracking-wider mb-3">Testimonials</p>
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
             Operators who made the switch
@@ -38,7 +38,7 @@ export default function Testimonials() {
           {testimonials.map((t) => (
             <div
               key={t.name}
-              className="bg-white/5 border border-white/10 rounded-2xl p-8 hover:bg-white/8 transition-colors"
+              className="bg-white/5 border border-white/10 rounded-2xl p-5 md:p-8 hover:bg-white/8 transition-colors"
             >
               <div className="flex mb-4 gap-0.5">
                 {[...Array(5)].map((_, i) => (
