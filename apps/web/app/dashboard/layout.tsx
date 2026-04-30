@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/dashboard/sidebar'
 import ThemeInjector from '@/components/theme-injector'
+import ChatWidget from '@/components/chat-widget'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -11,7 +12,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { data: co } = await supabase
     .from('companies')
-    .select('name, logo_url, primary_color, accent_color, onboarding_completed, trial_ends_at, subscription_status')
+    .select('name, logo_url, primary_color, accent_color, onboarding_completed, trial_ends_at, subscription_status, plan')
     .eq('owner_id', user.id)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -83,6 +84,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const primaryColor = (co as { primary_color?: string | null } | null)?.primary_color ?? '#1e3a2a'
   const accentColor  = (co as { accent_color?:  string | null } | null)?.accent_color  ?? '#2d7a4f'
+  const plan         = (co as { plan?: string | null } | null)?.plan ?? null
 
   return (
     <>
@@ -96,6 +98,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </div>
         </main>
       </div>
+      <ChatWidget plan={plan} />
     </>
   )
 }
