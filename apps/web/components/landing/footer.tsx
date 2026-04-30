@@ -2,11 +2,23 @@ import Link from 'next/link'
 import { Truck } from 'lucide-react'
 
 const productLinks = [
-  { label: 'Features', href: '#features' },
-  { label: 'How It Works', href: '#how-it-works' },
-  { label: 'Pricing', href: '#pricing' },
-  { label: 'FAQ', href: '#faq' },
-  { label: 'Changelog', href: '#' },
+  { label: 'Features',     href: '/#features' },
+  { label: 'How It Works', href: '/#how-it-works' },
+  { label: 'Pricing',      href: '/pricing' },
+  { label: 'FAQ',          href: '/#faq' },
+  { label: 'Changelog',    href: '/changelog' },
+]
+
+const companyLinks = [
+  { label: 'About',    href: '/about' },
+  { label: 'Blog',     href: '/blog' },
+  { label: 'Careers',  href: '/careers' },
+]
+
+const legalLinks = [
+  { label: 'Privacy',  href: '/privacy' },
+  { label: 'Terms',    href: '/terms' },
+  { label: 'Security', href: '/security' },
 ]
 
 export default function Footer() {
@@ -38,16 +50,24 @@ export default function Footer() {
           <div>
             <h4 className="text-sm font-semibold text-white mb-4">Company</h4>
             <ul className="space-y-2">
-              {['About', 'Blog', 'Careers'].map((l) => (
-                <li key={l}><Link href="#" className="text-sm text-white/40 hover:text-white transition-colors">{l}</Link></li>
+              {companyLinks.map((l) => (
+                <li key={l.label}>
+                  <Link href={l.href} className="text-sm text-white/40 hover:text-white transition-colors">
+                    {l.label}
+                  </Link>
+                </li>
               ))}
             </ul>
           </div>
           <div>
             <h4 className="text-sm font-semibold text-white mb-4">Legal</h4>
             <ul className="space-y-2">
-              {['Privacy', 'Terms', 'Security'].map((l) => (
-                <li key={l}><Link href="#" className="text-sm text-white/40 hover:text-white transition-colors">{l}</Link></li>
+              {legalLinks.map((l) => (
+                <li key={l.label}>
+                  <Link href={l.href} className="text-sm text-white/40 hover:text-white transition-colors">
+                    {l.label}
+                  </Link>
+                </li>
               ))}
             </ul>
           </div>
