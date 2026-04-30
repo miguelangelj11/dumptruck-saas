@@ -18,6 +18,11 @@ export async function GET(request: Request) {
   if (tokenHash && type) {
     const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type })
     if (!error) {
+      // Recovery links must go to the reset form — the session is now active
+      // and updateUser() will work once the user submits their new password.
+      if (type === 'recovery') {
+        return NextResponse.redirect(`${origin}/reset-password`)
+      }
       return NextResponse.redirect(`${origin}${next}`)
     }
     return NextResponse.redirect(`${origin}/login?error=invalid_reset_link`)
