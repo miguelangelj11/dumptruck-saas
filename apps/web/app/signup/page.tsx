@@ -150,7 +150,7 @@ export default function SignupPage() {
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 required
-                placeholder="Webb Dirt & Gravel"
+                placeholder="Atlas Hauling Co."
                 style={inputStyle}
               />
             </Field>
@@ -161,7 +161,7 @@ export default function SignupPage() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
-                placeholder="John Webb"
+                placeholder="Jake Morrison"
                 autoComplete="name"
                 style={inputStyle}
               />

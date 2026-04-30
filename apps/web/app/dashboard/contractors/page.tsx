@@ -388,7 +388,7 @@ export default function ContractorsPage() {
                   </div>
                   <div className="col-span-2">
                     <label className="block text-xs font-medium text-gray-700 mb-1">Job Name *</label>
-                    <input required value={ticketForm.job_name} onChange={e => setTicketForm(p => ({ ...p, job_name: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="Highway 90 Fill Site" />
+                    <input required value={ticketForm.job_name} onChange={e => setTicketForm(p => ({ ...p, job_name: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="Ironclad Grade Site" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Date *</label>
@@ -603,7 +603,7 @@ export default function ContractorsPage() {
             <form onSubmit={handleSaveContractor} className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Name *</label>
-                <input required value={contractorForm.name} onChange={e => setContractorForm(p => ({ ...p, name: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="Mike Johnson" />
+                <input required value={contractorForm.name} onChange={e => setContractorForm(p => ({ ...p, name: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="Danny Schultz" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -620,7 +620,7 @@ export default function ContractorsPage() {
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-                <input type="email" value={contractorForm.email} onChange={e => setContractorForm(p => ({ ...p, email: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="mike@email.com" />
+                <input type="email" value={contractorForm.email} onChange={e => setContractorForm(p => ({ ...p, email: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="danny@atlashauling.com" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>

@@ -28,11 +28,11 @@ function DispatchMockup() {
             ))}
           </div>
           {[
-            { name: 'Miguel Rivera',  truck: 'SA07', statusColor: '#4ade80', status: 'On Site',    job: 'ER Snell Job',     loads: 4 },
-            { name: 'Carlos Santos',  truck: 'F03',  statusColor: '#60a5fa', status: 'Dispatched', job: 'Watson Fill',      loads: 2 },
-            { name: 'James Okafor',   truck: 'B12',  statusColor: '#4ade80', status: 'On Site',    job: 'Riverside Grade',  loads: 6 },
-            { name: 'Derek Williams', truck: 'T05',  statusColor: '#FFB800', status: 'En Route',   job: 'Piedmont Dirt Co', loads: 1 },
-            { name: 'Luis Herrera',   truck: 'SA11', statusColor: '#a78bfa', status: 'Idle',       job: '—',                loads: 0 },
+            { name: 'Jake Morrison',  truck: 'SA07', statusColor: '#4ade80', status: 'On Site',    job: 'Atlas Haul Site',   loads: 4 },
+            { name: 'Carlos Rivera',  truck: 'F03',  statusColor: '#60a5fa', status: 'Dispatched', job: 'Summit Fill',       loads: 2 },
+            { name: 'Tyler Brooks',   truck: 'B12',  statusColor: '#4ade80', status: 'On Site',    job: 'Ironclad Grade',    loads: 6 },
+            { name: 'Danny Schultz',  truck: 'T05',  statusColor: '#FFB800', status: 'En Route',   job: 'Redrock Excavating', loads: 1 },
+            { name: 'Marcus Webb',    truck: 'SA11', statusColor: '#a78bfa', status: 'Idle',       job: '—',                 loads: 0 },
           ].map((row) => (
             <div key={row.name} style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px 1fr 50px', gap: '4px', alignItems: 'center', padding: '7px 6px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -69,11 +69,11 @@ function TicketsMockup() {
         ))}
       </div>
       {[
-        { id: '#1042', driver: 'Miguel Rivera', job: 'ER Snell Job',    material: 'Dirt',    loads: 4, status: 'Verified',   statusColor: '#4ade80' },
-        { id: '#1041', driver: 'James Okafor',  job: 'Riverside Grade', material: 'Gravel',  loads: 6, status: 'Verified',   statusColor: '#4ade80' },
-        { id: '#1040', driver: 'Carlos Santos', job: 'Watson Fill',     material: 'Fill',    loads: 2, status: 'Pending',    statusColor: '#FFB800' },
-        { id: '#1039', driver: 'Derek Williams',job: 'Piedmont Dirt',   material: 'Sand',    loads: 1, status: 'Pending',    statusColor: '#FFB800' },
-        { id: '#1038', driver: 'Luis Herrera',  job: 'City Road Work',  material: 'Asphalt', loads: 5, status: 'Invoiced',   statusColor: '#60a5fa' },
+        { id: '#1042', driver: 'Jake Morrison', job: 'Atlas Haul Site',   material: 'Dirt',    loads: 4, status: 'Verified',   statusColor: '#4ade80' },
+        { id: '#1041', driver: 'Tyler Brooks',  job: 'Ironclad Grade',    material: 'Gravel',  loads: 6, status: 'Verified',   statusColor: '#4ade80' },
+        { id: '#1040', driver: 'Carlos Rivera', job: 'Summit Fill',       material: 'Fill',    loads: 2, status: 'Pending',    statusColor: '#FFB800' },
+        { id: '#1039', driver: 'Danny Schultz', job: 'Redrock Excavating',material: 'Sand',    loads: 1, status: 'Pending',    statusColor: '#FFB800' },
+        { id: '#1038', driver: 'Marcus Webb',   job: 'Canyon Fleet Site', material: 'Asphalt', loads: 5, status: 'Invoiced',   statusColor: '#60a5fa' },
       ].map((t) => (
         <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 6px', borderBottom: '1px solid rgba(255,255,255,0.05)', borderRadius: '4px' }}>
           <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace', flexShrink: 0 }}>{t.id}</span>
@@ -99,8 +99,8 @@ function InvoiceMockup() {
       <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '8px', padding: '8px 10px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
         <div>
           <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.35)', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Bill To</div>
-          <div style={{ fontSize: '11px', color: '#fff', fontWeight: 600 }}>ER Snell Construction</div>
-          <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)' }}>Atlanta, GA</div>
+          <div style={{ fontSize: '11px', color: '#fff', fontWeight: 600 }}>Atlas Hauling Co.</div>
+          <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)' }}>Denver, CO</div>
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.35)', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Due</div>
@@ -187,11 +187,11 @@ function DriversMockup() {
         <span style={{ fontSize: '10px', background: 'rgba(45,122,79,0.3)', color: '#4ade80', padding: '2px 8px', borderRadius: '99px' }}>+ Add Driver</span>
       </div>
       {[
-        { name: 'Miguel Rivera',  truck: 'SA07', loads: 142, earned: '$12,070', status: 'Active' },
-        { name: 'Carlos Santos',  truck: 'F03',  loads: 98,  earned: '$8,330',  status: 'Active' },
-        { name: 'James Okafor',   truck: 'B12',  loads: 211, earned: '$17,935', status: 'Active' },
-        { name: 'Derek Williams', truck: 'T05',  loads: 64,  earned: '$5,440',  status: 'Active' },
-        { name: 'Luis Herrera',   truck: 'SA11', loads: 77,  earned: '$6,545',  status: 'On Leave' },
+        { name: 'Jake Morrison', truck: 'SA07', loads: 142, earned: '$12,070', status: 'Active' },
+        { name: 'Carlos Rivera', truck: 'F03',  loads: 98,  earned: '$8,330',  status: 'Active' },
+        { name: 'Tyler Brooks',  truck: 'B12',  loads: 211, earned: '$17,935', status: 'Active' },
+        { name: 'Danny Schultz', truck: 'T05',  loads: 64,  earned: '$5,440',  status: 'Active' },
+        { name: 'Marcus Webb',   truck: 'SA11', loads: 77,  earned: '$6,545',  status: 'On Leave' },
       ].map((d) => (
         <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 4px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(45,122,79,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#4ade80', fontWeight: 700, flexShrink: 0 }}>

@@ -46,10 +46,10 @@ function DashboardMockup() {
 
 function DispatchMockup() {
   const jobs = [
-    { driver: 'Carlos M.', job: 'Riverside Fill', truck: 'TX-441', loads: 8, status: 'Active' },
-    { driver: 'James D.', job: 'Highway 90 Base', truck: 'TX-229', loads: 5, status: 'En Route' },
-    { driver: 'Tony R.', job: 'Stadium Demo', truck: 'TX-887', loads: 12, status: 'Complete' },
-    { driver: 'Marcus W.', job: 'North Quarry', truck: 'TX-115', loads: 3, status: 'Active' },
+    { driver: 'Jake M.', job: 'Atlas Haul Site', truck: 'TX-441', loads: 8, status: 'Active' },
+    { driver: 'Carlos R.', job: 'Summit Earthworks', truck: 'TX-229', loads: 5, status: 'En Route' },
+    { driver: 'Tyler B.', job: 'Ironclad Demo', truck: 'TX-887', loads: 12, status: 'Complete' },
+    { driver: 'Danny S.', job: 'Redrock Quarry', truck: 'TX-115', loads: 3, status: 'Active' },
   ]
   return (
     <div className="flex-1 p-5 space-y-3">
@@ -83,10 +83,10 @@ function DispatchMockup() {
 
 function TicketsMockup() {
   const tickets = [
-    { id: '#1041', job: 'Riverside Fill', material: 'Topsoil', driver: 'Carlos M.', qty: '14T', status: 'Invoiced' },
-    { id: '#1040', job: 'Highway 90', material: 'Gravel Base', driver: 'James D.', qty: '22T', status: 'Pending' },
-    { id: '#1039', job: 'Stadium Demo', material: 'Concrete', driver: 'Tony R.', qty: '18T', status: 'Paid' },
-    { id: '#1038', job: 'North Quarry', material: 'Fill Dirt', driver: 'Marcus W.', qty: '10T', status: 'Pending' },
+    { id: '#1041', job: 'Atlas Haul Site', material: 'Topsoil', driver: 'Jake M.', qty: '14T', status: 'Invoiced' },
+    { id: '#1040', job: 'Summit Earthworks', material: 'Gravel Base', driver: 'Carlos R.', qty: '22T', status: 'Pending' },
+    { id: '#1039', job: 'Ironclad Demo', material: 'Concrete', driver: 'Tyler B.', qty: '18T', status: 'Paid' },
+    { id: '#1038', job: 'Redrock Quarry', material: 'Fill Dirt', driver: 'Danny S.', qty: '10T', status: 'Pending' },
   ]
   return (
     <div className="flex-1 p-5 space-y-3">
@@ -121,10 +121,10 @@ function TicketsMockup() {
 
 function InvoicesMockup() {
   const invoices = [
-    { id: 'INV-0089', client: 'City of Atlanta', amount: '$12,400', loads: 31, status: 'Paid' },
-    { id: 'INV-0088', client: 'Hancock Bros.', amount: '$8,750', loads: 22, status: 'Sent' },
-    { id: 'INV-0087', client: 'DuraCon LLC', amount: '$5,200', loads: 14, status: 'Draft' },
-    { id: 'INV-0086', client: 'Metro Works', amount: '$19,600', loads: 48, status: 'Paid' },
+    { id: 'INV-0089', client: 'Atlas Hauling Co.', amount: '$12,400', loads: 31, status: 'Paid' },
+    { id: 'INV-0088', client: 'Summit Earthworks LLC', amount: '$8,750', loads: 22, status: 'Sent' },
+    { id: 'INV-0087', client: 'Ironclad Transport Inc.', amount: '$5,200', loads: 14, status: 'Draft' },
+    { id: 'INV-0086', client: 'Redrock Excavating', amount: '$19,600', loads: 48, status: 'Paid' },
   ]
   return (
     <div className="flex-1 p-5 space-y-3">

@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, Loader2, Receipt, ArrowLeft, Printer, Check, CreditCard, X, ChevronDown } from 'lucide-react'
 import InvoicePDFButton from '@/components/invoice-pdf-button'
-import Image from 'next/image'
+import CompanyAvatar from '@/components/dashboard/company-avatar'
 import { toast } from 'sonner'
 import type { Invoice, InvoiceLineItem, Load, LoadTicket, Contractor, ContractorTicket, ContractorTicketSlip, Payment, ReceivedInvoice } from '@/lib/types'
 import { getCompanyId } from '@/lib/get-company-id'
@@ -944,7 +944,7 @@ export default function InvoicesPage() {
                       value={createForm.client_name}
                       onChange={e => setCreateForm(p => ({ ...p, client_name: e.target.value }))}
                       className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
-                      placeholder={invoiceType === 'client' ? 'ACME Construction' : 'John Martinez'}
+                      placeholder={invoiceType === 'client' ? 'Atlas Hauling Co.' : 'Jake Morrison'}
                     />
                   </div>
                   <div className="col-span-2 sm:col-span-1">
@@ -1358,12 +1358,7 @@ export default function InvoicesPage() {
                     {userEmail && <p className="text-sm text-gray-500">{userEmail}</p>}
                   </div>
                   {/* Company logo / initials */}
-                  <div className="h-14 w-14 rounded-full overflow-hidden bg-[#2d7a4f] flex items-center justify-center shrink-0">
-                    {companyLogoUrl
-                      ? <Image src={companyLogoUrl} alt="Company logo" width={56} height={56} className="object-cover w-full h-full" />
-                      : <span className="text-lg font-bold text-white">{(companyName || 'MY').slice(0, 2).toUpperCase()}</span>
-                    }
-                  </div>
+                  <CompanyAvatar logoUrl={companyLogoUrl} name={companyName || 'MY'} size={56} />
                 </div>
               </div>
             </div>

@@ -1,9 +1,14 @@
 const companies = [
-  'Atlanta Dirt Works',
-  'Southeastern Hauling LLC',
-  'Piedmont Fill & Grade',
-  'Metro Excavation Services',
-  'Blue Ridge Trucking Co',
+  'Atlas Hauling Co.',
+  'Crestline Trucking LLC',
+  'Redrock Excavating',
+  'Titan Aggregate Co.',
+  'Blue Ridge Haulers',
+  'Summit Earthworks LLC',
+  'Ironclad Transport Inc.',
+  'Pinnacle Dirt Works',
+  'Canyon Fleet Services',
+  'Badlands Heavy Haul',
 ]
 
 export default function SocialProof() {

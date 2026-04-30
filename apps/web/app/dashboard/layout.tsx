@@ -11,7 +11,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { data: co } = await supabase
     .from('companies')
-    .select('logo_url, primary_color, accent_color, onboarding_completed, trial_ends_at, subscription_status')
+    .select('name, logo_url, primary_color, accent_color, onboarding_completed, trial_ends_at, subscription_status')
     .eq('owner_id', user.id)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -88,7 +88,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <>
       <ThemeInjector primaryColor={primaryColor} accentColor={accentColor} />
       <div className="flex h-screen bg-gray-50 overflow-hidden">
-        <Sidebar user={user} logoUrl={co?.logo_url ?? null} />
+        <Sidebar user={user} logoUrl={co?.logo_url ?? null} companyName={(co as { name?: string | null } | null)?.name ?? null} />
         <main className="flex-1 overflow-y-auto pt-14 md:pt-0 flex flex-col">
           {trialBanner}
           <div className="flex-1">

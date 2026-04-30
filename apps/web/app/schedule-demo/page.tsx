@@ -95,10 +95,10 @@ export default function ScheduleDemoPage() {
 
             <div style={rowStyle}>
               <Field label="Full name *">
-                <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} required placeholder="John Webb" style={inputStyle} />
+                <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} required placeholder="Jake Morrison" style={inputStyle} />
               </Field>
               <Field label="Company name *">
-                <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required placeholder="Webb Dirt & Gravel" style={inputStyle} />
+                <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required placeholder="Atlas Hauling Co." style={inputStyle} />
               </Field>
             </div>
 

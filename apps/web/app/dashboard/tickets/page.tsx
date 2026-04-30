@@ -607,7 +607,7 @@ export default function TicketsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Job Name *</label>
-                  <input required value={form.job_name} onChange={e => setForm(p => ({ ...p, job_name: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="Highway 90 Fill" />
+                  <input required value={form.job_name} onChange={e => setForm(p => ({ ...p, job_name: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="Ironclad Grade Site" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Working Under (Company)</label>
@@ -643,7 +643,7 @@ export default function TicketsPage() {
                 {/* Row 4: Driver + Truck */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Driver Name *</label>
-                  <input required value={form.driver_name} onChange={e => setForm(p => ({ ...p, driver_name: e.target.value }))} list="driver-dl" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="John Martinez" />
+                  <input required value={form.driver_name} onChange={e => setForm(p => ({ ...p, driver_name: e.target.value }))} list="driver-dl" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="Jake Morrison" />
                   <datalist id="driver-dl">{drivers.map(d => <option key={d} value={d} />)}</datalist>
                 </div>
                 <div>
