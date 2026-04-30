@@ -1,18 +1,43 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import type { EmailOtpType } from '@supabase/supabase-js'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
-  const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/dashboard'
 
-  if (code) {
-    const supabase = await createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+  const code      = searchParams.get('code')
+  const tokenHash = searchParams.get('token_hash')
+  const type      = searchParams.get('type') as EmailOtpType | null
+  const next      = searchParams.get('next') ?? '/dashboard'
+
+  const supabase = await createClient()
+
+  // ── Email-OTP / token_hash flow (password recovery, magic link) ──────────
+  // Supabase sends token_hash + type when the project uses email-link style
+  // rather than PKCE.  Must be verified before the PKCE branch.
+  if (tokenHash && type) {
+    const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type })
     if (!error) {
+      return NextResponse.redirect(`${origin}${next}`)
+    }
+    return NextResponse.redirect(`${origin}/login?error=invalid_reset_link`)
+  }
+
+  // ── PKCE code flow ────────────────────────────────────────────────────────
+  if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+
+    if (!error) {
+      // Password-recovery: skip all account-setup logic and go straight to
+      // the reset page so the user can set their new password immediately.
+      if (next === '/reset-password') {
+        return NextResponse.redirect(`${origin}/reset-password`)
+      }
+
+      // ── New-user account setup ──────────────────────────────────────────
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        // Auto-link driver account
+        // Auto-link driver account if the email matches an unlinked driver row
         if (user.email) {
           const { data: driverRow } = await supabase
             .from('drivers')
@@ -47,6 +72,7 @@ export async function GET(request: Request) {
           })
         }
       }
+
       return NextResponse.redirect(`${origin}${next}`)
     }
   }
