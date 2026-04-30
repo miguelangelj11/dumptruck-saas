@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin
 
   const { error } = await admin.auth.admin.inviteUserByEmail(email.trim(), {
     redirectTo: `${siteUrl}/auth/callback`,
