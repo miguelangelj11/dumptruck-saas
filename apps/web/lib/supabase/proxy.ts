@@ -43,7 +43,8 @@ export async function updateSession(request: NextRequest) {
   const publicPaths = [
     '/', '/login', '/signup', '/forgot-password', '/reset-password', '/auth', '/api/test-setup',
     '/about', '/blog', '/careers', '/privacy', '/terms', '/security', '/changelog',
-    '/pricing', '/features', '/schedule-demo',
+    '/pricing', '/features', '/schedule-demo', '/trial-expired',
+    '/api/webhooks',
   ]
   const isPublic = publicPaths.some(
     (p) => pathname === p || pathname.startsWith(p + '/')
@@ -72,6 +73,40 @@ export async function updateSession(request: NextRequest) {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
       return NextResponse.redirect(url)
+    }
+  }
+
+  // ── Trial / subscription enforcement for API routes ───────────────────────
+  // Blocks expired-trial users from calling data-mutation endpoints directly,
+  // even if they bypass the UI.  Excluded: webhooks (must always pass through),
+  // account deletion (so expired users can still delete their data), test-setup.
+  const isProtectedApiCall =
+    user &&
+    pathname.startsWith('/api/') &&
+    !pathname.startsWith('/api/webhooks/') &&
+    !pathname.startsWith('/api/account/delete') &&
+    !pathname.startsWith('/api/test-setup')
+
+  if (isProtectedApiCall) {
+    const { data: company } = await supabase
+      .from('companies')
+      .select('subscription_status, trial_ends_at')
+      .eq('owner_id', user.sub)
+      .maybeSingle()
+
+    const status      = company?.subscription_status as string | null
+    const trialEndsAt = company?.trial_ends_at as string | null
+
+    const isExpired =
+      status === 'expired' ||
+      status === 'canceled' ||
+      (status === 'trial' && trialEndsAt != null && new Date(trialEndsAt) < new Date())
+
+    if (isExpired) {
+      return NextResponse.json(
+        { error: 'Your trial or subscription has expired. Please subscribe to continue.' },
+        { status: 402 }
+      )
     }
   }
 
