@@ -516,19 +516,6 @@ export default function SettingsPage() {
     if (!inviteEmail.trim() || !companyId) return
     setSendingInvite(true)
 
-    const { error: dbError } = await supabase.from('drivers').insert({
-      company_id: companyId,
-      name:       inviteEmail.split('@')[0] ?? inviteEmail,
-      email:      inviteEmail.trim(),
-      status:     'inactive',
-    })
-
-    if (dbError) {
-      toast.error(dbError.message)
-      setSendingInvite(false)
-      return
-    }
-
     const res  = await fetch('/api/team/invite', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
