@@ -99,6 +99,12 @@ export default function LoginPage() {
               Start free trial
             </Link>
           </p>
+          <p className="text-center text-sm text-gray-500 mt-3">
+            Have an invite?{' '}
+            <Link href="/join" className="text-[#2d7a4f] font-medium hover:text-[#245f3e]">
+              Join your team →
+            </Link>
+          </p>
         </div>
       </div>
     </div>

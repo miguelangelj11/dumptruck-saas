@@ -23,7 +23,7 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}/reset-password`)
       }
       if (inviteToken) {
-        return NextResponse.redirect(`${origin}/invite/accept?t=${inviteToken}`)
+        return NextResponse.redirect(`${origin}/join?t=${inviteToken}`)
       }
       return NextResponse.redirect(`${origin}${next}`)
     }
@@ -39,9 +39,9 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}/reset-password`)
       }
 
-      // Invited users go to the accept page — no company creation
+      // Invited users go to the join page — no company creation
       if (inviteToken) {
-        return NextResponse.redirect(`${origin}/invite/accept?t=${inviteToken}`)
+        return NextResponse.redirect(`${origin}/join?t=${inviteToken}`)
       }
 
       // ── New-user account setup (owner signups only) ─────────────────────
