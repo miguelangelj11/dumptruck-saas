@@ -8,6 +8,7 @@
       "outputs": [".next/**", "!.next/cache/**"],
       "env": [
         "ANTHROPIC_API_KEY",
+        "RESEND_API_KEY",
         "SUPABASE_SERVICE_KEY",
         "STRIPE_SECRET_KEY",
         "STRIPE_WEBHOOK_SECRET",
