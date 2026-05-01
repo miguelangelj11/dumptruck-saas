@@ -66,4 +66,6 @@ export const LIMITS = {
   testSetup:    { limit: 10, windowMs: 60_000 },
   /** General API routes: 120 req / min per IP */
   api:          { limit: 120, windowMs: 60_000 },
+  /** AI chat — 20 req / hr per user (Claude API cost control) */
+  chat:         { limit: 20, windowMs: 60 * 60_000 },
 } satisfies Record<string, RateLimitConfig>

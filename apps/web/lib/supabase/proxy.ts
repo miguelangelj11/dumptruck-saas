@@ -44,7 +44,7 @@ export async function updateSession(request: NextRequest) {
     '/', '/login', '/signup', '/forgot-password', '/reset-password', '/auth', '/api/test-setup',
     '/about', '/blog', '/careers', '/privacy', '/terms', '/security', '/changelog',
     '/pricing', '/features', '/schedule-demo', '/trial-expired',
-    '/api/webhooks',
+    '/api/webhooks', '/api/health',
   ]
   const isPublic = publicPaths.some(
     (p) => pathname === p || pathname.startsWith(p + '/')
@@ -85,6 +85,8 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/api/') &&
     !pathname.startsWith('/api/webhooks/') &&
     !pathname.startsWith('/api/account/delete') &&
+    !pathname.startsWith('/api/billing/') &&   // expired users need billing access to pay
+    !pathname.startsWith('/api/health') &&
     !pathname.startsWith('/api/test-setup')
 
   if (isProtectedApiCall) {

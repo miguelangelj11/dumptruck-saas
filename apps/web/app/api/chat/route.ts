@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
+import { checkRateLimit, LIMITS } from '@/lib/rate-limit'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -19,6 +20,14 @@ export async function POST(req: NextRequest) {
 
   if (co?.plan !== 'enterprise') {
     return NextResponse.json({ error: 'Enterprise plan required' }, { status: 403 })
+  }
+
+  const rl = checkRateLimit(`chat:${user.id}`, LIMITS.chat)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please wait before sending more messages.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } },
+    )
   }
 
   const body = await req.json()

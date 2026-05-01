@@ -1,3 +1,5 @@
+export const revalidate = 30
+
 import { createClient } from '@/lib/supabase/server'
 import { TrendingUp, Truck, Users, Receipt, Activity, AlertTriangle, Radio } from 'lucide-react'
 import LoadsChart from '@/components/dashboard/loads-chart'

@@ -3,6 +3,29 @@ import createNextIntlPlugin from 'next-intl/plugin'
 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
 
+const SUPABASE_HOST = 'sjllakzzfaajgpxamfem.supabase.co'
+
+const csp = [
+  "default-src 'self'",
+  // Next.js requires unsafe-inline without nonce-based CSP; unsafe-eval for HMR in dev
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com",
+  "style-src 'self' 'unsafe-inline'",
+  `img-src 'self' data: blob: https://${SUPABASE_HOST}`,
+  "font-src 'self' data:",
+  `connect-src 'self' https://${SUPABASE_HOST} wss://${SUPABASE_HOST} https://api.stripe.com https://*.sentry.io`,
+  "frame-src https://js.stripe.com https://hooks.stripe.com",
+  "worker-src blob: 'self'",
+].join('; ')
+
+const securityHeaders = [
+  { key: 'X-Frame-Options',           value: 'SAMEORIGIN' },
+  { key: 'X-Content-Type-Options',    value: 'nosniff' },
+  { key: 'Referrer-Policy',           value: 'strict-origin-when-cross-origin' },
+  { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+  { key: 'Permissions-Policy',        value: 'camera=(), microphone=(), geolocation=()' },
+  { key: 'Content-Security-Policy',   value: csp },
+]
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ['@workspace/ui'],
@@ -10,10 +33,13 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'sjllakzzfaajgpxamfem.supabase.co',
+        hostname: SUPABASE_HOST,
         pathname: '/storage/v1/object/public/**',
       },
     ],
+  },
+  async headers() {
+    return [{ source: '/(.*)', headers: securityHeaders }]
   },
 }
 

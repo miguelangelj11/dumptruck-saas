@@ -40,6 +40,42 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/trial-expired')
   }
 
+  // Past-due payment banner — shown above everything else when payment has failed
+  let pastDueBanner: React.ReactNode = null
+  if (subscriptionStatus === 'past_due') {
+    pastDueBanner = (
+      <div style={{
+        background: '#fef2f2',
+        borderBottom: '1px solid #fca5a5',
+        padding: '10px 24px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        flexWrap: 'wrap',
+      }}>
+        <span style={{ fontSize: '16px' }}>🚨</span>
+        <span style={{ fontSize: '13px', fontWeight: 600, color: '#991b1b', flex: 1 }}>
+          Your last payment failed. Update your payment method to avoid losing access.
+        </span>
+        <Link
+          href="/dashboard/settings?tab=billing"
+          style={{
+            fontSize: '13px',
+            fontWeight: 700,
+            padding: '6px 14px',
+            borderRadius: '8px',
+            background: '#dc2626',
+            color: '#fff',
+            textDecoration: 'none',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          Update Payment →
+        </Link>
+      </div>
+    )
+  }
+
   // Compute trial banner
   let trialBanner: React.ReactNode = null
   if (subscriptionStatus === 'trial' && trialEndsAt) {
@@ -92,6 +128,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <div className="flex h-screen bg-gray-50 overflow-hidden">
         <Sidebar user={user} logoUrl={co?.logo_url ?? null} companyName={(co as { name?: string | null } | null)?.name ?? null} />
         <main className="flex-1 overflow-y-auto pt-14 md:pt-0 flex flex-col">
+          {pastDueBanner}
           {trialBanner}
           <div className="flex-1">
             {children}
