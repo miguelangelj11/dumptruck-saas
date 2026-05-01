@@ -26,15 +26,55 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Server configuration error — contact support' }, { status: 500 })
   }
 
-  // Look up the caller's company (RLS-scoped to the authenticated user)
-  const { data: company } = await supabase
+  // ── Resolve company for owner or admin callers ───────────────────────────
+  let companyId: string | null = null
+  let companyName: string | null = null
+
+  // Path 1: caller is an owner
+  const { data: ownedCompany } = await supabase
     .from('companies')
     .select('id, name')
     .eq('owner_id', user.id)
     .maybeSingle()
-  if (!company) {
-    return NextResponse.json({ error: 'No company found for this account' }, { status: 404 })
+
+  if (ownedCompany) {
+    companyId   = ownedCompany.id
+    companyName = ownedCompany.name
+  } else {
+    // Path 2: caller is an invited team member — check team_members for role + company
+    const { data: memberRow } = await supabase
+      .from('team_members')
+      .select('company_id, role')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (!memberRow) {
+      return NextResponse.json({ error: 'No company found for this account' }, { status: 404 })
+    }
+    if (memberRow.role !== 'owner' && memberRow.role !== 'admin') {
+      return NextResponse.json({ error: 'Only owners and admins can send invitations' }, { status: 403 })
+    }
+
+    // Look up company name via admin client (bypasses RLS on companies)
+    const adminForLookup = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      serviceKey,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+    const { data: teamCompany } = await adminForLookup
+      .from('companies')
+      .select('id, name')
+      .eq('id', memberRow.company_id)
+      .maybeSingle()
+
+    if (!teamCompany) {
+      return NextResponse.json({ error: 'No company found for this account' }, { status: 404 })
+    }
+    companyId   = teamCompany.id
+    companyName = teamCompany.name
   }
+
+  const company = { id: companyId!, name: companyName! }
 
   const admin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
