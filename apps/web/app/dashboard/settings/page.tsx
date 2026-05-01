@@ -532,7 +532,7 @@ export default function SettingsPage() {
     const res  = await fetch('/api/invite', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ email: inviteEmail.trim() }),
+      body:    JSON.stringify({ email: inviteEmail.trim(), role: inviteRole.toLowerCase() }),
     })
     const json = await res.json()
 

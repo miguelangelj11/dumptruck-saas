@@ -5,10 +5,11 @@ import type { EmailOtpType } from '@supabase/supabase-js'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
 
-  const code      = searchParams.get('code')
-  const tokenHash = searchParams.get('token_hash')
-  const type      = searchParams.get('type') as EmailOtpType | null
-  const next      = searchParams.get('next') ?? '/dashboard'
+  const code        = searchParams.get('code')
+  const tokenHash   = searchParams.get('token_hash')
+  const type        = searchParams.get('type') as EmailOtpType | null
+  const next        = searchParams.get('next') ?? '/dashboard'
+  const inviteToken = searchParams.get('invite_token')
 
   const supabase = await createClient()
 
@@ -18,10 +19,11 @@ export async function GET(request: Request) {
   if (tokenHash && type) {
     const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type })
     if (!error) {
-      // Recovery links must go to the reset form — the session is now active
-      // and updateUser() will work once the user submits their new password.
       if (type === 'recovery') {
         return NextResponse.redirect(`${origin}/reset-password`)
+      }
+      if (inviteToken) {
+        return NextResponse.redirect(`${origin}/invite/accept?t=${inviteToken}`)
       }
       return NextResponse.redirect(`${origin}${next}`)
     }
@@ -33,13 +35,16 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error) {
-      // Password-recovery: skip all account-setup logic and go straight to
-      // the reset page so the user can set their new password immediately.
       if (next === '/reset-password') {
         return NextResponse.redirect(`${origin}/reset-password`)
       }
 
-      // ── New-user account setup ──────────────────────────────────────────
+      // Invited users go to the accept page — no company creation
+      if (inviteToken) {
+        return NextResponse.redirect(`${origin}/invite/accept?t=${inviteToken}`)
+      }
+
+      // ── New-user account setup (owner signups only) ─────────────────────
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         // Auto-link driver account if the email matches an unlinked driver row
