@@ -6,10 +6,10 @@ import Image from 'next/image'
 import { Menu, X } from 'lucide-react'
 
 const NAV_LINKS = [
-  { label: 'Features',     href: '#features' },
-  { label: 'How It Works', href: '#how-it-works' },
-  { label: 'Pricing',      href: '#pricing' },
-  { label: 'FAQ',          href: '#faq' },
+  { label: 'Features',     href: '/#features' },
+  { label: 'How It Works', href: '/#how-it-works' },
+  { label: 'Pricing',      href: '/pricing' },
+  { label: 'FAQ',          href: '/#faq' },
 ]
 
 export default function Nav() {
