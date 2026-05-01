@@ -1,9 +1,65 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-export async function POST(request: Request) {
-  console.log('[accept-invite] handler reached')
+function getAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_KEY
+  if (!url || !key) throw new Error('Missing SUPABASE env vars')
+  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
+}
 
+// ── GET: validate token and return invite details ─────────────────────────────
+export async function GET(request: Request) {
+  const token = new URL(request.url).searchParams.get('token')
+
+  if (!token) {
+    return NextResponse.json({ valid: false, reason: 'Missing token' })
+  }
+
+  try {
+    const admin = getAdmin()
+
+    const { data: invite, error } = await admin
+      .from('invitations')
+      .select('email, role, company_id, expires_at, accepted_at')
+      .eq('token', token)
+      .maybeSingle()
+
+    if (error) {
+      console.error('[accept-invite GET] lookup error:', error.message)
+      return NextResponse.json({ valid: false, reason: 'Lookup failed' })
+    }
+    if (!invite) {
+      return NextResponse.json({ valid: false, reason: 'Invalid token' })
+    }
+    if (invite.accepted_at) {
+      return NextResponse.json({ valid: false, reason: 'Already accepted' })
+    }
+    if (new Date(invite.expires_at) < new Date()) {
+      return NextResponse.json({ valid: false, reason: 'Expired' })
+    }
+
+    const { data: company } = await admin
+      .from('companies')
+      .select('name')
+      .eq('id', invite.company_id)
+      .maybeSingle()
+
+    return NextResponse.json({
+      valid:        true,
+      email:        invite.email,
+      role:         invite.role,
+      company_id:   invite.company_id,
+      company_name: company?.name ?? 'your team',
+    })
+  } catch (e) {
+    console.error('[accept-invite GET] unhandled error:', e)
+    return NextResponse.json({ valid: false, reason: 'Server error' })
+  }
+}
+
+// ── POST: create account, link to company, sign in ───────────────────────────
+export async function POST(request: Request) {
   let token: string | undefined
   let password: string | undefined
 
@@ -11,65 +67,51 @@ export async function POST(request: Request) {
     const body = await request.json()
     token    = body.token
     password = body.password
-  } catch (e) {
-    console.error('[accept-invite] failed to parse request body:', e)
+  } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
 
   if (!token || !password) {
-    console.error('[accept-invite] missing token or password')
-    return NextResponse.json({ error: 'Missing token or password' }, { status: 400 })
+    return NextResponse.json({ error: 'Token and password are required' }, { status: 400 })
+  }
+  if (password.length < 6) {
+    return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 })
   }
 
-  const supabaseUrl     = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceRoleKey  = process.env.SUPABASE_SERVICE_KEY
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    console.error('[accept-invite] missing env vars — SUPABASE_URL or SUPABASE_SERVICE_KEY not set')
-    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
-  }
-
-  const admin = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
-
-  // ── 1. Validate the invite ────────────────────────────────────────────────
-  let invite: { id: string; company_id: string; email: string; role: string; expires_at: string; accepted_at: string | null } | null = null
   try {
-    const { data, error } = await admin
+    const admin = getAdmin()
+
+    // 1. Validate invitation
+    const { data: invite, error: inviteErr } = await admin
       .from('invitations')
-      .select('id, company_id, email, role, expires_at, accepted_at')
+      .select('id, email, role, company_id, expires_at, accepted_at')
       .eq('token', token)
       .maybeSingle()
-    if (error) throw error
-    invite = data
-  } catch (e) {
-    console.error('[accept-invite] invite lookup failed:', e)
-    return NextResponse.json({ error: 'Failed to look up invite' }, { status: 500 })
-  }
 
-  if (!invite) {
-    console.error('[accept-invite] no invite found for token:', token)
-    return NextResponse.json({ error: 'Invalid invite token' }, { status: 404 })
-  }
-  if (invite.accepted_at) {
-    return NextResponse.json({ error: 'Invite already accepted' }, { status: 409 })
-  }
-  if (new Date(invite.expires_at) < new Date()) {
-    return NextResponse.json({ error: 'Invite has expired' }, { status: 410 })
-  }
+    if (inviteErr) {
+      console.error('[accept-invite POST] invite lookup error:', inviteErr.message)
+      return NextResponse.json({ error: 'Failed to look up invitation' }, { status: 500 })
+    }
+    if (!invite) {
+      return NextResponse.json({ error: 'Invalid or expired invite' }, { status: 404 })
+    }
+    if (invite.accepted_at) {
+      return NextResponse.json({ error: 'This invite has already been accepted' }, { status: 409 })
+    }
+    if (new Date(invite.expires_at) < new Date()) {
+      return NextResponse.json({ error: 'This invite has expired. Ask your admin for a new one.' }, { status: 410 })
+    }
 
-  console.log('[accept-invite] invite valid for:', invite.email, 'role:', invite.role)
+    console.log('[accept-invite POST] processing for:', invite.email, 'company:', invite.company_id)
 
-  // ── 2. Create auth user (or find existing) ────────────────────────────────
-  let userId: string
-
-  try {
+    // 2. Create auth user
     const { data: created, error: createErr } = await admin.auth.admin.createUser({
       email:         invite.email,
       password,
       email_confirm: true,
     })
+
+    let userId: string
 
     if (createErr) {
       const isExisting =
@@ -78,83 +120,44 @@ export async function POST(request: Request) {
         createErr.message.toLowerCase().includes('unique')
 
       if (isExisting) {
-        // User already exists from a previous attempt — look them up and reuse
-        console.log('[accept-invite] user already exists, looking up existing account')
-        const { data: { users }, error: listErr } = await admin.auth.admin.listUsers()
-        if (listErr) throw listErr
-        const existing = users.find(u => u.email === invite!.email)
-        if (!existing) throw new Error('User exists per createUser but not found in listUsers')
-        // Update their password to the one they just set
-        await admin.auth.admin.updateUserById(existing.id, { password })
-        userId = existing.id
-      } else {
-        throw createErr
+        return NextResponse.json(
+          { error: 'An account with this email already exists. Sign in instead.' },
+          { status: 409 }
+        )
       }
-    } else {
-      userId = created.user.id
+      console.error('[accept-invite POST] createUser failed:', createErr.message)
+      return NextResponse.json({ error: createErr.message }, { status: 400 })
     }
-  } catch (e) {
-    console.error('[accept-invite] createUser failed:', e)
-    return NextResponse.json({ error: 'Failed to create account' }, { status: 500 })
-  }
 
-  console.log('[accept-invite] userId:', userId)
+    userId = created.user.id
+    console.log('[accept-invite POST] created userId:', userId)
 
-  // ── 2b. Delete any company auto-created by a DB trigger ──────────────────
-  // Some Supabase projects have an on_auth_user_created trigger that inserts a
-  // companies row for every new user. Invited team members are NOT owners, so
-  // we remove it immediately to prevent the onboarding redirect.
-  try {
-    const { error: delErr } = await admin
-      .from('companies')
-      .delete()
-      .eq('owner_id', userId)
-    if (delErr) console.error('[accept-invite] company cleanup error (non-fatal):', delErr.message)
-    else console.log('[accept-invite] cleaned up any auto-created company for team member')
-  } catch (e) {
-    console.error('[accept-invite] company cleanup threw (non-fatal):', e)
-  }
+    // 3. Delete any ghost company a DB trigger may have auto-created
+    const { error: delErr } = await admin.from('companies').delete().eq('owner_id', userId)
+    if (delErr) console.error('[accept-invite POST] ghost company delete (non-fatal):', delErr.message)
 
-  // ── 3. Upsert team_members ────────────────────────────────────────────────
-  try {
-    const { error: memberErr } = await admin
-      .from('team_members')
-      .upsert(
-        { company_id: invite.company_id, user_id: userId, role: invite.role },
-        { onConflict: 'company_id,user_id' }
-      )
-    if (memberErr) throw memberErr
-  } catch (e) {
-    console.error('[accept-invite] team_members upsert failed:', e)
-    await admin.auth.admin.deleteUser(userId).catch(() => {})
-    return NextResponse.json({ error: 'Failed to link account — please try again' }, { status: 500 })
-  }
+    // 4. Upsert profile — links user to the inviting company with correct role
+    const { error: profileErr } = await admin.from('profiles').upsert(
+      {
+        id:                   userId,
+        company_id:           invite.company_id,
+        role:                 invite.role,
+        email:                invite.email,
+        onboarding_completed: true,
+      },
+      { onConflict: 'id' }
+    )
+    if (profileErr) console.error('[accept-invite POST] profiles upsert (non-fatal):', profileErr.message)
 
-  // ── 3b. Upsert profile row ────────────────────────────────────────────────
-  // Links the new user to the inviting company with the correct role.
-  // onboarding_completed = true so they skip the owner onboarding wizard.
-  try {
-    const { error: profileErr } = await admin
-      .from('profiles')
-      .upsert(
-        {
-          id:                   userId,
-          company_id:           invite.company_id,
-          role:                 invite.role,
-          email:                invite.email,
-          onboarding_completed: true,
-        },
-        { onConflict: 'id' }
-      )
-    if (profileErr) console.error('[accept-invite] profiles upsert error (non-fatal):', profileErr.message)
-    else console.log('[accept-invite] profile upserted for userId:', userId)
-  } catch (e) {
-    console.error('[accept-invite] profiles upsert threw (non-fatal):', e)
-  }
+    // 5. Upsert team_members
+    const { error: memberErr } = await admin.from('team_members').upsert(
+      { user_id: userId, company_id: invite.company_id, role: invite.role },
+      { onConflict: 'company_id,user_id' }
+    )
+    if (memberErr) console.error('[accept-invite POST] team_members upsert (non-fatal):', memberErr.message)
 
-  // ── 4. Link driver row if applicable ─────────────────────────────────────
-  if (invite.role === 'driver') {
-    try {
+    // 6. Link driver row if applicable
+    if (invite.role === 'driver') {
       const { data: driverRow } = await admin
         .from('drivers')
         .select('id')
@@ -165,21 +168,18 @@ export async function POST(request: Request) {
       if (driverRow) {
         await admin.from('drivers').update({ auth_user_id: userId }).eq('id', driverRow.id)
       }
-    } catch (e) {
-      console.error('[accept-invite] driver link failed (non-fatal):', e)
     }
-  }
 
-  // ── 5. Mark invite accepted ───────────────────────────────────────────────
-  try {
+    // 7. Mark invitation accepted
     await admin
       .from('invitations')
       .update({ accepted_at: new Date().toISOString() })
       .eq('token', token)
-  } catch (e) {
-    console.error('[accept-invite] failed to mark invite accepted (non-fatal):', e)
-  }
 
-  console.log('[accept-invite] success for:', invite.email)
-  return NextResponse.json({ ok: true, role: invite.role, email: invite.email })
+    console.log('[accept-invite POST] success for:', invite.email)
+    return NextResponse.json({ success: true, email: invite.email, role: invite.role })
+  } catch (e) {
+    console.error('[accept-invite POST] unhandled error:', e)
+    return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 })
+  }
 }
