@@ -149,12 +149,15 @@ export async function POST(request: Request) {
     )
     if (profileErr) console.error('[accept-invite POST] profiles upsert (non-fatal):', profileErr.message)
 
-    // 5. Upsert team_members
+    // 5. Upsert team_members — this is the critical link; fail hard if it breaks
     const { error: memberErr } = await admin.from('team_members').upsert(
       { user_id: userId, company_id: invite.company_id, role: invite.role },
       { onConflict: 'company_id,user_id' }
     )
-    if (memberErr) console.error('[accept-invite POST] team_members upsert (non-fatal):', memberErr.message)
+    if (memberErr) {
+      console.error('[accept-invite POST] team_members upsert FAILED:', memberErr.message)
+      return NextResponse.json({ error: 'Failed to link account to company. Please contact support.' }, { status: 500 })
+    }
 
     // 6. Link driver row if applicable
     if (invite.role === 'driver') {
