@@ -17,39 +17,41 @@ export async function getCompanyId(): Promise<string | null> {
     return null
   }
 
-  // Look up existing company
-  const { data: existing, error: fetchError } = await supabase
+  // Check if user owns a company
+  const { data: owned, error: ownedError } = await supabase
     .from('companies')
     .select('id')
     .eq('owner_id', user.id)
     .limit(1)
     .maybeSingle()
 
-  if (fetchError) {
-    console.error('[getCompanyId] fetch error:', fetchError.message, '| user:', user.id)
+  if (ownedError) {
+    console.error('[getCompanyId] owned lookup error:', ownedError.message)
   }
 
-  if (existing?.id) {
-    cached = existing.id
+  if (owned?.id) {
+    cached = owned.id
     return cached
   }
 
-  // No company found — create one automatically
-  console.warn('[getCompanyId] no company for user', user.id, '— creating one now')
-  const name = user.user_metadata?.company_name ?? user.email ?? 'My Company'
-  const { data: created, error: createError } = await supabase
-    .from('companies')
-    .insert({ owner_id: user.id, name })
-    .select('id')
+  // Fallback: invited team members look up their company via team_members
+  const { data: memberRow, error: memberError } = await supabase
+    .from('team_members')
+    .select('company_id')
+    .eq('user_id', user.id)
     .maybeSingle()
 
-  if (createError) {
-    console.error('[getCompanyId] create error:', createError.message)
-    return null
+  if (memberError) {
+    console.error('[getCompanyId] team_members lookup error:', memberError.message)
   }
 
-  cached = created?.id ?? null
-  return cached
+  if (memberRow?.company_id) {
+    cached = memberRow.company_id
+    return cached
+  }
+
+  console.warn('[getCompanyId] no company found for user', user.id)
+  return null
 }
 
 export function clearCompanyIdCache() {
