@@ -10,22 +10,45 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: co } = await supabase
-    .from('companies')
-    .select('name, logo_url, primary_color, accent_color, onboarding_completed, trial_ends_at, subscription_status, plan')
-    .eq('owner_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(1)
+  // Check if this user is a team member (invited, not an owner)
+  const { data: memberRow } = await supabase
+    .from('team_members')
+    .select('company_id')
+    .eq('user_id', user.id)
     .maybeSingle()
 
-  // Redirect incomplete onboarding
-  if (co && (co as { onboarding_completed?: boolean | null }).onboarding_completed === false) {
+  const isTeamMember = !!memberRow
+
+  let co: Record<string, unknown> | null = null
+
+  if (isTeamMember && memberRow.company_id) {
+    // Team member — load the company they were invited to
+    const { data } = await supabase
+      .from('companies')
+      .select('name, logo_url, primary_color, accent_color, onboarding_completed, trial_ends_at, subscription_status, plan')
+      .eq('id', memberRow.company_id)
+      .maybeSingle()
+    co = data as Record<string, unknown> | null
+  } else {
+    // Owner — load their own company
+    const { data } = await supabase
+      .from('companies')
+      .select('name, logo_url, primary_color, accent_color, onboarding_completed, trial_ends_at, subscription_status, plan')
+      .eq('owner_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    co = data as Record<string, unknown> | null
+  }
+
+  // Redirect incomplete onboarding — owners only, never team members
+  if (!isTeamMember && co && co.onboarding_completed === false) {
     redirect('/onboarding')
   }
 
   // Trial expiry check — only runs when trial_ends_at is set (new signups)
-  const trialEndsAt      = (co as { trial_ends_at?: string | null } | null)?.trial_ends_at ?? null
-  const subscriptionStatus = (co as { subscription_status?: string | null } | null)?.subscription_status ?? null
+  const trialEndsAt        = (co?.trial_ends_at       as string | null | undefined) ?? null
+  const subscriptionStatus = (co?.subscription_status as string | null | undefined) ?? null
 
   if (subscriptionStatus === 'expired') {
     redirect('/trial-expired')
@@ -118,15 +141,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
     }
   }
 
-  const primaryColor = (co as { primary_color?: string | null } | null)?.primary_color ?? '#1e3a2a'
-  const accentColor  = (co as { accent_color?:  string | null } | null)?.accent_color  ?? '#2d7a4f'
-  const plan         = (co as { plan?: string | null } | null)?.plan ?? null
+  const primaryColor = (co?.primary_color as string | null | undefined) ?? '#1e3a2a'
+  const accentColor  = (co?.accent_color  as string | null | undefined) ?? '#2d7a4f'
+  const plan         = (co?.plan          as string | null | undefined) ?? null
 
   return (
     <>
       <ThemeInjector primaryColor={primaryColor} accentColor={accentColor} />
       <div className="flex h-screen bg-gray-50 overflow-hidden">
-        <Sidebar user={user} logoUrl={co?.logo_url ?? null} companyName={(co as { name?: string | null } | null)?.name ?? null} />
+        <Sidebar user={user} logoUrl={(co?.logo_url as string | null | undefined) ?? null} companyName={(co?.name as string | null | undefined) ?? null} />
         <main className="flex-1 overflow-y-auto pt-14 md:pt-0 flex flex-col">
           {pastDueBanner}
           {trialBanner}

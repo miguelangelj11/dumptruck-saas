@@ -100,6 +100,21 @@ export async function POST(request: Request) {
 
   console.log('[accept-invite] userId:', userId)
 
+  // ── 2b. Delete any company auto-created by a DB trigger ──────────────────
+  // Some Supabase projects have an on_auth_user_created trigger that inserts a
+  // companies row for every new user. Invited team members are NOT owners, so
+  // we remove it immediately to prevent the onboarding redirect.
+  try {
+    const { error: delErr } = await admin
+      .from('companies')
+      .delete()
+      .eq('owner_id', userId)
+    if (delErr) console.error('[accept-invite] company cleanup error (non-fatal):', delErr.message)
+    else console.log('[accept-invite] cleaned up any auto-created company for team member')
+  } catch (e) {
+    console.error('[accept-invite] company cleanup threw (non-fatal):', e)
+  }
+
   // ── 3. Upsert team_members ────────────────────────────────────────────────
   try {
     const { error: memberErr } = await admin
