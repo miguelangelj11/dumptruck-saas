@@ -50,12 +50,11 @@ export async function GET(request: Request) {
             .from('invitations')
             .select('id, company_id, role')
             .eq('email', user.email)
-            .is('accepted_at', null)
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle()
 
-          if (invitation) {
+          if (invitation && invitation.company_id) {
             // Upsert profiles (non-fatal)
             await admin.from('profiles').upsert(
               {
