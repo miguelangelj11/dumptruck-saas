@@ -5,171 +5,170 @@ import Link from 'next/link'
 import Nav from '@/components/landing/nav'
 import Footer from '@/components/landing/footer'
 
-// ─── Data ────────────────────────────────────────────────────────────────────
+// ─── Plan data (original 3-plan structure) ───────────────────────────────────
 
-type PlanKey = 'starter' | 'pro' | 'business' | 'enterprise'
-
-const plans: {
-  key: PlanKey
-  name: string
-  monthlyPrice: string
-  annualPrice: string
-  annualNote: string
-  description: string
-  cta: string
-  ctaHref: string
-  popular: boolean
-  features: string[]
-}[] = [
+const plans = [
   {
-    key: 'starter',
-    name: 'Starter',
-    monthlyPrice: '$0',
-    annualPrice: '$0',
-    annualNote: 'Free forever',
-    description: 'Free forever to get started',
-    cta: 'Get Started',
-    ctaHref: '/signup',
+    key: 'owner',
+    name: 'Owner Operator',
+    tagline: '1–3 trucks, solo operator',
+    monthlyPrice: '$80',
+    annualPrice: '$64',
+    annualSavings: 'Save $192/year',
     popular: false,
+    ctaLabel: 'Start Free Trial',
+    ctaHref: '/signup?plan=owner_operator',
     features: [
-      'Up to 2 drivers',
-      'Basic ticket management',
-      'PDF invoice generation',
-      'Revenue dashboard',
-      '1 team member seat',
-      'Email support',
+      'Up to 3 drivers',
+      'Up to 200 tickets/month',
+      'Basic ticket management (create, edit, delete)',
+      'Ticket photo upload',
+      'Basic loads tracking',
+      'Simple client invoices',
+      'Download invoice as PDF',
+      'Basic revenue dashboard',
+      'Single user login (owner only)',
+      'Company logo on invoices',
     ],
   },
   {
-    key: 'pro',
-    name: 'Pro',
-    monthlyPrice: '$29',
-    annualPrice: '$24',
-    annualNote: 'per month, billed annually',
-    description: 'For growing owner-operators',
-    cta: 'Start Free Trial',
-    ctaHref: '/signup?plan=pro',
+    key: 'fleet',
+    name: 'Fleet',
+    tagline: '4–15 trucks, growing fleet',
+    monthlyPrice: '$150',
+    annualPrice: '$120',
+    annualSavings: 'Save $360/year',
     popular: true,
+    ctaLabel: 'Start Free Trial',
+    ctaHref: '/signup?plan=fleet',
     features: [
-      'Up to 10 drivers',
-      'Full dispatch board',
-      'Driver app access',
-      'Custom invoice branding',
-      '3 team member seats',
+      'Up to 15 drivers',
+      'Unlimited tickets',
+      'Ticket photo upload (snap paper tickets)',
+      'Full dispatch board (assign drivers to jobs)',
+      'All 3 invoice types (Client, Driver Pay, Subcontractor)',
+      'Send invoices via email',
+      'Weekly auto-invoice builder',
+      'Payment tracking (mark invoices paid/unpaid)',
+      'Outstanding balance tracker',
+      'Missing tickets alerts',
+      'Driver payment history',
       'Subcontractor management',
-      'Priority support',
-      'Send invoices by email',
-    ],
-  },
-  {
-    key: 'business',
-    name: 'Business',
-    monthlyPrice: '$79',
-    annualPrice: '$65',
-    annualNote: 'per month, billed annually',
-    description: 'For established fleet operations',
-    cta: 'Start Free Trial',
-    ctaHref: '/signup?plan=business',
-    popular: false,
-    features: [
-      'Unlimited drivers',
-      'Everything in Pro',
-      'Client portal',
-      'Online payments (Stripe)',
-      '10 team member seats',
-      'Advanced reporting',
-      'API access',
-      'Weekly auto-invoicing',
+      'Basic reporting (revenue by driver, by job)',
+      'Up to 3 team logins (owner + 2 staff)',
+      'Priority email support',
     ],
   },
   {
     key: 'enterprise',
     name: 'Enterprise',
-    monthlyPrice: 'Custom',
-    annualPrice: 'Custom',
-    annualNote: 'tailored to your operation',
-    description: 'For large fleets & multi-location operators',
-    cta: 'Contact Sales',
-    ctaHref: '/schedule-demo',
+    tagline: '15+ trucks or multiple locations',
+    monthlyPrice: '$300+',
+    annualPrice: null,
+    annualSavings: null,
     popular: false,
+    ctaLabel: 'Schedule a Demo',
+    ctaHref: '/schedule-demo',
     features: [
-      'Unlimited everything',
-      'Everything in Business',
-      'AI Assistant (chatbot)',
-      'White labeling',
-      'Custom integrations',
+      'Unlimited drivers and trucks',
+      'Unlimited team logins with role-based access',
+      'Driver mobile app (submit tickets from phone)',
+      'AI ticket photo reader (auto-fills ticket data)',
+      'Advanced reporting (aging reports, 30/60/90 day)',
+      'Revenue by contractor, truck, job with charts',
+      'Send invoices via text/SMS',
+      'Auto-follow up on overdue invoices',
+      'QuickBooks export (CSV)',
       'Dedicated account manager',
-      'Custom onboarding',
+      'Custom onboarding included',
       'Priority phone support',
+      'Custom contract available',
+      'Pilot program available',
+    ],
+  },
+] as const
+
+// ─── Comparison table ────────────────────────────────────────────────────────
+
+type V = true | false | string
+
+const table: { section: string; rows: { label: string; vals: [V, V, V] }[] }[] = [
+  {
+    section: 'Core Features',
+    rows: [
+      { label: 'Ticket management',      vals: ['Basic', 'Full', 'Full'] },
+      { label: 'Ticket photo upload',    vals: [true, true, true] },
+      { label: 'Load tracking',          vals: ['Basic', 'Full', 'Full'] },
+      { label: 'Full dispatch board',    vals: [false, true, true] },
+      { label: 'Driver mobile app',      vals: [false, false, true] },
+      { label: 'AI ticket photo reader', vals: [false, false, true] },
+    ],
+  },
+  {
+    section: 'Team & Fleet',
+    rows: [
+      { label: 'Drivers',            vals: ['Up to 3', 'Up to 15', 'Unlimited'] },
+      { label: 'Team logins',        vals: ['1 (owner)', '3', 'Unlimited'] },
+      { label: 'Role-based access',  vals: [false, false, true] },
+      { label: 'Subcontractor mgmt', vals: [false, true, true] },
+    ],
+  },
+  {
+    section: 'Invoicing',
+    rows: [
+      { label: 'Invoice types',           vals: ['Client only', 'All 3 types', 'All 3 types'] },
+      { label: 'PDF download',            vals: [true, true, true] },
+      { label: 'Send by email',           vals: [false, true, true] },
+      { label: 'Send by SMS',             vals: [false, false, true] },
+      { label: 'Weekly auto-invoice',     vals: [false, true, true] },
+      { label: 'QuickBooks export (CSV)', vals: [false, false, true] },
+    ],
+  },
+  {
+    section: 'Reporting',
+    rows: [
+      { label: 'Basic revenue dashboard',    vals: [true, true, true] },
+      { label: 'Revenue by driver / job',    vals: [false, true, true] },
+      { label: 'Advanced aging reports',     vals: [false, false, true] },
+      { label: 'Charts & contractor reports', vals: [false, false, true] },
+    ],
+  },
+  {
+    section: 'Support',
+    rows: [
+      { label: 'Support tier',             vals: ['Email', 'Priority email', 'Priority phone'] },
+      { label: 'Dedicated account manager', vals: [false, false, true] },
+      { label: 'Custom onboarding',         vals: [false, false, true] },
     ],
   },
 ]
 
-type FeatureValue = true | false | string
-
-const comparisonSections: {
-  title: string
-  rows: { label: string; values: [FeatureValue, FeatureValue, FeatureValue, FeatureValue] }[]
-}[] = [
-  {
-    title: 'Core Features',
-    rows: [
-      { label: 'Dispatching',       values: [false, true, true, true] },
-      { label: 'Ticket Management', values: ['Basic', true, true, true] },
-      { label: 'Invoice Generation', values: ['PDF only', true, true, true] },
-      { label: 'Driver App Access', values: [false, true, true, true] },
-      { label: 'Revenue Dashboard', values: [true, true, true, true] },
-    ],
-  },
-  {
-    title: 'Team & Fleet',
-    rows: [
-      { label: 'Number of drivers',     values: ['2', '10', 'Unlimited', 'Unlimited'] },
-      { label: 'Truck management',       values: [true, true, true, true] },
-      { label: 'Subcontractor management', values: [false, true, true, true] },
-      { label: 'Team member seats',     values: ['1', '3', '10', 'Unlimited'] },
-    ],
-  },
-  {
-    title: 'Invoicing & Payments',
-    rows: [
-      { label: 'PDF invoice generation',   values: [true, true, true, true] },
-      { label: 'Custom invoice branding',  values: [false, true, true, true] },
-      { label: 'Client portal',            values: [false, false, true, true] },
-      { label: 'Online payments (Stripe)', values: [false, false, true, true] },
-    ],
-  },
-  {
-    title: 'Advanced',
-    rows: [
-      { label: 'Priority support',        values: [false, true, true, true] },
-      { label: 'API access',              values: [false, false, true, true] },
-      { label: 'Custom integrations',     values: [false, false, false, true] },
-      { label: 'AI Assistant',            values: [false, false, false, true] },
-      { label: 'White labeling',          values: [false, false, false, true] },
-      { label: 'Dedicated account manager', values: [false, false, false, true] },
-    ],
-  },
-]
+// ─── FAQ ─────────────────────────────────────────────────────────────────────
 
 const faq = [
-  { q: 'Is there a free trial?', a: 'Yes — the Pro and Business plans include a 14-day free trial, no credit card required. The Starter plan is free forever.' },
+  { q: 'Is there a free trial?', a: 'Yes — Owner Operator and Fleet plans include a 14-day free trial. No credit card required. Full access from day one.' },
   { q: 'Can I change plans later?', a: 'Absolutely. Upgrade or downgrade any time. Changes take effect at the next billing cycle.' },
-  { q: 'What happens to my data if I cancel?', a: 'Your data stays in the system for 30 days after cancellation. Export everything before then.' },
-  { q: 'Is there a limit on load tickets?', a: 'Starter is limited to 100 tickets/month. Pro and above include unlimited load tickets.' },
-  { q: 'How does annual billing work?', a: 'Pay for 12 months upfront and get roughly 20% off. You can switch from monthly to annual at any time.' },
+  { q: 'What happens to my data if I cancel?', a: 'Your data stays in the system for 30 days after cancellation. You can export everything before then.' },
+  { q: 'Is there a limit on load tickets?', a: 'Owner Operator is capped at 200 tickets/month. Fleet and Enterprise include unlimited tickets.' },
+  { q: 'How does annual billing work?', a: 'Pay for 12 months upfront and save around 20%. You can switch from monthly to annual at any time from your account settings.' },
+  { q: 'Do you offer custom pricing for large fleets?', a: 'Yes. Enterprise pricing is custom and based on your fleet size, locations, and needs. Schedule a demo to get a quote.' },
 ]
 
-// ─── Cell renderer ────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function Cell({ value, isHighlighted }: { value: FeatureValue; isHighlighted: boolean }) {
-  const dim = isHighlighted ? 'rgba(255,255,255,0.35)' : '#9ca3af'
-  const bright = isHighlighted ? '#4ade80' : '#2d7a4f'
-  const text = isHighlighted ? 'rgba(255,255,255,0.9)' : '#374151'
+function Check({ highlighted }: { highlighted: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ display: 'inline-block', flexShrink: 0 }}>
+      <circle cx="8" cy="8" r="8" fill={highlighted ? 'rgba(74,222,128,0.15)' : 'rgba(45,122,79,0.15)'} />
+      <path d="M4.5 8l2.5 2.5 4.5-5" stroke={highlighted ? '#4ade80' : '#2d7a4f'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
 
-  if (value === true)  return <span style={{ color: bright, fontSize: '16px', fontWeight: 700 }}>✓</span>
-  if (value === false) return <span style={{ color: dim, fontSize: '16px' }}>—</span>
-  return <span style={{ fontSize: '13px', fontWeight: 600, color: text }}>{value}</span>
+function Cell({ v, highlighted }: { v: V; highlighted: boolean }) {
+  if (v === true)  return <Check highlighted={highlighted} />
+  if (v === false) return <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '18px', lineHeight: 1 }}>—</span>
+  return <span style={{ fontSize: '12px', fontWeight: 600, color: highlighted ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.6)' }}>{v}</span>
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -177,40 +176,63 @@ function Cell({ value, isHighlighted }: { value: FeatureValue; isHighlighted: bo
 export default function PricingPage() {
   const [annual, setAnnual] = useState(false)
 
+  const BG = '#0f1923'
+  const CARD_BG = 'rgba(255,255,255,0.04)'
+  const CARD_BORDER = '1px solid rgba(255,255,255,0.09)'
+  const HIGHLIGHT_BG = '#152a1e'
+  const HIGHLIGHT_BORDER = '2px solid #2d7a4f'
+  const GREEN = '#2d7a4f'
+  const GREEN_LIGHT = '#4ade80'
+
   return (
-    <div style={{ background: '#0f1923', minHeight: '100vh' }}>
+    <div style={{ background: BG, minHeight: '100vh', color: '#fff' }}>
       <Nav />
 
-      {/* ── Hero ── */}
-      <div style={{ paddingTop: '96px', paddingBottom: '0', textAlign: 'center', padding: '96px 24px 0' }}>
-        <p style={{ fontSize: '13px', fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '16px' }}>
+      {/* ── Hero ─────────────────────────────────────────────────────────────── */}
+      <div style={{
+        paddingTop: '80px',
+        textAlign: 'center',
+        padding: '80px 24px 0',
+        backgroundImage: 'radial-gradient(rgba(255,255,255,0.035) 1px, transparent 1px)',
+        backgroundSize: '24px 24px',
+      }}>
+        <p style={{ fontSize: '12px', fontWeight: 700, color: GREEN_LIGHT, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '14px' }}>
           Pricing
         </p>
-        <h1 style={{ fontSize: 'clamp(28px, 5vw, 48px)', fontWeight: 800, color: '#fff', marginBottom: '12px', lineHeight: 1.2 }}>
-          Choose a plan built for your hauling business.
+        <h1 style={{ fontSize: 'clamp(30px, 5vw, 52px)', fontWeight: 800, color: '#fff', marginBottom: '14px', lineHeight: 1.15, letterSpacing: '-0.02em' }}>
+          Choose a plan built for<br className="hidden-xs" /> your hauling business.
         </h1>
-        <p style={{ fontSize: '17px', color: 'rgba(255,255,255,0.5)', marginBottom: '40px' }}>
-          Or start free, and upgrade at any time.
+        <p style={{ fontSize: '17px', color: 'rgba(255,255,255,0.45)', marginBottom: '36px', lineHeight: 1.6 }}>
+          Owner Operator and Fleet plans include a free 14-day trial. No credit card required.
         </p>
 
-        {/* Toggle */}
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '100px', padding: '6px 16px' }}>
-          <span style={{ fontSize: '13px', fontWeight: 600, color: annual ? 'rgba(255,255,255,0.4)' : '#fff', transition: 'color 0.2s' }}>
+        {/* Billing toggle */}
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '12px',
+          background: 'rgba(255,255,255,0.05)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: '100px',
+          padding: '8px 18px',
+          marginBottom: '56px',
+        }}>
+          <span style={{ fontSize: '13px', fontWeight: 600, color: annual ? 'rgba(255,255,255,0.35)' : '#fff', transition: 'color 0.2s' }}>
             Monthly
           </span>
           <button
             onClick={() => setAnnual(a => !a)}
-            aria-label="Toggle billing period"
+            aria-label="Toggle annual billing"
             style={{
               position: 'relative',
               width: '44px',
               height: '24px',
               borderRadius: '100px',
               border: 'none',
-              background: annual ? '#2d7a4f' : 'rgba(255,255,255,0.2)',
+              background: annual ? GREEN : 'rgba(255,255,255,0.2)',
               cursor: 'pointer',
               transition: 'background 0.2s',
-              flexShrink: 0,
+              outline: 'none',
             }}
           >
             <span style={{
@@ -222,93 +244,91 @@ export default function PricingPage() {
               borderRadius: '50%',
               background: '#fff',
               transition: 'left 0.2s',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+              display: 'block',
             }} />
           </button>
-          <span style={{ fontSize: '13px', fontWeight: 600, color: annual ? '#fff' : 'rgba(255,255,255,0.4)', transition: 'color 0.2s' }}>
+          <span style={{ fontSize: '13px', fontWeight: 600, color: annual ? '#fff' : 'rgba(255,255,255,0.35)', transition: 'color 0.2s' }}>
             Annual
           </span>
-          <span style={{ fontSize: '11px', fontWeight: 700, background: '#2d7a4f', color: '#fff', padding: '2px 8px', borderRadius: '100px' }}>
+          <span style={{ fontSize: '11px', fontWeight: 700, background: GREEN, color: '#fff', padding: '3px 9px', borderRadius: '100px', lineHeight: 1.4 }}>
             Save ~20%
           </span>
         </div>
       </div>
 
-      {/* ── Pricing Cards ── */}
-      <div style={{ maxWidth: '1200px', margin: '48px auto 0', padding: '0 24px' }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: '16px',
-          alignItems: 'start',
-        }}
-          className="pricing-grid"
-        >
+      {/* ── Pricing cards ─────────────────────────────────────────────────────── */}
+      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 20px 0' }}>
+        <div className="plans-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', alignItems: 'stretch' }}>
           {plans.map((plan) => {
-            const price = annual ? plan.annualPrice : plan.monthlyPrice
             const isEnterprise = plan.key === 'enterprise'
-            const isHighlighted = plan.popular
+            const hl = plan.popular
+            const price = annual
+              ? (plan.annualPrice ?? 'Contact us')
+              : plan.monthlyPrice
 
             return (
               <div
                 key={plan.key}
                 style={{
                   position: 'relative',
-                  borderRadius: '16px',
-                  padding: '28px 24px',
+                  borderRadius: '18px',
+                  padding: '32px 28px',
                   display: 'flex',
                   flexDirection: 'column',
-                  background: isHighlighted ? '#1e3a2a' : 'rgba(255,255,255,0.05)',
-                  border: isHighlighted ? '2px solid #2d7a4f' : '1px solid rgba(255,255,255,0.1)',
-                  boxShadow: isHighlighted ? '0 0 40px rgba(45,122,79,0.2)' : 'none',
+                  background: hl ? HIGHLIGHT_BG : CARD_BG,
+                  border: hl ? HIGHLIGHT_BORDER : CARD_BORDER,
+                  boxShadow: hl ? '0 0 48px rgba(45,122,79,0.18)' : 'none',
+                  marginTop: hl ? '-8px' : '0',
                 }}
               >
                 {/* Popular badge */}
-                {plan.popular && (
+                {hl && (
                   <div style={{
                     position: 'absolute',
                     top: '-13px',
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    background: '#2d7a4f',
+                    background: GREEN,
                     color: '#fff',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    padding: '3px 12px',
+                    fontSize: '10px',
+                    fontWeight: 800,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    padding: '4px 14px',
                     borderRadius: '100px',
                     whiteSpace: 'nowrap',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
                   }}>
                     Most Popular
                   </div>
                 )}
 
                 {/* Plan name */}
-                <p style={{ fontSize: '13px', fontWeight: 700, color: isHighlighted ? '#4ade80' : 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px' }}>
+                <p style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: hl ? GREEN_LIGHT : 'rgba(255,255,255,0.4)', marginBottom: '10px' }}>
                   {plan.name}
                 </p>
 
-                {/* Price */}
-                <div style={{ marginBottom: '6px' }}>
-                  {isEnterprise ? (
-                    <span style={{ fontSize: '32px', fontWeight: 800, color: '#fff' }}>Custom</span>
-                  ) : (
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                      <span style={{ fontSize: '40px', fontWeight: 800, color: '#fff', lineHeight: 1 }}>{price}</span>
-                      {price !== '$0' && <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.4)' }}>/mo</span>}
-                    </div>
-                  )}
-                </div>
+                {/* Price block */}
+                {isEnterprise && annual ? (
+                  <div style={{ marginBottom: '6px' }}>
+                    <span style={{ fontSize: '34px', fontWeight: 800, color: '#fff', lineHeight: 1 }}>Contact us</span>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '6px' }}>
+                    <span style={{ fontSize: '44px', fontWeight: 800, color: '#fff', lineHeight: 1 }}>{price}</span>
+                    {!isEnterprise && <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.35)' }}>/mo</span>}
+                    {isEnterprise && <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.35)' }}>/mo</span>}
+                  </div>
+                )}
 
-                {/* Annual note */}
-                <p style={{ fontSize: '12px', color: isHighlighted ? '#4ade80' : 'rgba(255,255,255,0.35)', marginBottom: '8px', minHeight: '16px' }}>
-                  {annual && !isEnterprise && plan.key !== 'starter' ? plan.annualNote : isEnterprise ? plan.annualNote : ''}
+                {/* Annual savings note */}
+                <p style={{ fontSize: '12px', color: hl ? GREEN_LIGHT : 'rgba(255,255,255,0.35)', marginBottom: '6px', minHeight: '18px' }}>
+                  {annual && plan.annualSavings ? `${plan.annualSavings} · billed annually` : ''}
                 </p>
 
-                {/* Description */}
-                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.5, marginBottom: '24px' }}>
-                  {plan.description}
+                {/* Tagline */}
+                <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.5, marginBottom: '24px' }}>
+                  {plan.tagline}
                 </p>
 
                 {/* CTA */}
@@ -317,110 +337,121 @@ export default function PricingPage() {
                   style={{
                     display: 'block',
                     textAlign: 'center',
-                    padding: '11px 16px',
+                    padding: '12px 16px',
                     borderRadius: '10px',
                     fontSize: '14px',
                     fontWeight: 700,
                     textDecoration: 'none',
-                    marginBottom: '24px',
+                    marginBottom: '28px',
                     transition: 'opacity 0.15s',
-                    background: isHighlighted ? '#2d7a4f' : isEnterprise ? 'transparent' : 'rgba(255,255,255,0.1)',
-                    color: '#fff',
-                    border: isEnterprise ? '1px solid rgba(255,255,255,0.25)' : 'none',
+                    ...(hl
+                      ? { background: GREEN, color: '#fff' }
+                      : isEnterprise
+                      ? { background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }
+                      : { background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.12)' }
+                    ),
                   }}
                 >
-                  {plan.cta}
+                  {plan.ctaLabel} →
                 </Link>
 
+                {/* Divider */}
+                <div style={{ height: '1px', background: hl ? 'rgba(45,122,79,0.3)' : 'rgba(255,255,255,0.07)', marginBottom: '24px' }} />
+
                 {/* Feature list */}
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: '11px' }}>
                   {plan.features.map((f) => (
-                    <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                      <span style={{ color: isHighlighted ? '#4ade80' : '#2d7a4f', fontWeight: 700, fontSize: '14px', flexShrink: 0, marginTop: '1px' }}>✓</span>
-                      <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.4 }}>{f}</span>
+                    <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                      <span style={{ color: hl ? GREEN_LIGHT : GREEN, fontSize: '14px', fontWeight: 700, flexShrink: 0, marginTop: '1px', lineHeight: 1.4 }}>✓</span>
+                      <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>{f}</span>
                     </li>
                   ))}
                 </ul>
+
+                {/* Trust bullets (trial plans) */}
+                {!isEnterprise && (
+                  <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: hl ? '1px solid rgba(45,122,79,0.3)' : '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {['14-day free trial', 'No credit card required', 'Cancel anytime'].map((t) => (
+                      <div key={t} style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: 'rgba(255,255,255,0.35)' }}>
+                        <span style={{ color: hl ? GREEN_LIGHT : GREEN, fontWeight: 700 }}>✓</span>
+                        {t}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {isEnterprise && (
+                  <p style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.07)', fontSize: '12px', color: 'rgba(255,255,255,0.35)', lineHeight: 1.6 }}>
+                    Custom pricing based on fleet size. Talk to us before you commit — we'll walk you through everything.
+                  </p>
+                )}
               </div>
             )
           })}
         </div>
       </div>
 
-      {/* ── Comparison Table ── */}
-      <div style={{ maxWidth: '1200px', margin: '80px auto 0', padding: '0 24px' }}>
-        <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', marginBottom: '8px', textAlign: 'center' }}>
+      {/* ── Compare all features ──────────────────────────────────────────────── */}
+      <div style={{ maxWidth: '1100px', margin: '88px auto 0', padding: '0 20px' }}>
+        <h2 style={{ fontSize: 'clamp(22px, 3vw, 32px)', fontWeight: 800, color: '#fff', textAlign: 'center', marginBottom: '8px', letterSpacing: '-0.01em' }}>
           Compare all features
         </h2>
         <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginBottom: '40px' }}>
           See exactly what's included in each plan.
         </p>
 
-        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <table style={{ width: '100%', minWidth: '640px', borderCollapse: 'collapse' }}>
-            {/* Column headers */}
+        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <table style={{ width: '100%', minWidth: '580px', borderCollapse: 'collapse' }}>
             <thead>
-              <tr>
-                <th style={{ width: '36%', padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.07em', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
+                <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', width: '40%', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                   Feature
                 </th>
-                {plans.map((plan) => (
-                  <th key={plan.key} style={{
-                    width: '16%',
-                    padding: '12px 8px',
+                {plans.map((p) => (
+                  <th key={p.key} style={{
+                    padding: '14px 12px',
                     textAlign: 'center',
                     fontSize: '13px',
                     fontWeight: 700,
-                    color: plan.popular ? '#4ade80' : '#fff',
+                    color: p.popular ? GREEN_LIGHT : '#fff',
                     borderBottom: '1px solid rgba(255,255,255,0.08)',
-                    background: plan.popular ? 'rgba(45,122,79,0.1)' : 'transparent',
+                    background: p.popular ? 'rgba(45,122,79,0.08)' : 'transparent',
+                    width: '20%',
                   }}>
-                    {plan.name}
+                    {p.name}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {comparisonSections.map((section, si) => (
+              {table.map((section, si) => (
                 <>
-                  {/* Section header row */}
-                  <tr key={`section-${si}`}>
-                    <td
-                      colSpan={5}
-                      style={{
-                        padding: '20px 16px 8px',
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        color: 'rgba(255,255,255,0.35)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.1em',
-                        borderBottom: '1px solid rgba(255,255,255,0.06)',
-                      }}
-                    >
-                      {section.title}
+                  <tr key={`s${si}`}>
+                    <td colSpan={4} style={{
+                      padding: '18px 20px 8px',
+                      fontSize: '10px',
+                      fontWeight: 800,
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      color: 'rgba(255,255,255,0.25)',
+                      borderTop: si > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                    }}>
+                      {section.section}
                     </td>
                   </tr>
-
-                  {/* Feature rows */}
                   {section.rows.map((row, ri) => (
-                    <tr
-                      key={`${si}-${ri}`}
-                      style={{ background: ri % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent' }}
-                    >
-                      <td style={{ padding: '13px 16px', fontSize: '13px', color: 'rgba(255,255,255,0.7)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <tr key={`${si}-${ri}`} style={{ background: ri % 2 === 0 ? 'rgba(255,255,255,0.015)' : 'transparent' }}>
+                      <td style={{ padding: '12px 20px', fontSize: '13px', color: 'rgba(255,255,255,0.65)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                         {row.label}
                       </td>
-                      {row.values.map((val, vi) => (
-                        <td
-                          key={vi}
-                          style={{
-                            padding: '13px 8px',
-                            textAlign: 'center',
-                            borderBottom: '1px solid rgba(255,255,255,0.04)',
-                            background: plans[vi]?.popular ? 'rgba(45,122,79,0.06)' : 'transparent',
-                          }}
-                        >
-                          <Cell value={val} isHighlighted={!!plans[vi]?.popular} />
+                      {row.vals.map((v, vi) => (
+                        <td key={vi} style={{
+                          padding: '12px 12px',
+                          textAlign: 'center',
+                          borderBottom: '1px solid rgba(255,255,255,0.04)',
+                          background: plans[vi]?.popular ? 'rgba(45,122,79,0.05)' : 'transparent',
+                        }}>
+                          <Cell v={v} highlighted={!!plans[vi]?.popular} />
                         </td>
                       ))}
                     </tr>
@@ -432,67 +463,67 @@ export default function PricingPage() {
         </div>
       </div>
 
-      {/* ── FAQ ── */}
-      <div style={{ maxWidth: '720px', margin: '80px auto 0', padding: '0 24px' }}>
-        <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', marginBottom: '32px', textAlign: 'center' }}>
+      {/* ── FAQ ──────────────────────────────────────────────────────────────── */}
+      <div style={{ maxWidth: '720px', margin: '88px auto 0', padding: '0 20px' }}>
+        <h2 style={{ fontSize: 'clamp(22px, 3vw, 32px)', fontWeight: 800, color: '#fff', textAlign: 'center', marginBottom: '40px', letterSpacing: '-0.01em' }}>
           Frequently asked questions
         </h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-          {faq.map((item) => (
-            <div
-              key={item.q}
-              style={{ padding: '20px 0', borderBottom: '1px solid rgba(255,255,255,0.08)' }}
-            >
-              <p style={{ fontSize: '15px', fontWeight: 600, color: '#fff', marginBottom: '8px' }}>{item.q}</p>
-              <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.6 }}>{item.a}</p>
-            </div>
-          ))}
-        </div>
+        {faq.map((item, i) => (
+          <div key={i} style={{ padding: '22px 0', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+            <p style={{ fontSize: '15px', fontWeight: 700, color: '#fff', marginBottom: '8px' }}>{item.q}</p>
+            <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.7 }}>{item.a}</p>
+          </div>
+        ))}
       </div>
 
-      {/* ── Bottom CTA ── */}
-      <div style={{ maxWidth: '1200px', margin: '80px auto 0', padding: '0 24px 80px' }}>
+      {/* ── Bottom CTA ───────────────────────────────────────────────────────── */}
+      <div style={{ maxWidth: '1100px', margin: '88px auto 0', padding: '0 20px 88px' }}>
         <div style={{
-          background: '#1e3a2a',
-          border: '1px solid rgba(45,122,79,0.4)',
+          background: 'linear-gradient(135deg, #152a1e 0%, #0f1923 100%)',
+          border: '1px solid rgba(45,122,79,0.35)',
           borderRadius: '20px',
-          padding: '64px 32px',
+          padding: 'clamp(48px, 8vw, 80px) 32px',
           textAlign: 'center',
         }}>
-          <h2 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 800, color: '#fff', marginBottom: '12px', lineHeight: 1.25 }}>
+          <p style={{ fontSize: '12px', fontWeight: 700, color: GREEN_LIGHT, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '14px' }}>
+            Get started today
+          </p>
+          <h2 style={{ fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 800, color: '#fff', marginBottom: '14px', lineHeight: 1.2, letterSpacing: '-0.02em' }}>
             Ready to run your business like a boss?
           </h2>
-          <p style={{ fontSize: '16px', color: 'rgba(255,255,255,0.5)', marginBottom: '32px' }}>
-            14-day free trial. No credit card required. Cancel anytime.
+          <p style={{ fontSize: '16px', color: 'rgba(255,255,255,0.45)', marginBottom: '36px', maxWidth: '480px', margin: '0 auto 36px' }}>
+            14-day free trial. No credit card required. Set up in 10 minutes.
           </p>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link
               href="/signup"
               style={{
                 display: 'inline-block',
-                padding: '14px 32px',
+                padding: '14px 36px',
                 borderRadius: '12px',
-                background: '#2d7a4f',
+                background: GREEN,
                 color: '#fff',
                 fontSize: '15px',
                 fontWeight: 700,
                 textDecoration: 'none',
+                transition: 'opacity 0.15s',
               }}
             >
-              Start Free Trial
+              Start Free Trial →
             </Link>
             <Link
               href="/schedule-demo"
               style={{
                 display: 'inline-block',
-                padding: '14px 32px',
+                padding: '14px 36px',
                 borderRadius: '12px',
                 background: 'transparent',
-                color: '#fff',
+                color: 'rgba(255,255,255,0.8)',
                 fontSize: '15px',
                 fontWeight: 600,
                 textDecoration: 'none',
-                border: '1px solid rgba(255,255,255,0.2)',
+                border: '1px solid rgba(255,255,255,0.18)',
+                transition: 'border-color 0.15s',
               }}
             >
               Schedule a Demo
@@ -501,17 +532,11 @@ export default function PricingPage() {
         </div>
       </div>
 
-      {/* Mobile responsive styles */}
+      {/* Responsive grid */}
       <style>{`
-        @media (max-width: 900px) {
-          .pricing-grid {
-            grid-template-columns: repeat(2, 1fr) !important;
-          }
-        }
-        @media (max-width: 560px) {
-          .pricing-grid {
-            grid-template-columns: 1fr !important;
-          }
+        @media (max-width: 860px) {
+          .plans-grid { grid-template-columns: 1fr !important; }
+          .plans-grid > div { margin-top: 0 !important; }
         }
       `}</style>
 
