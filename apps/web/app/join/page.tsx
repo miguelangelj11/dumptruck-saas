@@ -4,10 +4,16 @@ import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Suspense } from 'react'
 
+type Invite = {
+  email: string
+  role: string
+  companies: { name: string } | null
+}
+
 function JoinForm() {
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
-  const [invite, setInvite] = useState(null)
+  const [invite, setInvite] = useState<Invite | null>(null)
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
