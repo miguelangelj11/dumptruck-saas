@@ -19,11 +19,12 @@ export async function GET(request: Request) {
 
   const { data, error } = await admin
     .from('invitations')
-    .select('email, role, expires_at, accepted_at, companies(name)')
+    .select('email, role, expires_at, accepted_at, company_id')
     .eq('token', token)
     .maybeSingle()
 
   if (error || !data) {
+    console.error('[invite/details] lookup error:', error?.message ?? 'no row found for token')
     return NextResponse.json({ valid: false, reason: 'invalid' })
   }
   if (data.accepted_at) {
@@ -33,10 +34,16 @@ export async function GET(request: Request) {
     return NextResponse.json({ valid: false, reason: 'expired' })
   }
 
+  const { data: company } = await admin
+    .from('companies')
+    .select('name')
+    .eq('id', data.company_id)
+    .maybeSingle()
+
   return NextResponse.json({
     valid:       true,
     email:       data.email,
     role:        data.role,
-    companyName: (data.companies as unknown as { name: string } | null)?.name ?? 'your team',
+    companyName: company?.name ?? 'your team',
   })
 }

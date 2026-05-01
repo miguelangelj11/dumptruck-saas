@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       email:      email.trim(),
       role:       role.toLowerCase(),
       invited_by: user.id,
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
     })
     .select('token')
     .single()
