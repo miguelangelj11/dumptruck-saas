@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 import Sidebar from '@/components/dashboard/sidebar'
 import ThemeInjector from '@/components/theme-injector'
 import ChatWidget from '@/components/chat-widget'
@@ -22,13 +23,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
   let co: Record<string, unknown> | null = null
 
   if (isTeamMember && memberRow.company_id) {
-    // Team member — load the company they were invited to
-    const { data } = await supabase
-      .from('companies')
-      .select('name, logo_url, primary_color, accent_color, onboarding_completed, trial_ends_at, subscription_status, plan')
-      .eq('id', memberRow.company_id)
-      .maybeSingle()
-    co = data as Record<string, unknown> | null
+    // Team member — use admin client to bypass RLS and load the inviting company
+    const adminUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const adminKey = process.env.SUPABASE_SERVICE_KEY
+    if (adminUrl && adminKey) {
+      const admin = createAdminClient(adminUrl, adminKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      })
+      const { data } = await admin
+        .from('companies')
+        .select('name, logo_url, primary_color, accent_color, onboarding_completed, trial_ends_at, subscription_status, plan')
+        .eq('id', memberRow.company_id)
+        .maybeSingle()
+      co = data as Record<string, unknown> | null
+    }
   } else {
     // Owner — load their own company
     const { data } = await supabase
