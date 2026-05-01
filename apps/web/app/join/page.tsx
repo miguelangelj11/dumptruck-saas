@@ -50,29 +50,35 @@ function JoinForm() {
   async function handleJoin() {
     setJoining(true)
     setError('')
-    const res = await fetch('/api/team/accept-invite', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, password })
-    })
-    const data = await res.json()
-    if (!res.ok || data.error) {
-      setError(data.error ?? 'Something went wrong. Please try again.')
+    try {
+      const res = await fetch('/api/team/accept-invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, password })
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) {
+        setError(data.error ?? 'Something went wrong. Please try again.')
+        setJoining(false)
+        return
+      }
+      // Account created server-side — sign in client-side to get the session cookie
+      const supabase = createClient()
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password,
+      })
+      if (signInErr) {
+        setError('Account created but sign-in failed. Try signing in on the login page.')
+        setJoining(false)
+        return
+      }
+      window.location.href = data.role === 'driver' ? '/driver' : '/dashboard'
+    } catch (e) {
+      console.error('handleJoin error:', e)
+      setError('Something went wrong. Please try again.')
       setJoining(false)
-      return
     }
-    // Account created server-side — sign in client-side to get the session cookie
-    const supabase = createClient()
-    const { error: signInErr } = await supabase.auth.signInWithPassword({
-      email: data.email,
-      password,
-    })
-    if (signInErr) {
-      setError('Account created but sign-in failed. Try signing in on the login page.')
-      setJoining(false)
-      return
-    }
-    window.location.href = data.role === 'driver' ? '/driver' : '/dashboard'
   }
 
   if (loading) return <div className="flex items-center justify-center min-h-screen"><p>Loading...</p></div>
