@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 import type { EmailOtpType } from '@supabase/supabase-js'
 
 export async function GET(request: Request) {
@@ -52,7 +53,45 @@ export async function GET(request: Request) {
           }
         }
 
-        // Skip company creation for invited team members
+        // ── Check for pending/accepted invitation by email ────────────────
+        // Invited users may hit this callback before or after accept-invite runs.
+        // Either way, the invitation record always exists first — use it to
+        // link the user to the right company and skip creating a new one.
+        if (user.email) {
+          const { data: invitation } = await supabase
+            .from('invitations')
+            .select('company_id, role, accepted_at')
+            .eq('email', user.email)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+          if (invitation) {
+            // Use service role to write team_members (RLS blocks regular client)
+            const adminUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+            const adminKey = process.env.SUPABASE_SERVICE_KEY
+            if (adminUrl && adminKey) {
+              const admin = createAdminClient(adminUrl, adminKey, {
+                auth: { autoRefreshToken: false, persistSession: false },
+              })
+              await admin.from('team_members').upsert(
+                { company_id: invitation.company_id, user_id: user.id, role: invitation.role },
+                { onConflict: 'company_id,user_id' }
+              )
+              if (!invitation.accepted_at) {
+                await admin.from('invitations')
+                  .update({ accepted_at: new Date().toISOString() })
+                  .eq('email', user.email)
+                  .is('accepted_at', null)
+              }
+              // Delete any ghost company a DB trigger may have created
+              await admin.from('companies').delete().eq('owner_id', user.id)
+            }
+            return NextResponse.redirect(`${origin}/dashboard`)
+          }
+        }
+
+        // ── Also check team_members directly (belt-and-suspenders) ───────
         const { data: memberRow } = await supabase
           .from('team_members')
           .select('company_id')
