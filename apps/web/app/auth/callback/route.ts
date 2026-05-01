@@ -115,6 +115,15 @@ export async function GET(request: Request) {
 
         // Owner flow — ensure company row exists
         if (user) {
+          // Final guard: never create a company for an invited user
+          const { data: anyInvite } = await supabase
+            .from('invitations')
+            .select('id')
+            .eq('email', user.email!)
+            .limit(1)
+            .maybeSingle()
+          if (anyInvite) return NextResponse.redirect(`${origin}/dashboard`)
+
           const { data: existing } = await supabase
             .from('companies')
             .select('id')
@@ -122,7 +131,7 @@ export async function GET(request: Request) {
             .limit(1)
 
           if (!existing?.[0]) {
-            const name = user.user_metadata?.company_name ?? user.email ?? 'My Company'
+            const name = user.user_metadata?.company_name ?? user.email ?? ''
             const plan = user.user_metadata?.plan ?? 'owner_operator'
             const now  = new Date()
             const trialEndsAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)

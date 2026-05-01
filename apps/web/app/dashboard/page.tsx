@@ -21,6 +21,15 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   const uid = user?.id ?? ''
 
+  // For team members, company_id on data rows = the owner's user id (= companies.id).
+  // Look it up via team_members so all queries use the correct id.
+  const { data: memberRow } = await supabase
+    .from('team_members')
+    .select('company_id')
+    .eq('user_id', uid)
+    .maybeSingle()
+  const effectiveCompanyId = memberRow?.company_id ?? uid
+
   // ── Date helpers ──────────────────────────────────────────────────────────
   const now = new Date()
   const todayStr = now.toISOString().split('T')[0]!
@@ -46,16 +55,16 @@ export default async function DashboardPage() {
 
   // ── Batch 1: core data ────────────────────────────────────────────────────
   const [loadsRes, invoicesRes, companyRes, activityRes] = await Promise.all([
-    supabase.from('loads').select('id, rate, status, driver_name, job_name, date, created_at').eq('company_id', uid).gte('date', sixMonthsAgoStr).order('created_at', { ascending: false }),
-    supabase.from('invoices').select('id, status, total, created_at').eq('company_id', uid),
-    supabase.from('companies').select('id, name, address, phone, email, logo_url, primary_color, onboarding_completed').eq('owner_id', uid).maybeSingle(),
-    supabase.from('activity_feed').select('id, type, message, created_at').eq('company_id', uid).order('created_at', { ascending: false }).limit(8),
+    supabase.from('loads').select('id, rate, status, driver_name, job_name, date, created_at').eq('company_id', effectiveCompanyId).gte('date', sixMonthsAgoStr).order('created_at', { ascending: false }),
+    supabase.from('invoices').select('id, status, total, created_at').eq('company_id', effectiveCompanyId),
+    supabase.from('companies').select('id, name, address, phone, email, logo_url, primary_color, onboarding_completed').eq('id', effectiveCompanyId).maybeSingle(),
+    supabase.from('activity_feed').select('id, type, message, created_at').eq('company_id', effectiveCompanyId).order('created_at', { ascending: false }).limit(8),
   ])
 
   const loads    = loadsRes.data    ?? []
   const invoices = invoicesRes.data ?? []
   const companyId    = companyRes.data?.id
-  const companyName  = companyRes.data?.name ?? user?.user_metadata?.company_name ?? 'Your Company'
+  const companyName  = companyRes.data?.name ?? ''
   const activityFeed = activityRes.error ? [] : (activityRes.data ?? [])
 
   // ── Setup completion banner ───────────────────────────────────────────────

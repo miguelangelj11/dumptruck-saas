@@ -275,23 +275,24 @@ export default function InvoicesPage() {
     setUserEmail(user.email ?? '')
 
     const [range0, range1] = pageRange(0)
+    const companyIdForQuery = await getCompanyId()
+    const effectiveId = companyIdForQuery ?? user.id
     // Load company info from companies table (source of truth)
     const [invRes, coRes] = await Promise.all([
-      supabase.from('invoices').select('*', { count: 'exact' }).eq('company_id', user.id).order('created_at', { ascending: false }).range(range0, range1),
-      supabase.from('companies').select('name, address, phone, logo_url').eq('owner_id', user.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+      supabase.from('invoices').select('*', { count: 'exact' }).eq('company_id', effectiveId).order('created_at', { ascending: false }).range(range0, range1),
+      supabase.from('companies').select('name, address, phone, logo_url').eq('id', effectiveId).maybeSingle(),
     ])
 
     if (invRes.error) toast.error('Failed to load invoices: ' + invRes.error.message)
 
-    setCompanyName(coRes.data?.name ?? user.user_metadata?.company_name ?? '')
+    setCompanyName(coRes.data?.name ?? '')
     setCompanyAddress((coRes.data as { address?: string | null } | null)?.address ?? '')
     setUserPhone((coRes.data as { phone?: string | null } | null)?.phone ?? user.user_metadata?.phone ?? '')
     setCompanyLogoUrl((coRes.data as { logo_url?: string | null } | null)?.logo_url ?? null)
 
-    // Load received invoices (uses companies.id — needs getCompanyId)
-    const companyId = await getCompanyId()
-    if (companyId) {
-      const { data: recvData } = await supabase.from('received_invoices').select('*').eq('company_id', companyId).order('created_at', { ascending: false })
+    // Load received invoices
+    if (companyIdForQuery) {
+      const { data: recvData } = await supabase.from('received_invoices').select('*').eq('company_id', companyIdForQuery).order('created_at', { ascending: false })
       setReceivedInvoices(recvData ?? [])
     }
 

@@ -227,7 +227,7 @@ export default function SettingsPage() {
       setUserId(user.id)
       setEmail(user.email ?? '')
 
-      const { data: co, error } = await supabase
+      let { data: co, error } = await supabase
         .from('companies')
         .select('id, name, address, phone, logo_url, primary_color, accent_color')
         .eq('owner_id', user.id)
@@ -236,6 +236,23 @@ export default function SettingsPage() {
         .maybeSingle()
 
       if (error) console.error('[settings] company fetch:', error.message)
+
+      // Team member fallback — look up company via team_members
+      if (!co) {
+        const { data: mem } = await supabase
+          .from('team_members')
+          .select('company_id')
+          .eq('user_id', user.id)
+          .maybeSingle()
+        if (mem?.company_id) {
+          const { data: teamCo } = await supabase
+            .from('companies')
+            .select('id, name, address, phone, logo_url, primary_color, accent_color')
+            .eq('id', mem.company_id)
+            .maybeSingle()
+          co = teamCo
+        }
+      }
 
       if (co) {
         const c = co as CompanyRow
@@ -294,7 +311,6 @@ export default function SettingsPage() {
 
         fetchTrucks(c.id)
       } else {
-        setCompanyName(user.user_metadata?.company_name ?? '')
         setNotifEmail(user.email ?? '')
       }
 

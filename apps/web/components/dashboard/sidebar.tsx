@@ -47,7 +47,7 @@ export default function Sidebar({ user, logoUrl, companyName: companyNameProp }:
     { href: '/dashboard/settings', icon: Settings, label: t('settings') },
   ]
 
-  const companyName = companyNameProp ?? user.user_metadata?.company_name ?? 'My Company'
+  const companyName = companyNameProp ?? ''
 
   async function handleLogout() {
     setLoggingOut(true)
