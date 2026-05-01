@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient } from '@supabase/supabase-js'
 
 export async function POST(request: Request) {
@@ -84,17 +83,5 @@ export async function POST(request: Request) {
     .update({ accepted_at: new Date().toISOString() })
     .eq('token', token)
 
-  // Sign in via SSR client so the browser gets a session cookie
-  const supabase = await createServerClient()
-  const { error: signInErr } = await supabase.auth.signInWithPassword({
-    email: invite.email,
-    password,
-  })
-
-  if (signInErr) {
-    // Account was created — tell the client to sign in manually
-    return NextResponse.json({ ok: true, needsSignIn: true, email: invite.email })
-  }
-
-  return NextResponse.json({ ok: true, role: invite.role })
+  return NextResponse.json({ ok: true, role: invite.role, email: invite.email })
 }

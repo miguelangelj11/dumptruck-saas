@@ -7,6 +7,7 @@ import { Suspense } from 'react'
 type Invite = {
   email: string
   role: string
+  company_id: string
   companies: { name: string } | null
 }
 
@@ -30,7 +31,7 @@ function JoinForm() {
       const supabase = createClient()
       const { data, error } = await supabase
         .from('invitations')
-        .select('*, companies(name)')
+        .select('email, role, company_id, companies:company_id(name)')
         .eq('token', token)
         .is('accepted_at', null)
         .single()
@@ -48,18 +49,30 @@ function JoinForm() {
 
   async function handleJoin() {
     setJoining(true)
+    setError('')
     const res = await fetch('/api/team/accept-invite', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token, password })
     })
     const data = await res.json()
-    if (data.error) {
-      setError(data.error)
+    if (!res.ok || data.error) {
+      setError(data.error ?? 'Something went wrong. Please try again.')
       setJoining(false)
       return
     }
-    window.location.href = '/dashboard'
+    // Account created server-side — sign in client-side to get the session cookie
+    const supabase = createClient()
+    const { error: signInErr } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password,
+    })
+    if (signInErr) {
+      setError('Account created but sign-in failed. Try signing in on the login page.')
+      setJoining(false)
+      return
+    }
+    window.location.href = data.role === 'driver' ? '/driver' : '/dashboard'
   }
 
   if (loading) return <div className="flex items-center justify-center min-h-screen"><p>Loading...</p></div>
@@ -87,7 +100,7 @@ function JoinForm() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-950">
       <div className="bg-white rounded-xl p-8 max-w-md w-full">
-        <h1 className="text-2xl font-bold mb-1">Join {invite?.companies?.name}</h1>
+        <h1 className="text-2xl font-bold mb-1">Join {invite?.companies?.name ?? 'your team'}</h1>
         <p className="text-gray-500 mb-6">You've been invited as {invite?.role}</p>
         <p className="text-sm text-gray-600 mb-4">{invite?.email}</p>
         <input
@@ -97,12 +110,15 @@ function JoinForm() {
           onChange={e => setPassword(e.target.value)}
           className="w-full border rounded-lg px-4 py-3 mb-4"
         />
+        {error && error !== 'no_token' && error !== 'invalid' && (
+          <p className="text-red-600 text-sm mb-2">{error}</p>
+        )}
         <button
           onClick={handleJoin}
           disabled={joining || password.length < 6}
           className="w-full bg-green-600 text-white rounded-lg py-3 font-semibold disabled:opacity-50"
         >
-          {joining ? 'Joining...' : `Join ${invite?.companies?.name}`}
+          {joining ? 'Joining...' : `Join ${invite?.companies?.name ?? 'your team'}`}
         </button>
       </div>
     </div>
