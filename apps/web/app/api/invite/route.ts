@@ -63,26 +63,8 @@ export async function POST(request: Request) {
   const siteUrl     = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin
   const inviteToken = invitation.token as string
 
-  // Generate the Supabase magic link — invite_token rides along so auth/callback
-  // can route to /invite/accept instead of creating a new company
-  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
-    type:    'invite',
-    email:   email.trim(),
-    options: { redirectTo: `${siteUrl}/auth/callback?invite_token=${inviteToken}` },
-  })
-
-  if (linkError) {
-    await admin.from('invitations').delete().eq('token', inviteToken)
-    console.error(`[invite] generateLink failed for ${email.trim()}:`, linkError.message)
-    return NextResponse.json({ error: linkError.message }, { status: 400 })
-  }
-
-  const inviteUrl = linkData.properties?.action_link
-  if (!inviteUrl) {
-    await admin.from('invitations').delete().eq('token', inviteToken)
-    console.error('[invite] generateLink returned no action_link')
-    return NextResponse.json({ error: 'Failed to generate invite link' }, { status: 500 })
-  }
+  // Direct link — no Supabase auth hop. The UUID token IS the credential.
+  const inviteUrl = `${siteUrl}/join?t=${inviteToken}`
 
   const resend    = new Resend(resendKey)
   const roleLabel = role.charAt(0).toUpperCase() + role.slice(1)

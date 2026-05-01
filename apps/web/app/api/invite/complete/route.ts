@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server'
-import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient } from '@supabase/supabase-js'
 
 export async function POST(request: Request) {
-  const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { token, password, fullName } = await request.json() as {
+    token?: string; password?: string; fullName?: string
+  }
 
-  const { token } = await request.json() as { token?: string }
-  if (!token) return NextResponse.json({ error: 'Missing token' }, { status: 400 })
+  if (!token || !password) {
+    return NextResponse.json({ error: 'Missing token or password' }, { status: 400 })
+  }
 
   const admin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,6 +16,7 @@ export async function POST(request: Request) {
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
 
+  // Validate the invite token
   const { data: invite, error: lookupErr } = await admin
     .from('invitations')
     .select('id, company_id, email, role, expires_at, accepted_at')
@@ -31,35 +32,58 @@ export async function POST(request: Request) {
   if (new Date(invite.expires_at) < new Date()) {
     return NextResponse.json({ error: 'Invite has expired' }, { status: 410 })
   }
-  // Security: the logged-in user's email must match the invite email
-  if (user.email?.toLowerCase() !== invite.email.toLowerCase()) {
-    return NextResponse.json({ error: 'Email mismatch' }, { status: 403 })
+
+  // Create the auth account — email_confirm: true skips the verification email
+  // (the invite token already proved they own the address)
+  const { data: created, error: createErr } = await admin.auth.admin.createUser({
+    email:         invite.email,
+    password,
+    email_confirm: true,
+    user_metadata: { full_name: (fullName ?? '').trim() },
+  })
+
+  if (createErr) {
+    const alreadyExists =
+      createErr.message.toLowerCase().includes('already') ||
+      createErr.message.toLowerCase().includes('registered')
+    if (alreadyExists) {
+      return NextResponse.json(
+        { error: 'already_registered', email: invite.email },
+        { status: 409 }
+      )
+    }
+    console.error('[invite/complete] createUser failed:', createErr.message)
+    return NextResponse.json({ error: createErr.message }, { status: 400 })
   }
 
-  // Create the team_members row (upsert is safe if they somehow get here twice)
+  const userId = created.user.id
+
+  // Create the team_members row
   const { error: memberErr } = await admin
     .from('team_members')
     .upsert(
-      { company_id: invite.company_id, user_id: user.id, role: invite.role },
+      { company_id: invite.company_id, user_id: userId, role: invite.role },
       { onConflict: 'company_id,user_id' }
     )
 
   if (memberErr) {
+    // Roll back the created auth user so the invitee can retry cleanly
+    await admin.auth.admin.deleteUser(userId)
     console.error('[invite/complete] team_members insert failed:', memberErr.message)
-    return NextResponse.json({ error: 'Failed to link account' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to link account — please try again' }, { status: 500 })
   }
 
   // Driver role: link auth_user_id to the pre-created driver row if one exists
-  if (invite.role === 'driver' && user.email) {
+  if (invite.role === 'driver') {
     const { data: driverRow } = await admin
       .from('drivers')
       .select('id')
       .eq('company_id', invite.company_id)
-      .eq('email', user.email)
+      .eq('email', invite.email)
       .is('auth_user_id', null)
       .maybeSingle()
     if (driverRow) {
-      await admin.from('drivers').update({ auth_user_id: user.id }).eq('id', driverRow.id)
+      await admin.from('drivers').update({ auth_user_id: userId }).eq('id', driverRow.id)
     }
   }
 
@@ -69,6 +93,6 @@ export async function POST(request: Request) {
     .update({ accepted_at: new Date().toISOString() })
     .eq('token', token)
 
-  console.log(`[invite/complete] User ${user.id} accepted invite to company ${invite.company_id} as ${invite.role}`)
-  return NextResponse.json({ ok: true, role: invite.role })
+  console.log(`[invite/complete] Created account for ${invite.email} in company ${invite.company_id} as ${invite.role}`)
+  return NextResponse.json({ ok: true, role: invite.role, email: invite.email })
 }

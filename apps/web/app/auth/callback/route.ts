@@ -9,7 +9,6 @@ export async function GET(request: Request) {
   const tokenHash   = searchParams.get('token_hash')
   const type        = searchParams.get('type') as EmailOtpType | null
   const next        = searchParams.get('next') ?? '/dashboard'
-  const inviteToken = searchParams.get('invite_token')
 
   const supabase = await createClient()
 
@@ -21,9 +20,6 @@ export async function GET(request: Request) {
     if (!error) {
       if (type === 'recovery') {
         return NextResponse.redirect(`${origin}/reset-password`)
-      }
-      if (inviteToken) {
-        return NextResponse.redirect(`${origin}/join?t=${inviteToken}`)
       }
       return NextResponse.redirect(`${origin}${next}`)
     }
@@ -37,11 +33,6 @@ export async function GET(request: Request) {
     if (!error) {
       if (next === '/reset-password') {
         return NextResponse.redirect(`${origin}/reset-password`)
-      }
-
-      // Invited users go to the join page — no company creation
-      if (inviteToken) {
-        return NextResponse.redirect(`${origin}/join?t=${inviteToken}`)
       }
 
       // ── New-user account setup (owner signups only) ─────────────────────

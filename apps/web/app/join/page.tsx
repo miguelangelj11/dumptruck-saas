@@ -82,21 +82,27 @@ function JoinForm() {
 
     const supabase = createClient()
 
-    // User is already signed in via the magic link session — just set their password
-    const { error: updateErr } = await supabase.auth.updateUser({
-      password,
-      data: { full_name: fullName.trim() },
-    })
-    if (updateErr) { setError(updateErr.message); setLoading(false); return }
-
-    // Finalise: creates team_members row, links driver record if applicable
+    // Create the account + link to company in one server-side call
     const res  = await fetch('/api/invite/complete', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ token }),
+      body:    JSON.stringify({ token, password, fullName: fullName.trim() }),
     })
     const json = await res.json()
+
+    if (res.status === 409 && json.error === 'already_registered') {
+      setError('This email already has a DumpTruckBoss account. Sign in on the login page to join the team.')
+      setLoading(false)
+      return
+    }
     if (!res.ok) { setError(json.error ?? 'Failed to complete invite'); setLoading(false); return }
+
+    // Account created — sign in so the browser gets a session
+    const { error: signInErr } = await supabase.auth.signInWithPassword({
+      email:    json.email,
+      password,
+    })
+    if (signInErr) { setError(signInErr.message); setLoading(false); return }
 
     setSuccess(true)
     setTimeout(() => router.push(json.role === 'driver' ? '/driver' : '/dashboard'), 1800)
