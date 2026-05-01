@@ -55,7 +55,7 @@ function Shell({ children }: { children: React.ReactNode }) {
 function JoinForm() {
   const params  = useSearchParams()
   const router  = useRouter()
-  const token   = params.get('t') ?? ''
+  const token   = params.get('token') ?? params.get('t') ?? ''
 
   const [details,  setDetails]  = useState<InviteDetails | null>(null)
   const [fullName, setFullName] = useState('')
@@ -67,7 +67,7 @@ function JoinForm() {
 
   useEffect(() => {
     if (!token) { setDetails({ valid: false, reason: 'none' }); return }
-    fetch(`/api/invite/details?t=${token}`)
+    fetch(`/api/invite/details?token=${token}`)
       .then(r => r.json())
       .then(setDetails)
       .catch(() => setDetails({ valid: false, reason: 'invalid' }))

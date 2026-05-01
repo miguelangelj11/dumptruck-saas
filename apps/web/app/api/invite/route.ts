@@ -64,7 +64,7 @@ export async function POST(request: Request) {
   const inviteToken = invitation.token as string
 
   // Direct link — no Supabase auth hop. The UUID token IS the credential.
-  const inviteUrl = `${siteUrl}/join?t=${inviteToken}`
+  const inviteUrl = `${siteUrl}/join?token=${inviteToken}`
 
   const resend    = new Resend(resendKey)
   const roleLabel = role.charAt(0).toUpperCase() + role.slice(1)

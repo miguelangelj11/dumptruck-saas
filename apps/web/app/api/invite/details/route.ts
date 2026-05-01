@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 // Only returns non-sensitive fields (email, role, company name, validity flags).
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
-  const token = searchParams.get('t')
+  const token = searchParams.get('token') ?? searchParams.get('t')
 
   if (!token) {
     return NextResponse.json({ error: 'Missing token' }, { status: 400 })
