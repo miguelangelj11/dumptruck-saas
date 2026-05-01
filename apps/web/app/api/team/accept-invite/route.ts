@@ -130,6 +130,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to link account — please try again' }, { status: 500 })
   }
 
+  // ── 3b. Upsert profile row ────────────────────────────────────────────────
+  // Links the new user to the inviting company with the correct role.
+  // onboarding_completed = true so they skip the owner onboarding wizard.
+  try {
+    const { error: profileErr } = await admin
+      .from('profiles')
+      .upsert(
+        {
+          id:                   userId,
+          company_id:           invite.company_id,
+          role:                 invite.role,
+          email:                invite.email,
+          onboarding_completed: true,
+        },
+        { onConflict: 'id' }
+      )
+    if (profileErr) console.error('[accept-invite] profiles upsert error (non-fatal):', profileErr.message)
+    else console.log('[accept-invite] profile upserted for userId:', userId)
+  } catch (e) {
+    console.error('[accept-invite] profiles upsert threw (non-fatal):', e)
+  }
+
   // ── 4. Link driver row if applicable ─────────────────────────────────────
   if (invite.role === 'driver') {
     try {

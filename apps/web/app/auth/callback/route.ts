@@ -52,6 +52,17 @@ export async function GET(request: Request) {
           }
         }
 
+        // Skip company creation for invited team members
+        const { data: memberRow } = await supabase
+          .from('team_members')
+          .select('company_id')
+          .eq('user_id', user.id)
+          .maybeSingle()
+
+        if (memberRow) {
+          return NextResponse.redirect(`${origin}/dashboard`)
+        }
+
         // Ensure company row exists for owner accounts
         const { data: existing } = await supabase
           .from('companies')
