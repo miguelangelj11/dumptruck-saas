@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => ({}))
-  const { driverEmail, driverName, jobName, location, startTime, truckNumber, instructions } =
+  const { driverEmail, driverName, jobName, location, startTime, truckNumber, instructions, dispatchId } =
     body as {
       driverEmail?:  string
       driverName?:   string
@@ -23,6 +23,7 @@ export async function POST(request: Request) {
       startTime?:    string
       truckNumber?:  string
       instructions?: string
+      dispatchId?:   string
     }
 
   if (!driverEmail) return NextResponse.json({ sent: false, reason: 'no_email' })
@@ -30,16 +31,37 @@ export async function POST(request: Request) {
   const resend = new Resend(resendKey)
 
   const rows: { label: string; value: string }[] = [
-    ...(jobName    ? [{ label: 'Job',           value: jobName    }] : []),
-    ...(location   ? [{ label: 'Location',      value: location   }] : []),
-    ...(startTime  ? [{ label: 'Start Time',    value: startTime  }] : []),
-    ...(truckNumber? [{ label: 'Truck #',       value: truckNumber}] : []),
-    ...(instructions?[{ label: 'Instructions', value: instructions}] : []),
+    ...(jobName     ? [{ label: 'Job',          value: jobName      }] : []),
+    ...(location    ? [{ label: 'Location',     value: location     }] : []),
+    ...(startTime   ? [{ label: 'Start Time',   value: startTime    }] : []),
+    ...(truckNumber ? [{ label: 'Truck #',      value: truckNumber  }] : []),
+    ...(instructions? [{ label: 'Instructions', value: instructions }] : []),
   ]
 
   const tableRows = rows.map(r =>
     `<tr><td style="padding:8px 12px;font-weight:600;color:#374151;width:130px;vertical-align:top">${r.label}</td><td style="padding:8px 12px;color:#111827">${r.value}</td></tr>`
   ).join('')
+
+  const token = dispatchId ? Buffer.from(dispatchId).toString('base64') : null
+  const base  = dispatchId ? `https://dumptruckboss.com/api/dispatches/respond?id=${dispatchId}&token=${token}` : null
+
+  const actionButtons = base ? `
+    <div style="text-align:center;margin:24px 0">
+      <a href="${base}&action=accepted"
+         style="display:inline-block;background:#16a34a;color:#fff;font-size:15px;font-weight:700;
+                padding:14px 28px;border-radius:10px;text-decoration:none;letter-spacing:0.01em;margin:0 6px 10px">
+        ✅ Accept Dispatch
+      </a>
+      <a href="${base}&action=declined"
+         style="display:inline-block;background:#dc2626;color:#fff;font-size:15px;font-weight:700;
+                padding:14px 28px;border-radius:10px;text-decoration:none;letter-spacing:0.01em;margin:0 6px 10px">
+        ❌ Decline Dispatch
+      </a>
+      <p style="font-size:11px;color:#9ca3af;margin:10px 0 0">
+        Tap a button to respond to this dispatch
+      </p>
+    </div>
+  ` : ''
 
   const html = `
     <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#f9fafb;padding:32px 16px">
@@ -55,8 +77,9 @@ export async function POST(request: Request) {
         <table style="width:100%;border-collapse:collapse">
           ${tableRows}
         </table>
+        ${actionButtons}
       </div>
-      <p style="text-align:center;font-size:12px;color:#9ca3af;margin:0">DumpTruckBoss · Powered by dumptruckboss.com</p>
+      <p style="text-align:center;font-size:12px;color:#9ca3af;margin:0">DumpTruckBoss · dumptruckboss.com</p>
     </div>
   `
 

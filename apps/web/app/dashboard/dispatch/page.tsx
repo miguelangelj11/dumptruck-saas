@@ -332,6 +332,7 @@ export default function DispatchPage() {
                 startTime:    dispForm.start_time || undefined,
                 truckNumber:  dispForm.truck_number || undefined,
                 instructions: dispForm.instructions || undefined,
+                dispatchId:   data.id,
               }),
             }).catch(err => console.error('[dispatch notify]', err))
           }
@@ -346,6 +347,21 @@ export default function DispatchPage() {
       .update({ status, updated_at: new Date().toISOString() }).eq('id', id)
     if (error) { toast.error(error.message); return }
     setDispatches(prev => prev.map(d => d.id === id ? { ...d, status } : d))
+
+    if (status === 'cancelled') {
+      const disp = dispatches.find(d => d.id === id)
+      if (disp?.driver_id) {
+        const { data: driverRow } = await supabase.from('drivers').select('email').eq('id', disp.driver_id).maybeSingle()
+        if (driverRow?.email) {
+          const jobName = jobs.find(j => j.id === disp.job_id)?.job_name
+          fetch('/api/dispatches/cancel-notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ driverEmail: driverRow.email, driverName: disp.driver_name, jobName, type: 'cancelled' }),
+          }).catch(err => console.error('[cancel-notify]', err))
+        }
+      }
+    }
   }
 
   async function updateLoads(id: string, delta: number) {
@@ -360,10 +376,23 @@ export default function DispatchPage() {
 
   async function deleteDispatch(id: string) {
     if (!confirm('Remove this dispatch?')) return
+    const disp = dispatches.find(d => d.id === id)
     const { error } = await supabase.from('dispatches').delete().eq('id', id)
     if (error) { toast.error(error.message); return }
     toast.success('Dispatch removed')
     setDispatches(prev => prev.filter(d => d.id !== id))
+
+    if (disp?.driver_id) {
+      const { data: driverRow } = await supabase.from('drivers').select('email').eq('id', disp.driver_id).maybeSingle()
+      if (driverRow?.email) {
+        const jobName = jobs.find(j => j.id === disp.job_id)?.job_name
+        fetch('/api/dispatches/cancel-notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ driverEmail: driverRow.email, driverName: disp.driver_name, jobName, type: 'cancelled' }),
+        }).catch(err => console.error('[cancel-notify]', err))
+      }
+    }
   }
 
   // ── Render ───────────────────────────────────────────────────────────────────

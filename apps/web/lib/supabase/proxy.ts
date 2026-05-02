@@ -44,7 +44,7 @@ export async function updateSession(request: NextRequest) {
     '/', '/login', '/signup', '/forgot-password', '/reset-password', '/auth', '/api/test-setup',
     '/about', '/blog', '/careers', '/privacy', '/terms', '/security', '/changelog',
     '/pricing', '/features', '/schedule-demo', '/trial-expired',
-    '/api/webhooks', '/api/health', '/api/invite', '/api/team/accept-invite',
+    '/api/webhooks', '/api/health', '/api/invite', '/api/team/accept-invite', '/api/dispatches/respond',
     '/invite', '/join',
   ]
   const isPublic = publicPaths.some(
