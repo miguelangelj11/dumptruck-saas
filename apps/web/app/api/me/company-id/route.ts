@@ -19,12 +19,12 @@ export async function GET() {
   // 1. profiles.organization_id
   const { data: profile } = await admin
     .from('profiles')
-    .select('organization_id')
+    .select('company_id')
     .eq('id', user.id)
     .maybeSingle()
 
-  if (profile?.organization_id) {
-    return NextResponse.json({ companyId: profile.organization_id })
+  if (profile?.company_id) {
+    return NextResponse.json({ companyId: profile.company_id })
   }
 
   // 2. owner lookup
