@@ -14,7 +14,7 @@ import { logDispatchActivity } from '@/lib/workflows'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type DriverBasic = { id: string; name: string; truck_number?: string | null }
+type DriverBasic = { id: string; name: string }
 type JobWithLoads = Job & { loads?: Load[] }
 type ContractorBasic = { id: string; name: string; phone: string | null }
 
@@ -923,14 +923,14 @@ export default function DispatchPage() {
                     onChange={e => {
                       const dId = e.target.value
                       const d   = drivers.find(d => d.id === dId)
-                      setDispForm(f => ({ ...f, driver_id: dId, truck_number: d?.truck_number ?? f.truck_number }))
+                      setDispForm(f => ({ ...f, driver_id: dId }))
                     }}
                     className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]"
                   >
                     <option value="">— Select a driver —</option>
                     {availableDrivers.length > 0 && (
                       <optgroup label="Available">
-                        {availableDrivers.map(d => <option key={d.id} value={d.id}>{d.name}{d.truck_number ? ` · Truck #${d.truck_number}` : ''}</option>)}
+                        {availableDrivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                       </optgroup>
                     )}
                     {drivers.filter(d => driverDispMap.has(d.id)).length > 0 && (
