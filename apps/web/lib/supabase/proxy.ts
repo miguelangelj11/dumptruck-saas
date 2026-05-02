@@ -87,6 +87,7 @@ export async function updateSession(request: NextRequest) {
     !pathname.startsWith('/api/webhooks/') &&
     !pathname.startsWith('/api/account/delete') &&
     !pathname.startsWith('/api/billing/') &&   // expired users need billing access to pay
+    !pathname.startsWith('/api/me/') &&        // identity resolution must always pass through
     !pathname.startsWith('/api/health') &&
     !pathname.startsWith('/api/test-setup')
 
