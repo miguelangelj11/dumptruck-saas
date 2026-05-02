@@ -45,6 +45,7 @@ type CompanyExtRow = CompanyRow & {
   notify_invoice_overdue: boolean | null
   notify_document_expiring: boolean | null
   notify_missing_tickets: boolean | null
+  email_signature: string | null
 }
 
 type DriverRow = {
@@ -311,6 +312,7 @@ export default function SettingsPage() {
             'notify_new_ticket', 'notify_ticket_approved', 'notify_invoice_sent',
             'notify_payment_received', 'notify_invoice_overdue',
             'notify_document_expiring', 'notify_missing_tickets',
+            'email_signature',
           ].join(','))
           .eq('id', c.id)
           .maybeSingle()
@@ -334,6 +336,7 @@ export default function SettingsPage() {
           if (x.notify_invoice_overdue      != null) setNotifyOverdue(x.notify_invoice_overdue)
           if (x.notify_document_expiring    != null) setNotifyExpiring(x.notify_document_expiring)
           if (x.notify_missing_tickets      != null) setNotifyMissing(x.notify_missing_tickets)
+          if (x.email_signature             != null) setInvSignature(x.email_signature ?? '')
         }
 
         const { data: driversData } = await supabase
@@ -559,6 +562,7 @@ export default function SettingsPage() {
       invoice_show_time:            invShowTime,
       invoice_show_ticket_number:   invShowTicket,
       invoice_show_material:        invShowMat,
+      email_signature:              invSignature || null,
     }).eq('id', companyId)
     if (error) toast.error(error.message)
     else toast.success('Invoice settings saved')
