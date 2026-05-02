@@ -29,16 +29,31 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const organizationId = profile?.organization_id ?? null
   const isTeamMember   = !!profile && profile.role !== 'admin'
 
-  // Load company using organization_id
-  const { data: coData } = organizationId
-    ? await admin
-        .from('companies')
-        .select('name, logo_url, primary_color, accent_color, onboarding_completed, trial_ends_at, subscription_status, plan, owner_id')
-        .eq('id', organizationId)
-        .maybeSingle()
-    : { data: null }
+  // Load company via organization_id (profiles path), falling back to owner lookup
+  // so the sidebar shows correctly even before the profiles backfill SQL has been run.
+  let coData: Record<string, unknown> | null = null
 
-  const co = coData as Record<string, unknown> | null
+  if (organizationId) {
+    const { data } = await admin
+      .from('companies')
+      .select('name, logo_url, primary_color, accent_color, onboarding_completed, trial_ends_at, subscription_status, plan, owner_id')
+      .eq('id', organizationId)
+      .maybeSingle()
+    coData = data as Record<string, unknown> | null
+  }
+
+  if (!coData) {
+    const { data } = await admin
+      .from('companies')
+      .select('name, logo_url, primary_color, accent_color, onboarding_completed, trial_ends_at, subscription_status, plan, owner_id')
+      .eq('owner_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    coData = data as Record<string, unknown> | null
+  }
+
+  const co = coData
 
   // Redirect incomplete onboarding — only for the company owner
   if (!isTeamMember && co && co.onboarding_completed === false) {
