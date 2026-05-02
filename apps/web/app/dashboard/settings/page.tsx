@@ -501,10 +501,11 @@ export default function SettingsPage() {
   async function handleAddCompany(e: React.FormEvent) {
     e.preventDefault()
     if (!newCompanyName.trim()) return
+    if (!companyId) { toast.error('Save company info first'); return }
     setAddingCompany(true)
     const { error } = await supabase
       .from('client_companies')
-      .insert({ name: newCompanyName.trim(), company_id: userId })
+      .insert({ name: newCompanyName.trim(), company_id: companyId })
     if (error) { toast.error(error.message); setAddingCompany(false); return }
     toast.success(`"${newCompanyName.trim()}" added`)
     setNewCompanyName('')
