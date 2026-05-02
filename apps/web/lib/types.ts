@@ -170,7 +170,7 @@ export type ContractorTicket = {
   contractor_ticket_slips?: ContractorTicketSlip[]
 }
 
-export type DispatchStatus = 'dispatched' | 'accepted' | 'working' | 'completed'
+export type DispatchStatus = 'dispatched' | 'accepted' | 'working' | 'completed' | 'cancelled' | 'declined'
 
 export type Dispatch = {
   id: string
