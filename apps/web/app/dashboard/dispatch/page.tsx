@@ -16,7 +16,7 @@ import { logDispatchActivity } from '@/lib/workflows'
 
 type DriverBasic = { id: string; name: string }
 type JobWithLoads = Job & { loads?: Load[] }
-type ContractorBasic = { id: string; name: string; phone: string | null }
+type ContractorBasic = { id: string; name: string; phone: string | null; email: string | null }
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -121,7 +121,7 @@ export default function DispatchPage() {
       supabase.from('drivers').select('id,name').eq('company_id', companyId).order('name'),
       supabase.from('jobs').select('*').eq('company_id', companyId).order('created_at', { ascending: false }),
       supabase.from('dispatches').select('*').eq('company_id', companyId).eq('dispatch_date', today).order('created_at', { ascending: false }),
-      supabase.from('contractors').select('id,name,phone').eq('company_id', companyId).eq('status', 'active').order('name'),
+      supabase.from('contractors').select('id,name,phone,email').eq('company_id', companyId).eq('status', 'active').order('name'),
     ])
 
     if (jobsRes.error && !jobsRes.error.message.includes('schema cache'))
@@ -152,7 +152,23 @@ export default function DispatchPage() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => {
+    fetchData()
+
+    const channel = supabase
+      .channel('dispatch-status-updates')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'dispatches' },
+        (payload: { new: Record<string, unknown> }) => {
+          const updated = payload.new as unknown as Dispatch
+          setDispatches(prev => prev.map(d => d.id === updated.id ? { ...d, ...updated } : d))
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [])
 
   // ── Derived ─────────────────────────────────────────────────────────────────
 
@@ -315,7 +331,7 @@ export default function DispatchPage() {
         const jobLocation = jobs.find(j => j.id === dispForm.job_id)?.location ?? ''
         logDispatchActivity(companyId, displayName, jobName, data.id, supabase)
 
-        // Send email notification to driver
+        // Send email notification to driver or subcontractor
         if (!isSub && dispForm.driver_id) {
           const { data: driverRow } = await supabase
             .from('drivers')
@@ -339,6 +355,22 @@ export default function DispatchPage() {
             }).catch(err => console.error('[dispatch notify]', err))
           }
         }
+        if (isSub && sub?.email) {
+          fetch('/api/dispatches/notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              driverEmail:  sub.email,
+              driverName:   displayName,
+              jobName:      jobName || undefined,
+              location:     jobLocation || undefined,
+              startTime:    dispForm.start_time || undefined,
+              truckNumber:  dispForm.truck_number || undefined,
+              instructions: dispForm.instructions || undefined,
+              dispatchId:   data.id,
+            }),
+          }).catch(err => console.error('[dispatch notify sub]', err))
+        }
       }
     }
     setSavingDispatch(false); setShowDispForm(false)
@@ -352,15 +384,25 @@ export default function DispatchPage() {
 
     if (status === 'cancelled') {
       const disp = dispatches.find(d => d.id === id)
+      const jobName = jobs.find(j => j.id === disp?.job_id)?.job_name
       if (disp?.driver_id) {
         const { data: driverRow } = await supabase.from('drivers').select('email').eq('id', disp.driver_id).maybeSingle()
         if (driverRow?.email) {
-          const jobName = jobs.find(j => j.id === disp.job_id)?.job_name
           fetch('/api/dispatches/cancel-notify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ driverEmail: driverRow.email, driverName: disp.driver_name, jobName, type: 'cancelled' }),
           }).catch(err => console.error('[cancel-notify]', err))
+        }
+      }
+      if (disp?.subcontractor_id) {
+        const { data: subRow } = await supabase.from('contractors').select('email,name').eq('id', disp.subcontractor_id).maybeSingle()
+        if (subRow?.email) {
+          fetch('/api/dispatches/cancel-notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ driverEmail: subRow.email, driverName: subRow.name ?? disp.driver_name, jobName, type: 'cancelled' }),
+          }).catch(err => console.error('[cancel-notify sub]', err))
         }
       }
     }
@@ -384,15 +426,25 @@ export default function DispatchPage() {
     toast.success('Dispatch removed')
     setDispatches(prev => prev.filter(d => d.id !== id))
 
+    const jobName = jobs.find(j => j.id === disp?.job_id)?.job_name
     if (disp?.driver_id) {
       const { data: driverRow } = await supabase.from('drivers').select('email').eq('id', disp.driver_id).maybeSingle()
       if (driverRow?.email) {
-        const jobName = jobs.find(j => j.id === disp.job_id)?.job_name
         fetch('/api/dispatches/cancel-notify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ driverEmail: driverRow.email, driverName: disp.driver_name, jobName, type: 'cancelled' }),
         }).catch(err => console.error('[cancel-notify]', err))
+      }
+    }
+    if (disp?.subcontractor_id) {
+      const { data: subRow } = await supabase.from('contractors').select('email,name').eq('id', disp.subcontractor_id).maybeSingle()
+      if (subRow?.email) {
+        fetch('/api/dispatches/cancel-notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ driverEmail: subRow.email, driverName: subRow.name ?? disp.driver_name, jobName, type: 'cancelled' }),
+        }).catch(err => console.error('[cancel-notify sub]', err))
       }
     }
   }
