@@ -116,7 +116,7 @@ export default function DispatchPage() {
 
     const [loadsRes, driversRes] = await Promise.all([
       supabase.from('loads').select('id,job_name,driver_name,truck_number,date,status,rate,rate_type').eq('company_id', companyId).gte('date', cutoff),
-      supabase.from('drivers').select('id,name,truck_number').eq('status', 'active').order('name'),
+      supabase.from('drivers').select('id,name,truck_number').eq('company_id', companyId).eq('status', 'available').order('name'),
     ])
 
     const [jobsRes, dispRes, contractorsRes] = await Promise.all([
@@ -941,7 +941,7 @@ export default function DispatchPage() {
                     )}
                   </select>
                   {availableDrivers.length === 0 && !editingDispatch && (
-                    <p className="text-xs text-amber-600 mt-1">All drivers are already dispatched today.</p>
+                    <p className="text-xs text-amber-600 mt-1">No available drivers.</p>
                   )}
                 </div>
               ) : (
