@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { getCompanyId } from '@/lib/get-company-id'
 import { Loader2, Plus, DollarSign, TrendingUp, TrendingDown, AlertCircle, CreditCard } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -59,17 +60,19 @@ export default function RevenuePage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setLoading(false); return }
     setUserId(user.id)
+    const orgId = await getCompanyId()
+    if (!orgId) { setLoading(false); return }
 
     const sixMonthsAgo = new Date()
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
     const cutoff = sixMonthsAgo.toISOString().split('T')[0]!
 
     const [lRes, eRes, ctRes, invRes, payRes] = await Promise.all([
-      supabase.from('loads').select('*').eq('company_id', user.id).gte('date', cutoff),
-      supabase.from('expenses').select('*').eq('company_id', user.id).order('date', { ascending: false }),
-      supabase.from('contractor_tickets').select('*').eq('company_id', user.id).gte('date', cutoff),
-      supabase.from('invoices').select('*').eq('company_id', user.id),
-      supabase.from('payments').select('*').eq('company_id', user.id),
+      supabase.from('loads').select('*').eq('company_id', orgId).gte('date', cutoff),
+      supabase.from('expenses').select('*').eq('company_id', orgId).order('date', { ascending: false }),
+      supabase.from('contractor_tickets').select('*').eq('company_id', orgId).gte('date', cutoff),
+      supabase.from('invoices').select('*').eq('company_id', orgId),
+      supabase.from('payments').select('*').eq('company_id', orgId),
     ])
 
     if (lRes.error) console.error('[revenue] loads:', lRes.error.message)
@@ -90,15 +93,15 @@ export default function RevenuePage() {
 
   async function handleAddExpense(e: React.FormEvent) {
     e.preventDefault()
-    const uid = await getUid()
-    if (!uid) { toast.error('Not authenticated'); return }
+    const orgId = await getCompanyId()
+    if (!orgId) { toast.error('Not authenticated'); return }
     setSaving(true)
     const { error } = await supabase.from('expenses').insert({
       description: expForm.description,
       amount: parseFloat(expForm.amount) || 0,
       category: expForm.category,
       date: expForm.date,
-      company_id: uid,
+      company_id: orgId,
     })
     if (error) { toast.error('Failed to add expense'); setSaving(false); return }
     toast.success('Expense added')

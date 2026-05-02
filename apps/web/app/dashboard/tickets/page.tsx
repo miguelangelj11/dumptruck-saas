@@ -105,15 +105,16 @@ export default function TicketsPage() {
   async function fetchData(uid?: string) {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
-    const id = uid ?? user?.id
-    if (!id) { setLoading(false); return }
-    setUserId(id)
+    if (!user) { setLoading(false); return }
+    setUserId(user.id)
+    const orgId = await getCompanyId()
+    if (!orgId) { setLoading(false); return }
 
     const [range0, range1] = pageRange(0)
     const [loadsRes, contractorsRes, countRes] = await Promise.all([
-      supabase.from('loads').select('*, load_tickets(*)').eq('company_id', id).order('date', { ascending: false }).range(range0, range1),
-      supabase.from('contractors').select('*').eq('company_id', id).eq('status', 'active').order('name'),
-      supabase.from('loads').select('id', { count: 'exact', head: true }).eq('company_id', id),
+      supabase.from('loads').select('*, load_tickets(*)').eq('company_id', orgId).order('date', { ascending: false }).range(range0, range1),
+      supabase.from('contractors').select('*').eq('company_id', orgId).eq('status', 'active').order('name'),
+      supabase.from('loads').select('id', { count: 'exact', head: true }).eq('company_id', orgId),
     ])
     if (loadsRes.error) toast.error('Failed to load tickets: ' + loadsRes.error.message)
     const loaded = loadsRes.data ?? []
@@ -133,7 +134,7 @@ export default function TicketsPage() {
     const { data } = await supabase
       .from('loads')
       .select('*, load_tickets(*)')
-      .eq('company_id', userId)
+      .eq('company_id', await getCompanyId() ?? userId)
       .order('date', { ascending: false })
       .range(range0, range1)
     const newItems = data ?? []
@@ -225,7 +226,8 @@ export default function TicketsPage() {
     setSaving(true)
 
     const uid = await getUid()
-    if (!uid) { toast.error('Not authenticated'); setSaving(false); return }
+    const orgId = await getCompanyId()
+    if (!uid || !orgId) { toast.error('Not authenticated'); setSaving(false); return }
 
     const payload = {
       job_name: form.job_name, client_company: form.client_company || null,
@@ -235,7 +237,7 @@ export default function TicketsPage() {
       time_in: form.time_in || null, time_out: form.time_out || null,
       rate: parseFloat(form.rate) || 0, rate_type: form.rate_type,
       status: form.status as Load['status'], notes: form.notes || null,
-      company_id: uid,
+      company_id: orgId,
     }
 
     const filledRows = ticketRows.filter(r => r.tonnage || r.imageFile || r.ticket_number)
@@ -247,7 +249,7 @@ export default function TicketsPage() {
         let image_url: string | null = null
         if (row.imageFile) image_url = await uploadPhoto(uid, editing.id, row.id, row.imageFile)
         const { error: slipErr } = await supabase.from('load_tickets').insert({
-          id: row.id, load_id: editing.id, company_id: uid,
+          id: row.id, load_id: editing.id, company_id: orgId,
           ticket_number: row.ticket_number || null,
           tonnage: parseFloat(row.tonnage) || null, image_url,
         })
@@ -262,7 +264,7 @@ export default function TicketsPage() {
         let image_url: string | null = null
         if (row.imageFile) image_url = await uploadPhoto(uid, jobId, row.id, row.imageFile)
         const { error: slipErr } = await supabase.from('load_tickets').insert({
-          id: row.id, load_id: jobId, company_id: uid,
+          id: row.id, load_id: jobId, company_id: orgId,
           ticket_number: row.ticket_number || null,
           tonnage: parseFloat(row.tonnage) || null, image_url,
         })
@@ -326,9 +328,9 @@ export default function TicketsPage() {
   }
 
   async function handleApprove(l: Load) {
-    const uid = await getUid()
-    if (!uid) return
-    const { error } = await approveTicket({ id: l.id, job_name: l.job_name, driver_name: l.driver_name }, uid, supabase)
+    const orgId = await getCompanyId()
+    if (!orgId) return
+    const { error } = await approveTicket({ id: l.id, job_name: l.job_name, driver_name: l.driver_name }, orgId, supabase)
     if (error) { toast.error('Approval failed: ' + error); return }
     setLoads(prev => prev.map(t => t.id === l.id ? { ...t, status: 'approved' } : t))
     toast.success(`Approved: ${l.job_name} — ${l.driver_name}`, { description: 'Ready to invoice' })

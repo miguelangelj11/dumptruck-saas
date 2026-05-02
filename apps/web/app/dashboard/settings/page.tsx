@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { getCompanyId } from '@/lib/get-company-id'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -319,7 +320,7 @@ export default function SettingsPage() {
       const totp = factors?.totp?.find((f: { status: string }) => f.status === 'verified')
       if (totp) { setMfaEnabled(true); setMfaFactorId(totp.id) }
 
-      fetchClientCompanies(user.id)
+      getCompanyId().then(orgId => { if (orgId) fetchClientCompanies(orgId) })
       setLoading(false)
     }
     init()
@@ -449,7 +450,7 @@ export default function SettingsPage() {
     toast.success(`"${newCompanyName.trim()}" added`)
     setNewCompanyName('')
     setAddingCompany(false)
-    fetchClientCompanies(userId)
+    getCompanyId().then(orgId => { if (orgId) fetchClientCompanies(orgId) })
   }
 
   async function handleDeleteCompany(id: string, name: string) {

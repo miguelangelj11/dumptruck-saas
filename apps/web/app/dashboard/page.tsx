@@ -21,14 +21,13 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   const uid = user?.id ?? ''
 
-  // For team members, company_id on data rows = the owner's user id (= companies.id).
-  // Look it up via team_members so all queries use the correct id.
-  const { data: memberRow } = await supabase
-    .from('team_members')
-    .select('company_id')
-    .eq('user_id', uid)
+  // Resolve organization_id from profiles — works for owners and team members alike
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('organization_id')
+    .eq('id', uid)
     .maybeSingle()
-  const effectiveCompanyId = memberRow?.company_id ?? uid
+  const effectiveCompanyId = profile?.organization_id ?? uid
 
   // ── Date helpers ──────────────────────────────────────────────────────────
   const now = new Date()

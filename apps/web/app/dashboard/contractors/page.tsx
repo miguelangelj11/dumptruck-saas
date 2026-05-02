@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { getCompanyId } from '@/lib/get-company-id'
 import { Plus, Pencil, Trash2, Loader2, Truck, ChevronLeft, Camera, X, ImageIcon, ChevronRight, Phone, Mail } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Contractor, ContractorTicket, ContractorTicketSlip, ClientCompany } from '@/lib/types'
@@ -68,9 +69,11 @@ export default function ContractorsPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setLoading(false); return }
     setUserId(user.id)
+    const orgId = await getCompanyId()
+    if (!orgId) { setLoading(false); return }
     const [contractorsRes, companiesRes] = await Promise.all([
-      supabase.from('contractors').select('*').eq('company_id', user.id).order('name'),
-      supabase.from('client_companies').select('*').eq('company_id', user.id).order('name'),
+      supabase.from('contractors').select('*').eq('company_id', orgId).order('name'),
+      supabase.from('client_companies').select('*').eq('company_id', orgId).order('name'),
     ])
     if (contractorsRes.error) toast.error('Failed to load subcontractors: ' + contractorsRes.error.message)
     setContractors(contractorsRes.data ?? [])
@@ -112,8 +115,8 @@ export default function ContractorsPage() {
   async function handleSaveContractor(e: React.FormEvent) {
     e.preventDefault()
     setSavingContractor(true)
-    const uid = await getUid()
-    if (!uid) { toast.error('Not authenticated'); setSavingContractor(false); return }
+    const orgId = await getCompanyId()
+    if (!orgId) { toast.error('Not authenticated'); setSavingContractor(false); return }
 
     const fields = {
       name: contractorForm.name,
@@ -129,7 +132,7 @@ export default function ContractorsPage() {
       toast.success('Subcontractor updated')
       if (selected?.id === editingContractor.id) setSelected({ ...editingContractor, ...fields } as Contractor)
     } else {
-      const { error } = await supabase.from('contractors').insert({ ...fields, company_id: uid })
+      const { error } = await supabase.from('contractors').insert({ ...fields, company_id: orgId })
       if (error) { toast.error(error.message); setSavingContractor(false); return }
       toast.success('Subcontractor added')
     }
@@ -192,7 +195,8 @@ export default function ContractorsPage() {
     setSavingTicket(true)
 
     const uid = await getUid()
-    if (!uid) { toast.error('Not authenticated'); setSavingTicket(false); return }
+    const orgId = await getCompanyId()
+    if (!uid || !orgId) { toast.error('Not authenticated'); setSavingTicket(false); return }
 
     const basePayload = {
       job_name: ticketForm.job_name,
@@ -205,7 +209,7 @@ export default function ContractorsPage() {
       status: ticketForm.status as ContractorTicket['status'],
       notes: ticketForm.notes || null,
       contractor_id: selected.id,
-      company_id: uid,
+      company_id: orgId,
     }
 
     if (editingTicket) {
@@ -218,7 +222,7 @@ export default function ContractorsPage() {
         for (const row of newSlips) {
           let image_url: string | null = null
           if (row.imageFile) image_url = await uploadSlipPhoto(uid, editingTicket.id, row.id, row.imageFile)
-          const { error: slipErr } = await supabase.from('contractor_ticket_slips').insert({ id: row.id, ticket_id: editingTicket.id, company_id: uid, tonnage: parseFloat(row.tonnage) || null, image_url })
+          const { error: slipErr } = await supabase.from('contractor_ticket_slips').insert({ id: row.id, ticket_id: editingTicket.id, company_id: orgId, tonnage: parseFloat(row.tonnage) || null, image_url })
           if (slipErr) toast.error('Slip save failed: ' + slipErr.message)
         }
         setUploadingImage(false)
@@ -233,7 +237,7 @@ export default function ContractorsPage() {
         if (!row.tonnage && !row.imageFile) continue
         let image_url: string | null = null
         if (row.imageFile) image_url = await uploadSlipPhoto(uid, ticketId, row.id, row.imageFile)
-        const { error: slipErr } = await supabase.from('contractor_ticket_slips').insert({ id: row.id, ticket_id: ticketId, company_id: uid, tonnage: parseFloat(row.tonnage) || null, image_url })
+        const { error: slipErr } = await supabase.from('contractor_ticket_slips').insert({ id: row.id, ticket_id: ticketId, company_id: orgId, tonnage: parseFloat(row.tonnage) || null, image_url })
         if (slipErr) toast.error('Slip save failed: ' + slipErr.message)
       }
       setUploadingImage(false)

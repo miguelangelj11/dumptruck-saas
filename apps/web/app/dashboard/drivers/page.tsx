@@ -49,7 +49,7 @@ export default function DriversPage() {
 
     const [dRes, lRes, dpRes] = await Promise.all([
       supabase.from('drivers').select('*').eq('company_id', companyId).order('name'),
-      supabase.from('loads').select('*').eq('company_id', user.id).gte('date', cutoff),
+      supabase.from('loads').select('*').eq('company_id', companyId).gte('date', cutoff),
       supabase.from('driver_payments').select('*').eq('company_id', companyId).order('payment_date', { ascending: false }),
     ])
     if (dRes.error) toast.error('Failed to load drivers: ' + dRes.error.message)

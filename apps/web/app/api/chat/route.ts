@@ -12,11 +12,14 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: co } = await supabase
-    .from('companies')
-    .select('plan')
-    .eq('owner_id', user.id)
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('organization_id')
+    .eq('id', user.id)
     .maybeSingle()
+  const { data: co } = profile?.organization_id
+    ? await supabase.from('companies').select('plan').eq('id', profile.organization_id).maybeSingle()
+    : { data: null }
 
   if (co?.plan !== 'enterprise') {
     return NextResponse.json({ error: 'Enterprise plan required' }, { status: 403 })

@@ -111,13 +111,13 @@ export default function DispatchPage() {
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
     const cutoff = sixMonthsAgo.toISOString().split('T')[0]!
 
-    const [companyId, loadsRes, driversRes] = await Promise.all([
-      getCompanyId(),
-      supabase.from('loads').select('id,job_name,driver_name,truck_number,date,status,rate,rate_type').eq('company_id', user.id).gte('date', cutoff),
+    const companyId = await getCompanyId()
+    if (!companyId) { setLoading(false); return }
+
+    const [loadsRes, driversRes] = await Promise.all([
+      supabase.from('loads').select('id,job_name,driver_name,truck_number,date,status,rate,rate_type').eq('company_id', companyId).gte('date', cutoff),
       supabase.from('drivers').select('id,name,truck_number').eq('status', 'active').order('name'),
     ])
-
-    if (!companyId) { setLoading(false); return }
 
     const [jobsRes, dispRes, contractorsRes] = await Promise.all([
       supabase.from('jobs').select('*').eq('company_id', companyId).order('created_at', { ascending: false }),

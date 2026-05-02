@@ -317,7 +317,7 @@ export default function InvoicesPage() {
   }
 
   async function loadMoreInvoices() {
-    const uid = await getUid()
+    const uid = await getCompanyId()
     if (!uid || loadingMoreInvoices) return
     setLoadingMoreInvoices(true)
     const nextPage = invoicePage + 1
@@ -338,7 +338,7 @@ export default function InvoicesPage() {
   }
 
   async function fetchLoadsForCreate() {
-    const uid = await getUid()
+    const uid = await getCompanyId()
     if (!uid) return
     const { data } = await supabase
       .from('loads')
@@ -349,7 +349,7 @@ export default function InvoicesPage() {
   }
 
   async function fetchContractors() {
-    const uid = await getUid()
+    const uid = await getCompanyId()
     if (!uid) return
     const { data } = await supabase
       .from('contractors')
@@ -361,7 +361,7 @@ export default function InvoicesPage() {
   }
 
   async function fetchContractorTickets(contractorId: string) {
-    const uid = await getUid()
+    const uid = await getCompanyId()
     if (!uid) return
     const { data } = await supabase
       .from('contractor_tickets')
@@ -433,7 +433,7 @@ export default function InvoicesPage() {
     setView('detail')
     setPayments([])
     setDetailTicketPhotos([])
-    const uid = await getUid()
+    const uid = await getCompanyId()
 
     const [invRes, paymentsRes] = await Promise.all([
       supabase.from('invoices').select('*, invoice_line_items(*)').eq('id', inv.id).single(),
@@ -494,7 +494,7 @@ export default function InvoicesPage() {
     }
 
     setSavingPayment(true)
-    const uid = await getUid()
+    const uid = await getCompanyId()
     if (!uid) { toast.error('Not authenticated'); setSavingPayment(false); return }
 
     const { error } = await supabase.from('payments').insert({
@@ -530,7 +530,7 @@ export default function InvoicesPage() {
     if (activeSelectionSize === 0) { toast.error('Select at least one job'); return }
     setSaving(true)
 
-    const uid = await getUid()
+    const uid = await getCompanyId()
     if (!uid) { toast.error('Not authenticated'); setSaving(false); return }
 
     const prefix = invoiceType === 'client' ? 'INV' : invoiceType === 'paystub' ? 'PAY' : 'CONT'

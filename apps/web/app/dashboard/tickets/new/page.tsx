@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { getCompanyId } from '@/lib/get-company-id'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Camera, X, Plus, Loader2, CheckCircle2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -52,10 +53,12 @@ export default function QuickTicketPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       setUserId(user.id)
+      const orgId = await getCompanyId()
+      if (!orgId) return
       const { data } = await supabase
         .from('loads')
         .select('job_name, truck_number, driver_name')
-        .eq('company_id', user.id)
+        .eq('company_id', orgId)
         .order('created_at', { ascending: false })
         .limit(50)
       if (data) {

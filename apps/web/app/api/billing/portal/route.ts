@@ -13,11 +13,14 @@ export async function POST(request: Request) {
 
   const log = logger.withContext({ userId: user.id })
 
-  const { data: company } = await supabase
-    .from('companies')
-    .select('stripe_customer_id')
-    .eq('owner_id', user.id)
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('organization_id')
+    .eq('id', user.id)
     .maybeSingle()
+  const { data: company } = profile?.organization_id
+    ? await supabase.from('companies').select('stripe_customer_id').eq('id', profile.organization_id).maybeSingle()
+    : { data: null }
 
   if (!company?.stripe_customer_id) {
     log.warn('billing.portal.no_customer')

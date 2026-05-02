@@ -91,11 +91,14 @@ export async function updateSession(request: NextRequest) {
     !pathname.startsWith('/api/test-setup')
 
   if (isProtectedApiCall) {
-    const { data: company } = await supabase
-      .from('companies')
-      .select('subscription_status, trial_ends_at')
-      .eq('owner_id', user.sub)
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('organization_id')
+      .eq('id', user.sub)
       .maybeSingle()
+    const { data: company } = prof?.organization_id
+      ? await supabase.from('companies').select('subscription_status, trial_ends_at').eq('id', prof.organization_id).maybeSingle()
+      : { data: null }
 
     const status      = company?.subscription_status as string | null
     const trialEndsAt = company?.trial_ends_at as string | null
