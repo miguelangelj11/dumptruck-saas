@@ -100,7 +100,7 @@ export default async function DashboardPage() {
   const setupDone  = allSetupChecks.filter(Boolean).length
   const setupTotal = allSetupChecks.length
   const setupPct   = Math.round((setupDone / setupTotal) * 100)
-  const showSetupBanner = !onboardingCompleted && setupPct < 100
+  const showSetupBanner = false // hidden: !onboardingCompleted && setupPct < 100
 
   // ── Stat calculations ─────────────────────────────────────────────────────
   const thisWeekTickets = loads.filter(l => l.date >= thisWeekStartStr && l.date <= todayStr).length
