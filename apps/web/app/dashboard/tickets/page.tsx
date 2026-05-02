@@ -63,6 +63,7 @@ export default function TicketsPage() {
   const [saving, setSaving]       = useState(false)
   const [userId, setUserId]       = useState('')
   const [contractors, setContractors] = useState<Contractor[]>([])
+  const [clientCompanies, setClientCompanies] = useState<{ id: string; name: string }[]>([])
 
   // Filters
   const [search, setSearch]               = useState('')
@@ -111,9 +112,10 @@ export default function TicketsPage() {
     if (!orgId) { setLoading(false); return }
 
     const [range0, range1] = pageRange(0)
-    const [loadsRes, contractorsRes, countRes] = await Promise.all([
+    const [loadsRes, contractorsRes, clientCompaniesRes, countRes] = await Promise.all([
       supabase.from('loads').select('*, load_tickets(*)').eq('company_id', orgId).order('date', { ascending: false }).range(range0, range1),
       supabase.from('contractors').select('*').eq('company_id', orgId).eq('status', 'active').order('name'),
+      supabase.from('client_companies').select('id, name').eq('company_id', orgId).order('name'),
       supabase.from('loads').select('id', { count: 'exact', head: true }).eq('company_id', orgId),
     ])
     if (loadsRes.error) toast.error('Failed to load tickets: ' + loadsRes.error.message)
@@ -123,6 +125,7 @@ export default function TicketsPage() {
     setHasMore(loaded.length === PAGE_SIZE)
     setTotalCount(countRes.count ?? null)
     setContractors(contractorsRes.data ?? [])
+    setClientCompanies(clientCompaniesRes.data ?? [])
     setLoading(false)
   }
 
@@ -615,7 +618,7 @@ export default function TicketsPage() {
                   <label className="block text-xs font-medium text-gray-700 mb-1">Working Under (Company)</label>
                   <select value={form.client_company} onChange={e => setForm(p => ({ ...p, client_company: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white">
                     <option value="">— Select company —</option>
-                    {contractors.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                    {clientCompanies.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                   </select>
                 </div>
 
