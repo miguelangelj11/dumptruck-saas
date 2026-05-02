@@ -64,6 +64,11 @@ export default async function DashboardPage() {
   const invoices = invoicesRes.data ?? []
   const companyId    = companyRes.data?.id
   const companyName  = companyRes.data?.name ?? ''
+
+  const meta = user?.user_metadata ?? {}
+  const fullName = (meta.full_name as string | undefined) || (meta.name as string | undefined) || ''
+  const firstName = fullName ? fullName.split(' ')[0] : (user?.email ?? '').split('@')[0]
+  const displayName = firstName || companyName
   const activityFeed = activityRes.error ? [] : (activityRes.data ?? [])
 
   // ── Setup completion banner ───────────────────────────────────────────────
@@ -175,7 +180,7 @@ export default async function DashboardPage() {
   return (
     <div className="p-6 md:p-8 max-w-7xl">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Welcome back, {companyName}</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Welcome back, {displayName}</h1>
         <p className="text-gray-500 text-sm mt-1">Here&apos;s what&apos;s happening with your operation today.</p>
       </div>
 

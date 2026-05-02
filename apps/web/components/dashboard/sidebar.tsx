@@ -24,7 +24,7 @@ import { useTranslations } from 'next-intl'
 import LanguageSelector from '@/components/language-selector'
 
 type Props = {
-  user: { email?: string; user_metadata?: { company_name?: string } }
+  user: { email?: string; user_metadata?: { company_name?: string; full_name?: string; name?: string } }
   logoUrl?: string | null
   companyName?: string | null
 }
@@ -47,7 +47,7 @@ export default function Sidebar({ user, logoUrl, companyName: companyNameProp }:
     { href: '/dashboard/settings', icon: Settings, label: t('settings') },
   ]
 
-  const companyName = companyNameProp ?? ''
+  const companyName = companyNameProp || user.user_metadata?.company_name || ''
 
   async function handleLogout() {
     setLoggingOut(true)
@@ -99,8 +99,8 @@ export default function Sidebar({ user, logoUrl, companyName: companyNameProp }:
         <div className="flex items-center gap-3 px-2 mb-2">
           <CompanyAvatar logoUrl={logoUrl} name={companyName} size={32} bg="var(--hf-sidebar-accent)" />
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-white truncate">{companyName}</p>
-            <p className="text-[10px] text-white/40 truncate">{user.email}</p>
+            <p className="text-xs font-bold text-white truncate">{companyName}</p>
+            <p className="text-[10px] text-white/50 truncate">{user.email}</p>
           </div>
         </div>
         <LanguageSelector />
