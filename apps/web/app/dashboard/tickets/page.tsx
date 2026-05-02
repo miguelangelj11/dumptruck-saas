@@ -21,34 +21,17 @@ const statusColor = {
 
 const LOAD_TYPES = ['Dirt', 'Gravel', 'Asphalt', 'Sand', 'Rock', 'Fill', 'Millings', 'Other']
 
-// Normalize any stored time string to HH:MM (24-hour) for <input type="time">
-function to24h(t: string | null | undefined): string {
-  if (!t) return ''
-  const s = t.trim()
-  // Already HH:MM or HH:MM:SS
-  if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(s)) return s.slice(0, 5).padStart(5, '0').replace(/^(\d):/, '0$1:')
-  // "7:30 AM", "07:30 AM", "7:30AM", "07:30AM"
-  const m = s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i)
-  if (!m) return ''
-  let h = parseInt(m[1] ?? '0', 10)
-  const min = m[2]!
-  const ampm = (m[4] ?? '').toUpperCase()
-  if (ampm === 'AM' && h === 12) h = 0
-  if (ampm === 'PM' && h !== 12) h += 12
-  return `${String(h).padStart(2, '0')}:${min}`
-}
-
-// Format HH:MM for display as 12-hour with AM/PM
-function fmt12h(t: string | null | undefined): string {
-  const normalized = to24h(t)
-  if (!normalized) return ''
-  const [hStr, min] = normalized.split(':')
-  let h = parseInt(hStr!, 10)
-  const ampm = h >= 12 ? 'PM' : 'AM'
-  if (h === 0) h = 12
-  else if (h > 12) h -= 12
-  return `${h}:${min} ${ampm}`
-}
+const TIME_OPTIONS: string[] = (() => {
+  const opts: string[] = []
+  for (let h = 0; h < 24; h++) {
+    for (const m of [0, 30]) {
+      const ampm = h < 12 ? 'AM' : 'PM'
+      const h12  = h === 0 ? 12 : h > 12 ? h - 12 : h
+      opts.push(`${h12}:${String(m).padStart(2, '0')} ${ampm}`)
+    }
+  }
+  return opts
+})()
 
 type TicketRow = {
   id: string
@@ -245,7 +228,7 @@ export default function TicketsPage() {
       job_name: l.job_name, client_company: l.client_company ?? '',
       load_type: l.load_type ?? '', origin: l.origin ?? '', destination: l.destination ?? '',
       driver_name: l.driver_name, truck_number: l.truck_number ?? '',
-      date: l.date, time_in: to24h(l.time_in), time_out: to24h(l.time_out),
+      date: l.date, time_in: l.time_in ?? '', time_out: l.time_out ?? '',
       rate: String(l.rate), rate_type: l.rate_type ?? 'load',
       status: l.status, notes: l.notes ?? '',
     })
@@ -689,11 +672,17 @@ export default function TicketsPage() {
                 {/* Row 5: Time in + Time out */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Time In</label>
-                  <input type="time" value={to24h(form.time_in)} onChange={e => setForm(p => ({ ...p, time_in: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" />
+                  <select value={form.time_in} onChange={e => setForm(p => ({ ...p, time_in: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white">
+                    <option value="">— Select time —</option>
+                    {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Time Out</label>
-                  <input type="time" value={to24h(form.time_out)} onChange={e => setForm(p => ({ ...p, time_out: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" />
+                  <select value={form.time_out} onChange={e => setForm(p => ({ ...p, time_out: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white">
+                    <option value="">— Select time —</option>
+                    {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
                 </div>
 
                 {/* Row 6: Rate + Status */}
