@@ -25,12 +25,14 @@ const LOAD_TYPES = ['Dirt', 'Gravel', 'Asphalt', 'Sand', 'Rock', 'Fill', 'Millin
 function to24h(t: string | null | undefined): string {
   if (!t) return ''
   const s = t.trim()
-  if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(s)) return s.slice(0, 5)
-  const m = s.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
+  // Already HH:MM or HH:MM:SS
+  if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(s)) return s.slice(0, 5).padStart(5, '0').replace(/^(\d):/, '0$1:')
+  // "7:30 AM", "07:30 AM", "7:30AM", "07:30AM"
+  const m = s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i)
   if (!m) return ''
   let h = parseInt(m[1] ?? '0', 10)
   const min = m[2]!
-  const ampm = m[3]!.toUpperCase()
+  const ampm = (m[4] ?? '').toUpperCase()
   if (ampm === 'AM' && h === 12) h = 0
   if (ampm === 'PM' && h !== 12) h += 12
   return `${String(h).padStart(2, '0')}:${min}`
@@ -687,11 +689,11 @@ export default function TicketsPage() {
                 {/* Row 5: Time in + Time out */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Time In</label>
-                  <input type="time" value={form.time_in} onChange={e => setForm(p => ({ ...p, time_in: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" />
+                  <input type="time" value={to24h(form.time_in)} onChange={e => setForm(p => ({ ...p, time_in: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Time Out</label>
-                  <input type="time" value={form.time_out} onChange={e => setForm(p => ({ ...p, time_out: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" />
+                  <input type="time" value={to24h(form.time_out)} onChange={e => setForm(p => ({ ...p, time_out: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" />
                 </div>
 
                 {/* Row 6: Rate + Status */}
