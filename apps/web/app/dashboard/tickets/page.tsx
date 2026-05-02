@@ -21,6 +21,33 @@ const statusColor = {
 
 const LOAD_TYPES = ['Dirt', 'Gravel', 'Asphalt', 'Sand', 'Rock', 'Fill', 'Millings', 'Other']
 
+// Normalize any stored time string to HH:MM (24-hour) for <input type="time">
+function to24h(t: string | null | undefined): string {
+  if (!t) return ''
+  const s = t.trim()
+  if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(s)) return s.slice(0, 5)
+  const m = s.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
+  if (!m) return ''
+  let h = parseInt(m[1] ?? '0', 10)
+  const min = m[2]!
+  const ampm = m[3]!.toUpperCase()
+  if (ampm === 'AM' && h === 12) h = 0
+  if (ampm === 'PM' && h !== 12) h += 12
+  return `${String(h).padStart(2, '0')}:${min}`
+}
+
+// Format HH:MM for display as 12-hour with AM/PM
+function fmt12h(t: string | null | undefined): string {
+  const normalized = to24h(t)
+  if (!normalized) return ''
+  const [hStr, min] = normalized.split(':')
+  let h = parseInt(hStr!, 10)
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  if (h === 0) h = 12
+  else if (h > 12) h -= 12
+  return `${h}:${min} ${ampm}`
+}
+
 type TicketRow = {
   id: string
   ticket_number: string
@@ -216,7 +243,7 @@ export default function TicketsPage() {
       job_name: l.job_name, client_company: l.client_company ?? '',
       load_type: l.load_type ?? '', origin: l.origin ?? '', destination: l.destination ?? '',
       driver_name: l.driver_name, truck_number: l.truck_number ?? '',
-      date: l.date, time_in: l.time_in ?? '', time_out: l.time_out ?? '',
+      date: l.date, time_in: to24h(l.time_in), time_out: to24h(l.time_out),
       rate: String(l.rate), rate_type: l.rate_type ?? 'load',
       status: l.status, notes: l.notes ?? '',
     })
