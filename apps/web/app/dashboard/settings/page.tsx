@@ -62,6 +62,14 @@ type TruckRow = {
   created_at: string
 }
 
+type MemberRow = {
+  id: string
+  email: string
+  role: string
+  created_at: string
+  accepted_at: string | null
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const THEME_PRESETS = [
@@ -184,10 +192,12 @@ export default function SettingsPage() {
   const [savingNotify,    setSavingNotify]    = useState(false)
 
   // ── Team state ───────────────────────────────────────────────────────────
-  const [drivers,       setDrivers]       = useState<DriverRow[]>([])
-  const [inviteEmail,   setInviteEmail]   = useState('')
-  const [inviteRole,    setInviteRole]    = useState('Driver')
-  const [sendingInvite, setSendingInvite] = useState(false)
+  const [drivers,          setDrivers]          = useState<DriverRow[]>([])
+  const [members,          setMembers]          = useState<MemberRow[]>([])
+  const [inviteEmail,      setInviteEmail]      = useState('')
+  const [inviteRole,       setInviteRole]       = useState('Driver')
+  const [sendingInvite,    setSendingInvite]    = useState(false)
+  const [deletingMemberId, setDeletingMemberId] = useState<string | null>(null)
 
   // ── Security state ───────────────────────────────────────────────────────
   const [newEmail,        setNewEmail]        = useState('')
@@ -228,17 +238,40 @@ export default function SettingsPage() {
       setUserId(user.id)
       setEmail(user.email ?? '')
 
-      let { data: co, error } = await supabase
-        .from('companies')
-        .select('id, name, address, phone, logo_url, primary_color, accent_color')
-        .eq('owner_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
+      const companySelect = 'id, name, address, phone, logo_url, primary_color, accent_color'
+
+      // 1. Profile lookup — single source of truth for both owners and team members
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('organization_id')
+        .eq('id', user.id)
         .maybeSingle()
 
-      if (error) console.error('[settings] company fetch:', error.message)
+      let co: CompanyRow | null = null
 
-      // Team member fallback — look up company via team_members
+      if (prof?.organization_id) {
+        const { data } = await supabase
+          .from('companies')
+          .select(companySelect)
+          .eq('id', prof.organization_id)
+          .maybeSingle()
+        co = data as CompanyRow | null
+      }
+
+      // 2. Fallback: owner lookup
+      if (!co) {
+        const { data, error } = await supabase
+          .from('companies')
+          .select(companySelect)
+          .eq('owner_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        if (error) console.error('[settings] company fetch:', error.message)
+        co = data as CompanyRow | null
+      }
+
+      // 3. Fallback: team_members lookup
       if (!co) {
         const { data: mem } = await supabase
           .from('team_members')
@@ -248,10 +281,10 @@ export default function SettingsPage() {
         if (mem?.company_id) {
           const { data: teamCo } = await supabase
             .from('companies')
-            .select('id, name, address, phone, logo_url, primary_color, accent_color')
+            .select(companySelect)
             .eq('id', mem.company_id)
             .maybeSingle()
-          co = teamCo
+          co = teamCo as CompanyRow | null
         }
       }
 
@@ -311,6 +344,7 @@ export default function SettingsPage() {
         setDrivers(driversData ?? [])
 
         fetchTrucks(c.id)
+        fetchMembers(c.id)
       } else {
         setNotifEmail(user.email ?? '')
       }
@@ -345,6 +379,28 @@ export default function SettingsPage() {
       .eq('company_id', cid)
       .order('truck_number')
     setTrucks(data ?? [])
+  }
+
+  async function fetchMembers(cid: string) {
+    const { data } = await supabase
+      .from('invitations')
+      .select('id, email, role, created_at, accepted_at')
+      .eq('company_id', cid)
+      .order('created_at', { ascending: false })
+    setMembers((data ?? []) as MemberRow[])
+  }
+
+  async function handleRemoveMember(id: string, email: string) {
+    if (!confirm(`Remove ${email} from your team?`)) return
+    setDeletingMemberId(id)
+    const { error } = await supabase.from('invitations').delete().eq('id', id)
+    if (error) {
+      toast.error(error.message)
+    } else {
+      toast.success(`${email} removed`)
+      setMembers(prev => prev.filter(m => m.id !== id))
+    }
+    setDeletingMemberId(null)
   }
 
   async function handleSaveCompany(e: React.FormEvent) {
@@ -547,8 +603,7 @@ export default function SettingsPage() {
     }
 
     setInviteEmail('')
-    const { data } = await supabase.from('drivers').select('id, name, email, status, created_at').eq('company_id', companyId).order('name')
-    setDrivers(data ?? [])
+    if (companyId) fetchMembers(companyId)
     setSendingInvite(false)
   }
 
@@ -1299,51 +1354,70 @@ export default function SettingsPage() {
             </p>
           </form>
 
-          {/* Driver list */}
-          {drivers.length > 0 && (
-            <div className="border-t border-gray-100 pt-5">
-              <p className="text-sm font-semibold text-gray-800 mb-3">
-                Current Members
+          {/* Current Members */}
+          <div className="border-t border-gray-100 pt-5">
+            <p className="text-sm font-semibold text-gray-800 mb-3">
+              Current Members
+              {members.length > 0 && (
                 <span className="text-xs text-gray-400 font-normal ml-2">
-                  {drivers.filter(d => d.status === 'active').length} active · {drivers.filter(d => d.status !== 'active').length} pending
+                  {members.filter(m => !!m.accepted_at).length} active · {members.filter(m => !m.accepted_at).length} pending
                 </span>
-              </p>
-              <div className="divide-y divide-gray-50 border border-gray-100 rounded-xl overflow-hidden">
-                {drivers.map(d => (
-                  <div key={d.id} className="flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
-                        style={{ backgroundColor: primaryColor }}
-                      >
-                        {d.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{d.name}</p>
-                        <p className="text-xs text-gray-400">
-                          {d.email ?? 'No email'} · Joined {new Date(d.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        d.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-                      }`}>
-                        {d.status === 'active' ? 'Driver' : 'Pending'}
-                      </span>
-                      <button
-                        onClick={() => handleRemoveDriver(d.id, d.name)}
-                        className="p-1.5 text-gray-300 hover:text-red-500 transition-colors"
-                        aria-label={`Remove ${d.name}`}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+              )}
+            </p>
+            {members.length === 0 ? (
+              <div className="text-center py-8 border-2 border-dashed border-gray-100 rounded-xl">
+                <Users className="h-8 w-8 text-gray-200 mx-auto mb-2" />
+                <p className="text-sm text-gray-400">No team members yet</p>
+                <p className="text-xs text-gray-300 mt-0.5">Invite someone above to get started</p>
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="divide-y divide-gray-50 border border-gray-100 rounded-xl overflow-hidden">
+                {members.map(m => {
+                  const isActive = !!m.accepted_at
+                  const initials = m.email.charAt(0).toUpperCase()
+                  return (
+                    <div key={m.id} className="flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
+                          style={{ backgroundColor: primaryColor }}
+                        >
+                          {initials}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{m.email}</p>
+                          <p className="text-xs text-gray-400">
+                            <span className="capitalize">{m.role}</span>
+                            {' · '}
+                            {isActive
+                              ? `Joined ${new Date(m.accepted_at!).toLocaleDateString()}`
+                              : `Invited ${new Date(m.created_at).toLocaleDateString()}`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          isActive ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {isActive ? 'Active' : 'Pending'}
+                        </span>
+                        <button
+                          onClick={() => handleRemoveMember(m.id, m.email)}
+                          disabled={deletingMemberId === m.id}
+                          className="p-1.5 text-gray-300 hover:text-red-500 transition-colors disabled:opacity-50"
+                          aria-label={`Remove ${m.email}`}
+                        >
+                          {deletingMemberId === m.id
+                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            : <Trash2 className="h-3.5 w-3.5" />}
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
