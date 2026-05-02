@@ -116,7 +116,7 @@ export default function DispatchPage() {
 
     const [loadsRes, driversRes, jobsRes, dispRes, contractorsRes] = await Promise.all([
       supabase.from('loads').select('id,job_name,driver_name,truck_number,date,status,rate,rate_type').eq('company_id', companyId).gte('date', cutoff),
-      supabase.from('drivers').select('id,name,truck_number').eq('company_id', companyId).eq('status', 'active').order('name'),
+      supabase.from('drivers').select('id,name,truck_number').eq('company_id', companyId).eq('status', 'available').order('name'),
       supabase.from('jobs').select('*').eq('company_id', companyId).order('created_at', { ascending: false }),
       supabase.from('dispatches').select('*').eq('company_id', companyId).eq('dispatch_date', today).order('created_at', { ascending: false }),
       supabase.from('contractors').select('id,name,phone').eq('company_id', companyId).eq('status', 'active').order('name'),
