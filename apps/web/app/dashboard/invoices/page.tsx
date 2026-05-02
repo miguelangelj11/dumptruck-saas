@@ -1242,8 +1242,9 @@ export default function InvoicesPage() {
             header { display: none !important; }
             nav { display: none !important; }
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white !important; }
-            .print-doc { box-shadow: none !important; border: none !important; border-radius: 0 !important; }
-            .print-page { padding: 0 !important; background: white !important; }
+            .print-doc { box-shadow: none !important; border: none !important; border-radius: 0 !important; overflow: visible !important; max-width: 100% !important; }
+            .print-page { padding: 0 !important; background: white !important; overflow: visible !important; }
+            .invoice-table-wrap { overflow: visible !important; }
           }
         `}</style>
 
@@ -1328,8 +1329,8 @@ export default function InvoicesPage() {
         )}
 
         {/* Invoice document */}
-        <div className="print-page bg-gray-50 min-h-screen px-3 py-6 md:px-10 md:py-10" ref={printRef}>
-          <div className="print-doc w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-200 overflow-visible">
+        <div className="print-page bg-gray-50 min-h-screen px-2 py-6 md:px-8 md:py-10 overflow-x-hidden" ref={printRef}>
+          <div className="print-doc w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
 
             {/* ── TOP HEADER ── */}
             <div className="px-4 md:px-8 pt-6 pb-6 border-b border-gray-100">
@@ -1400,35 +1401,35 @@ export default function InvoicesPage() {
             </div>
 
             {/* ── LINE ITEMS TABLE ── */}
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[700px] text-sm border-collapse">
+            <div className="invoice-table-wrap overflow-x-auto">
+              <table className="w-full min-w-[580px] text-sm border-collapse">
                 <thead>
                   <tr className="bg-gray-100">
-                    <th style={{paddingLeft:24,paddingRight:12,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Date</th>
-                    <th style={{paddingLeft:12,paddingRight:12,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Truck #</th>
-                    <th style={{paddingLeft:12,paddingRight:12,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Driver</th>
-                    <th style={{paddingLeft:12,paddingRight:12,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Material / Location</th>
-                    <th style={{paddingLeft:12,paddingRight:12,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Ticket #</th>
-                    <th style={{paddingLeft:12,paddingRight:12,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Time</th>
-                    <th style={{paddingLeft:12,paddingRight:12,paddingTop:12,paddingBottom:12}} className="text-right text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Qty</th>
-                    <th style={{paddingLeft:12,paddingRight:12,paddingTop:12,paddingBottom:12}} className="text-right text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Rate</th>
-                    <th style={{paddingLeft:12,paddingRight:32,paddingTop:12,paddingBottom:12}} className="text-right text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Amount</th>
+                    <th style={{paddingLeft:16,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Date</th>
+                    <th style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Truck #</th>
+                    <th style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Driver</th>
+                    <th style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Material / Location</th>
+                    <th style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Ticket #</th>
+                    <th style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Time</th>
+                    <th style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-right text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Qty</th>
+                    <th style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-right text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Rate</th>
+                    <th style={{paddingLeft:8,paddingRight:16,paddingTop:12,paddingBottom:12}} className="text-right text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Amount</th>
                   </tr>
                 </thead>
                 <tbody>
                   {lineItems.map((item, idx) => (
                     <tr key={item.id} className={`border-b border-gray-100 ${idx % 2 === 1 ? 'bg-gray-50/60' : 'bg-white'}`}>
-                      <td style={{paddingLeft:24,paddingRight:12,paddingTop:12,paddingBottom:12}} className="text-gray-600 whitespace-nowrap text-xs">{fmtDate(item.line_date)}</td>
-                      <td style={{paddingLeft:12,paddingRight:12,paddingTop:12,paddingBottom:12}} className="font-semibold text-gray-800">{item.truck_number || <span className="text-gray-300 font-normal">—</span>}</td>
-                      <td style={{paddingLeft:12,paddingRight:12,paddingTop:12,paddingBottom:12}} className="text-gray-700 whitespace-nowrap">{item.driver_name}</td>
-                      <td style={{paddingLeft:12,paddingRight:12,paddingTop:12,paddingBottom:12}} className="text-gray-600">{item.material || <span className="text-gray-300">—</span>}</td>
-                      <td style={{paddingLeft:12,paddingRight:12,paddingTop:12,paddingBottom:12}} className="font-mono text-gray-600 text-xs">{item.ticket_number || <span className="text-gray-300 font-sans">—</span>}</td>
-                      <td style={{paddingLeft:12,paddingRight:12,paddingTop:12,paddingBottom:12}} className="text-gray-500 text-xs whitespace-nowrap">{item.time_worked || <span className="text-gray-300">—</span>}</td>
-                      <td style={{paddingLeft:12,paddingRight:12,paddingTop:12,paddingBottom:12}} className="text-gray-700 text-right tabular-nums">{item.quantity != null ? item.quantity : <span className="text-gray-300">—</span>}</td>
-                      <td style={{paddingLeft:12,paddingRight:12,paddingTop:12,paddingBottom:12}} className="text-gray-700 text-right whitespace-nowrap tabular-nums">
+                      <td style={{paddingLeft:16,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-gray-600 whitespace-nowrap text-xs">{fmtDate(item.line_date)}</td>
+                      <td style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="font-semibold text-gray-800">{item.truck_number || <span className="text-gray-300 font-normal">—</span>}</td>
+                      <td style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-gray-700 whitespace-nowrap">{item.driver_name}</td>
+                      <td style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-gray-600">{item.material || <span className="text-gray-300">—</span>}</td>
+                      <td style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="font-mono text-gray-600 text-xs">{item.ticket_number || <span className="text-gray-300 font-sans">—</span>}</td>
+                      <td style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-gray-500 text-xs whitespace-nowrap">{item.time_worked || <span className="text-gray-300">—</span>}</td>
+                      <td style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-gray-700 text-right tabular-nums">{item.quantity != null ? item.quantity : <span className="text-gray-300">—</span>}</td>
+                      <td style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-gray-700 text-right whitespace-nowrap tabular-nums">
                         ${fmt(item.rate ?? 0)}<span className="text-xs text-gray-400">/{item.rate_type ?? 'load'}</span>
                       </td>
-                      <td style={{paddingLeft:12,paddingRight:32,paddingTop:12,paddingBottom:12}} className="font-semibold text-gray-900 text-right tabular-nums">${fmt(item.amount)}</td>
+                      <td style={{paddingLeft:8,paddingRight:16,paddingTop:12,paddingBottom:12}} className="font-semibold text-gray-900 text-right tabular-nums whitespace-nowrap">${fmt(item.amount)}</td>
                     </tr>
                   ))}
                 </tbody>
