@@ -309,8 +309,33 @@ export default function DispatchPage() {
       toast.success(`${displayName} dispatched!`)
       if (data) {
         setDispatches(prev => [data as Dispatch, ...prev])
-        const jobName = jobs.find(j => j.id === dispForm.job_id)?.job_name ?? 'job'
+        const jobName = jobs.find(j => j.id === dispForm.job_id)?.job_name ?? ''
+        const jobLocation = jobs.find(j => j.id === dispForm.job_id)?.location ?? ''
         logDispatchActivity(companyId, displayName, jobName, data.id, supabase)
+
+        // Send email notification to driver
+        if (!isSub && dispForm.driver_id) {
+          const { data: driverRow } = await supabase
+            .from('drivers')
+            .select('email')
+            .eq('id', dispForm.driver_id)
+            .maybeSingle()
+          if (driverRow?.email) {
+            fetch('/api/dispatches/notify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                driverEmail:  driverRow.email,
+                driverName:   displayName,
+                jobName:      jobName || undefined,
+                location:     jobLocation || undefined,
+                startTime:    dispForm.start_time || undefined,
+                truckNumber:  dispForm.truck_number || undefined,
+                instructions: dispForm.instructions || undefined,
+              }),
+            }).catch(err => console.error('[dispatch notify]', err))
+          }
+        }
       }
     }
     setSavingDispatch(false); setShowDispForm(false)
