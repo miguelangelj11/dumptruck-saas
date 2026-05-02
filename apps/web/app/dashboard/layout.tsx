@@ -6,55 +6,45 @@ import Sidebar from '@/components/dashboard/sidebar'
 import ThemeInjector from '@/components/theme-injector'
 import ChatWidget from '@/components/chat-widget'
 
+function getAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const key = process.env.SUPABASE_SERVICE_KEY!
+  return createAdminClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
+}
+
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Check if this user is a team member (invited, not an owner)
-  const { data: memberRow } = await supabase
-    .from('team_members')
-    .select('company_id')
-    .eq('user_id', user.id)
+  const admin = getAdmin()
+
+  // Single source of truth: profile.organization_id
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('organization_id, role')
+    .eq('id', user.id)
     .maybeSingle()
 
-  const isTeamMember = !!memberRow
+  const organizationId = profile?.organization_id ?? null
+  const isTeamMember   = !!profile && profile.role !== 'admin'
 
-  let co: Record<string, unknown> | null = null
-
-  if (isTeamMember && memberRow.company_id) {
-    // Team member — use admin client to bypass RLS and load the inviting company
-    const adminUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const adminKey = process.env.SUPABASE_SERVICE_KEY
-    if (adminUrl && adminKey) {
-      const admin = createAdminClient(adminUrl, adminKey, {
-        auth: { autoRefreshToken: false, persistSession: false },
-      })
-      const { data } = await admin
+  // Load company using organization_id
+  const { data: coData } = organizationId
+    ? await admin
         .from('companies')
-        .select('name, logo_url, primary_color, accent_color, onboarding_completed, trial_ends_at, subscription_status, plan')
-        .eq('id', memberRow.company_id)
+        .select('name, logo_url, primary_color, accent_color, onboarding_completed, trial_ends_at, subscription_status, plan, owner_id')
+        .eq('id', organizationId)
         .maybeSingle()
-      co = data as Record<string, unknown> | null
-    }
-  } else {
-    // Owner — load their own company
-    const { data } = await supabase
-      .from('companies')
-      .select('name, logo_url, primary_color, accent_color, onboarding_completed, trial_ends_at, subscription_status, plan')
-      .eq('owner_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    co = data as Record<string, unknown> | null
-  }
+    : { data: null }
 
-  // Redirect incomplete onboarding — owners only, never team members
+  const co = coData as Record<string, unknown> | null
+
+  // Redirect incomplete onboarding — only for the company owner
   if (!isTeamMember && co && co.onboarding_completed === false) {
     redirect('/onboarding')
   }
 
-  // Trial expiry check — only runs when trial_ends_at is set (new signups)
   const trialEndsAt        = (co?.trial_ends_at       as string | null | undefined) ?? null
   const subscriptionStatus = (co?.subscription_status as string | null | undefined) ?? null
 
@@ -63,15 +53,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   if (subscriptionStatus === 'trial' && trialEndsAt && new Date(trialEndsAt) < new Date()) {
-    // Mark expired and redirect
-    await supabase
+    await admin
       .from('companies')
       .update({ trial_expired: true, subscription_status: 'expired' })
-      .eq('owner_id', user.id)
+      .eq('id', organizationId)
     redirect('/trial-expired')
   }
 
-  // Past-due payment banner — shown above everything else when payment has failed
+  // Past-due payment banner
   let pastDueBanner: React.ReactNode = null
   if (subscriptionStatus === 'past_due') {
     pastDueBanner = (
@@ -107,7 +96,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     )
   }
 
-  // Compute trial banner
+  // Trial banner
   let trialBanner: React.ReactNode = null
   if (subscriptionStatus === 'trial' && trialEndsAt) {
     const msLeft   = new Date(trialEndsAt).getTime() - Date.now()
@@ -157,7 +146,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <>
       <ThemeInjector primaryColor={primaryColor} accentColor={accentColor} />
       <div className="flex h-screen bg-gray-50 overflow-hidden">
-        <Sidebar user={user} logoUrl={(co?.logo_url as string | null | undefined) ?? null} companyName={(co?.name as string | null | undefined) ?? null} />
+        <Sidebar
+          user={user}
+          logoUrl={(co?.logo_url as string | null | undefined) ?? null}
+          companyName={(co?.name as string | null | undefined) ?? null}
+        />
         <main className="flex-1 overflow-y-auto pt-14 md:pt-0 flex flex-col">
           {pastDueBanner}
           {trialBanner}
