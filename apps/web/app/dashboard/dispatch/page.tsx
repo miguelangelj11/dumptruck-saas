@@ -125,6 +125,10 @@ export default function DispatchPage() {
     if (jobsRes.error && !jobsRes.error.message.includes('schema cache'))
       toast.error('Failed to load jobs: ' + jobsRes.error.message)
 
+    console.log('[dispatch] companyId:', companyId)
+    console.log('[dispatch] drivers returned:', driversRes.data?.length ?? 0, driversRes.error?.message ?? 'no error')
+    console.log('[dispatch] drivers data:', driversRes.data)
+
     const loads = (loadsRes.data ?? []) as Load[]
     setJobs((jobsRes.data ?? []).map((j: Job) => ({ ...j, loads: loads.filter(l => l.job_name === j.job_name) })))
     setDrivers(driversRes.data ?? [])

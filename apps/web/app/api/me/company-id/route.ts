@@ -16,18 +16,7 @@ export async function GET() {
 
   const admin = getAdmin()
 
-  // 1. profiles.organization_id
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('company_id')
-    .eq('id', user.id)
-    .maybeSingle()
-
-  if (profile?.company_id) {
-    return NextResponse.json({ companyId: profile.company_id })
-  }
-
-  // 2. owner lookup
+  // 1. Owner lookup
   const { data: company } = await admin
     .from('companies')
     .select('id')
@@ -37,15 +26,17 @@ export async function GET() {
     .maybeSingle()
 
   if (company?.id) {
+    console.log('[company-id] found via owner lookup:', company.id)
     return NextResponse.json({ companyId: company.id })
   }
 
-  // 3. team_members lookup
+  // 2. Team member lookup
   const { data: membership } = await admin
     .from('team_members')
     .select('company_id')
     .eq('user_id', user.id)
     .maybeSingle()
 
+  console.log('[company-id] found via team_members:', membership?.company_id ?? null)
   return NextResponse.json({ companyId: membership?.company_id ?? null })
 }
