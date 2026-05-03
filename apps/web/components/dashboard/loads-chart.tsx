@@ -1,43 +1,79 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
 
-type DataPoint = { month: string; current: number; previous: number }
+export type ChartPoint = { label: string; revenue: number }
 
-export default function LoadsChart({ data }: { data: DataPoint[] }) {
-  const [accentColor, setAccentColor] = useState('#2d7a4f')
+type Props = {
+  week:  ChartPoint[]
+  month: ChartPoint[]
+  year:  ChartPoint[]
+}
 
-  useEffect(() => {
-    const color = getComputedStyle(document.documentElement).getPropertyValue('--hf-sidebar-accent').trim()
-    if (color) setAccentColor(color)
-  }, [])
+const VIEWS = ['This Week', 'This Month', 'This Year'] as const
+type View = typeof VIEWS[number]
 
-  if (!data.length) {
-    return (
-      <div className="flex items-center justify-center h-[220px] text-gray-300 text-sm">
-        No load data yet
-      </div>
-    )
-  }
+function fmtAxis(v: number) {
+  if (v >= 1000) return `$${(v / 1000).toFixed(0)}k`
+  return `$${v}`
+}
+
+export default function LoadsChart({ week, month, year }: Props) {
+  const [view, setView] = useState<View>('This Week')
+  const data = view === 'This Week' ? week : view === 'This Month' ? month : year
+  const hasData = data.some(d => d.revenue > 0)
 
   return (
-    <ResponsiveContainer width="100%" height={220}>
-      <LineChart data={data} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-        <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9ca3af' }} />
-        <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} allowDecimals={false} />
-        <Tooltip
-          contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }}
-          labelStyle={{ fontWeight: 600 }}
-          formatter={(v) => [Number(v), '']}
-        />
-        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
-        <Line type="monotone" dataKey="current"  stroke={accentColor} strokeWidth={2} dot={false} name="This year" />
-        <Line type="monotone" dataKey="previous" stroke="#9ca3af" strokeWidth={2} dot={false} strokeDasharray="4 4" name="Last year" />
-      </LineChart>
-    </ResponsiveContainer>
+    <div>
+      <div className="flex gap-1 mb-4">
+        {VIEWS.map(v => (
+          <button
+            key={v}
+            onClick={() => setView(v)}
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              view === v
+                ? 'bg-[#1e3a2a] text-white'
+                : 'text-gray-500 hover:bg-gray-100'
+            }`}
+          >
+            {v}
+          </button>
+        ))}
+      </div>
+
+      {!hasData ? (
+        <div className="flex items-center justify-center h-[200px] text-gray-300 text-sm">
+          No revenue data for this period
+        </div>
+      ) : (
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={data} margin={{ top: 4, right: 4, left: -4, bottom: 4 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 10, fill: '#9ca3af' }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              tick={{ fontSize: 10, fill: '#9ca3af' }}
+              tickFormatter={fmtAxis}
+              axisLine={false}
+              tickLine={false}
+              width={44}
+            />
+            <Tooltip
+              contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }}
+              formatter={(v) => [`$${Number(v).toLocaleString()}`, 'Revenue']}
+              cursor={{ fill: '#f0fdf4' }}
+            />
+            <Bar dataKey="revenue" fill="#2d7a4f" radius={[3, 3, 0, 0]} maxBarSize={48} />
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </div>
   )
 }
