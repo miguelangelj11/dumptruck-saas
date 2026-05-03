@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ArrowRight } from 'lucide-react'
 
 const TABS = [
@@ -254,14 +255,37 @@ export default function Hero() {
   return (
     <section
       ref={sectionRef}
-      className="pt-20 pb-14 sm:pt-24 sm:pb-20"
-      style={{
-        background: '#0f1923',
-        backgroundImage: 'radial-gradient(#ffffff08 1px, transparent 1px)',
-        backgroundSize: '24px 24px',
-      }}
+      className="relative pt-20 pb-14 sm:pt-24 sm:pb-20 overflow-hidden"
+      style={{ background: '#0f1923' }}
     >
-      <div className="mx-auto max-w-5xl px-4 sm:px-6">
+      {/* Hero background image */}
+      <Image
+        src="/hero-bg.png"
+        alt=""
+        fill
+        priority
+        style={{ objectFit: 'cover', objectPosition: 'center', opacity: 0.28 }}
+        sizes="100vw"
+      />
+      {/* Dark overlay — heavier on the left so text stays readable */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(to right, rgba(15,25,35,0.92) 0%, rgba(15,25,35,0.65) 50%, rgba(15,25,35,0.45) 100%)',
+          zIndex: 1,
+        }}
+      />
+      {/* Dot-grid texture on top */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute', inset: 0, zIndex: 2,
+          backgroundImage: 'radial-gradient(#ffffff08 1px, transparent 1px)',
+          backgroundSize: '24px 24px',
+        }}
+      />
+      <div className="relative mx-auto max-w-5xl px-4 sm:px-6" style={{ zIndex: 10 }}>
 
         {/* Badge */}
         <div className="flex justify-center mb-6 sm:mb-7">
