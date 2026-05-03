@@ -835,7 +835,7 @@ export default function SettingsPage() {
               value={fullName}
               onChange={e => setFullName(e.target.value)}
               className={inputCls}
-              placeholder="e.g. Miguel Jimenez"
+              placeholder="e.g. John Smith"
             />
             <p className="text-xs text-gray-400 mt-1">Shown in the welcome message and sidebar.</p>
           </div>
