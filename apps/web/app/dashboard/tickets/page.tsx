@@ -79,6 +79,7 @@ export default function TicketsPage() {
   const [driversList, setDriversList] = useState<{ id: string; name: string }[]>([])
   const [driverMode, setDriverMode] = useState<'dropdown' | 'manual'>('dropdown')
   const [companyPlan,          setCompanyPlan]          = useState<string | null>(null)
+  const [isInternal,           setIsInternal]           = useState(false)
   const [monthTicketCount,     setMonthTicketCount]     = useState(0)
   const [ticketBannerDismissed, setTicketBannerDismissed] = useState(false)
 
@@ -137,7 +138,7 @@ export default function TicketsPage() {
       supabase.from('client_companies').select('id, name').eq('company_id', orgId).order('name'),
       supabase.from('loads').select('id', { count: 'exact', head: true }).eq('company_id', orgId),
       supabase.from('drivers').select('id, name').eq('company_id', orgId).eq('status', 'active').order('name'),
-      supabase.from('companies').select('plan').eq('id', orgId).maybeSingle(),
+      supabase.from('companies').select('plan, is_internal').eq('id', orgId).maybeSingle(),
       supabase.from('loads').select('id', { count: 'exact', head: true }).eq('company_id', orgId).gte('date', monthStart),
     ])
     if (loadsRes.error) toast.error('Failed to load tickets: ' + loadsRes.error.message)
@@ -149,7 +150,9 @@ export default function TicketsPage() {
     setContractors(contractorsRes.data ?? [])
     setClientCompanies(clientCompaniesRes.data ?? [])
     setDriversList(driversRes.data ?? [])
-    setCompanyPlan((coRes.data as Record<string, unknown> | null)?.plan as string | null ?? null)
+    const coData = coRes.data as Record<string, unknown> | null
+    setCompanyPlan(coData?.plan as string | null ?? null)
+    setIsInternal(!!(coData?.is_internal))
     setMonthTicketCount(monthRes.count ?? 0)
     setLoading(false)
   }
@@ -289,7 +292,7 @@ export default function TicketsPage() {
       }
       toast.success('Ticket updated')
     } else {
-      if (companyPlan === 'owner_operator' && monthTicketCount >= 200) {
+      if (!isInternal && companyPlan === 'owner_operator' && monthTicketCount >= 200) {
         toast.error('Monthly ticket limit reached (200/mo). Upgrade to Fleet for unlimited tickets.')
         setSaving(false)
         return

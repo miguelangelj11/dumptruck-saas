@@ -34,6 +34,7 @@ export default function DriversPage() {
   const [payForm, setPayForm]               = useState(EMPTY_PAY)
   const [savingPay, setSavingPay]           = useState(false)
   const [companyPlan, setCompanyPlan]           = useState<string | null>(null)
+  const [isInternal, setIsInternal]             = useState(false)
   const [nearLimitDismissed, setNearLimitDismissed] = useState(false)
   const [atLimitCardDismissed, setAtLimitCardDismissed] = useState(false)
   const [upgradeLoading, setUpgradeLoading]     = useState(false)
@@ -70,13 +71,15 @@ export default function DriversPage() {
       supabase.from('drivers').select('*').eq('company_id', companyId).order('name'),
       supabase.from('loads').select('*').eq('company_id', companyId).gte('date', cutoff),
       supabase.from('driver_payments').select('*').eq('company_id', companyId).order('payment_date', { ascending: false }),
-      supabase.from('companies').select('plan').eq('id', companyId).maybeSingle(),
+      supabase.from('companies').select('plan, is_internal').eq('id', companyId).maybeSingle(),
     ])
     if (dRes.error) toast.error('Failed to load drivers: ' + dRes.error.message)
     setDrivers(dRes.data ?? [])
     setLoads(lRes.data ?? [])
     setDriverPayments(dpRes.data ?? [])
-    setCompanyPlan((coRes.data as Record<string, unknown> | null)?.plan as string | null ?? null)
+    const coData = coRes.data as Record<string, unknown> | null
+    setCompanyPlan(coData?.plan as string | null ?? null)
+    setIsInternal(!!(coData?.is_internal))
     setLoading(false)
   }
 
@@ -84,7 +87,7 @@ export default function DriversPage() {
 
   // ── Plan limits ───────────────────────────────────────────────────────────
   const activeDriverCount = drivers.filter(d => d.status === 'active').length
-  const driverLimit       = companyPlan === 'enterprise' ? Infinity : companyPlan === 'fleet' ? 15 : 3
+  const driverLimit       = isInternal || companyPlan === 'enterprise' ? Infinity : companyPlan === 'fleet' ? 15 : 3
   const limitLabel        = driverLimit === Infinity ? '∞' : String(driverLimit)
   const atLimit           = driverLimit !== Infinity && activeDriverCount >= driverLimit
 
@@ -221,23 +224,18 @@ export default function DriversPage() {
             {driverUnpaidSummary.length > 0 && ` · ${driverUnpaidSummary.length} with unpaid work`}
           </p>
         </div>
-        {/* Add Driver button — overlay captures click when at limit to show upgrade modal */}
-        <div className="relative inline-flex">
-          <button
-            onClick={openAdd}
-            disabled={atLimit}
-            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors ${atLimit ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-[#2d7a4f] text-white hover:bg-[#245f3e]'}`}
-          >
-            <Plus className="h-4 w-4" /> Add Driver
-          </button>
-          {atLimit && (
-            <div
-              className="absolute inset-0 cursor-pointer"
-              title={`You've reached your plan limit (${activeDriverCount}/${limitLabel} drivers). Upgrade to add more.`}
-              onClick={() => { setEditingDriver(null); setForm(EMPTY_DRIVER); setShowForm(true) }}
-            />
-          )}
-        </div>
+        <button
+          onClick={() => {
+            if (atLimit) {
+              toast.error(`You've reached your ${limitLabel} driver limit. Upgrade your plan to add more drivers.`)
+              return
+            }
+            openAdd()
+          }}
+          className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors ${atLimit ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-[#2d7a4f] text-white hover:bg-[#245f3e]'}`}
+        >
+          <Plus className="h-4 w-4" /> Add Driver
+        </button>
       </div>
 
       {/* Near-limit warning banner (80%+) */}

@@ -38,24 +38,27 @@ export async function POST(request: Request) {
 
   const { data: company } = await admin
     .from('companies')
-    .select('plan')
+    .select('plan, is_internal')
     .eq('id', companyId)
     .maybeSingle()
 
-  const limit = getLimit((company as Record<string, unknown> | null)?.plan as string | null)
+  const co = company as Record<string, unknown> | null
+  if (!co?.is_internal) {
+    const limit = getLimit(co?.plan as string | null)
 
-  if (limit !== Infinity) {
-    const { count } = await admin
-      .from('drivers')
-      .select('id', { count: 'exact', head: true })
-      .eq('company_id', companyId)
-      .eq('status', 'active')
+    if (limit !== Infinity) {
+      const { count } = await admin
+        .from('drivers')
+        .select('id', { count: 'exact', head: true })
+        .eq('company_id', companyId)
+        .eq('status', 'active')
 
-    if ((count ?? 0) >= limit) {
-      return NextResponse.json(
-        { error: 'Driver limit reached for your plan. Please upgrade.' },
-        { status: 403 },
-      )
+      if ((count ?? 0) >= limit) {
+        return NextResponse.json(
+          { error: 'Driver limit reached for your plan. Please upgrade.' },
+          { status: 403 },
+        )
+      }
     }
   }
 

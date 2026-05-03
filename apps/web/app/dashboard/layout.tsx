@@ -41,7 +41,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (organizationId) {
     const { data } = await admin
       .from('companies')
-      .select('name, logo_url, primary_color, accent_color, onboarding_completed, trial_ends_at, subscription_status, plan, owner_id')
+      .select('name, logo_url, primary_color, accent_color, onboarding_completed, trial_ends_at, subscription_status, plan, owner_id, is_internal')
       .eq('id', organizationId)
       .maybeSingle()
     coData = data as Record<string, unknown> | null
@@ -50,7 +50,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!coData) {
     const { data } = await admin
       .from('companies')
-      .select('name, logo_url, primary_color, accent_color, onboarding_completed, trial_ends_at, subscription_status, plan, owner_id')
+      .select('name, logo_url, primary_color, accent_color, onboarding_completed, trial_ends_at, subscription_status, plan, owner_id, is_internal')
       .eq('owner_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -67,17 +67,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const trialEndsAt        = (co?.trial_ends_at       as string | null | undefined) ?? null
   const subscriptionStatus = (co?.subscription_status as string | null | undefined) ?? null
+  const isInternal         = !!(co?.is_internal        as boolean | null | undefined)
 
-  if (subscriptionStatus === 'expired' && !isSettingsPath) {
-    redirect('/subscribe')
-  }
+  if (!isInternal) {
+    if (subscriptionStatus === 'expired' && !isSettingsPath) {
+      redirect('/subscribe')
+    }
 
-  if (subscriptionStatus === 'trial' && trialEndsAt && new Date(trialEndsAt) < new Date()) {
-    await admin
-      .from('companies')
-      .update({ trial_expired: true, subscription_status: 'expired' })
-      .eq('id', organizationId)
-    if (!isSettingsPath) redirect('/subscribe')
+    if (subscriptionStatus === 'trial' && trialEndsAt && new Date(trialEndsAt) < new Date()) {
+      await admin
+        .from('companies')
+        .update({ trial_expired: true, subscription_status: 'expired' })
+        .eq('id', organizationId)
+      if (!isSettingsPath) redirect('/subscribe')
+    }
   }
 
   // Past-due payment banner
@@ -116,9 +119,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
     )
   }
 
-  // Trial banner — show for all 14 days
+  // Trial banner — show for all 14 days (not for internal accounts)
   let trialBanner: React.ReactNode = null
-  if (subscriptionStatus === 'trial' && trialEndsAt) {
+  if (!isInternal && subscriptionStatus === 'trial' && trialEndsAt) {
     const msLeft   = new Date(trialEndsAt).getTime() - Date.now()
     const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24))
     if (daysLeft > 0) {
