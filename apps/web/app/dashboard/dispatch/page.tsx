@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import {
   Plus, Pencil, Trash2, Loader2, X, MapPin, Users, Truck,
   DollarSign, Calendar, ChevronDown, ChevronUp, Send,
-  AlertTriangle, Clock, PackageOpen, TrendingUp, RefreshCw, Radio,
+  AlertTriangle, Clock, PackageOpen, TrendingUp, RefreshCw, Radio, Link2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Job, Load, Dispatch, DispatchStatus } from '@/lib/types'
@@ -75,6 +75,7 @@ export default function DispatchPage() {
   const [contractors, setContractors] = useState<ContractorBasic[]>([])
   const [loading,     setLoading]     = useState(true)
   const [userId,      setUserId]      = useState('')
+  const [orgId,       setOrgId]       = useState('')
 
   const [mainTab,     setMainTab]     = useState<'board' | 'today' | 'subs'>('board')
   const [jobFilter,   setJobFilter]   = useState<'active' | 'on_hold' | 'completed' | 'all'>('active')
@@ -115,6 +116,7 @@ export default function DispatchPage() {
 
     const companyId = await getCompanyId()
     if (!companyId) { setLoading(false); return }
+    setOrgId(companyId)
 
     const [loadsRes, driversRes, jobsRes, dispRes, contractorsRes] = await Promise.all([
       supabase.from('loads').select('id,job_name,driver_name,truck_number,date,status,rate,rate_type').eq('company_id', companyId).gte('date', cutoff),
@@ -351,6 +353,7 @@ export default function DispatchPage() {
                 truckNumber:  dispForm.truck_number || undefined,
                 instructions: dispForm.instructions || undefined,
                 dispatchId:   data.id,
+                companyId,
               }),
             }).catch(err => console.error('[dispatch notify]', err))
           }
@@ -368,6 +371,7 @@ export default function DispatchPage() {
               truckNumber:  dispForm.truck_number || undefined,
               instructions: dispForm.instructions || undefined,
               dispatchId:   data.id,
+              companyId,
             }),
           }).catch(err => console.error('[dispatch notify sub]', err))
         }
@@ -463,6 +467,18 @@ export default function DispatchPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {orgId && (
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(`https://dumptruckboss.com/portal?c=${orgId}`)
+                toast.success('Portal link copied!')
+              }}
+              title="Copy driver portal link"
+              className="h-9 px-3 rounded-xl border border-gray-200 flex items-center gap-1.5 text-gray-500 hover:bg-gray-50 transition-colors text-xs font-medium"
+            >
+              <Link2 className="h-3.5 w-3.5" /> Portal Link
+            </button>
+          )}
           <button
             onClick={fetchData}
             className="h-9 w-9 rounded-xl border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors"

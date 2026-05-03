@@ -45,7 +45,8 @@ export async function updateSession(request: NextRequest) {
     '/about', '/blog', '/careers', '/privacy', '/terms', '/security', '/changelog',
     '/pricing', '/features', '/schedule-demo', '/trial-expired',
     '/api/webhooks', '/api/health', '/api/invite', '/api/team/accept-invite', '/api/dispatches/respond',
-    '/invite', '/join',
+    '/api/public',
+    '/invite', '/join', '/portal',
   ]
   const isPublic = publicPaths.some(
     (p) => pathname === p || pathname.startsWith(p + '/')

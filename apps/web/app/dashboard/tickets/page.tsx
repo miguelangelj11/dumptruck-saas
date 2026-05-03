@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Pencil, Trash2, Loader2, FileText, Camera, X, ImageIcon, ChevronLeft, ChevronRight, Search, Filter, CheckCircle2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, FileText, Camera, X, ImageIcon, ChevronLeft, ChevronRight, Search, Filter, CheckCircle2, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Load, LoadTicket, Contractor } from '@/lib/types'
 import { linkTicketToDispatch, approveTicket } from '@/lib/workflows'
@@ -359,6 +359,14 @@ export default function TicketsPage() {
     toast.success(`Approved: ${l.job_name} — ${l.driver_name}`, { description: 'Ready to invoice' })
   }
 
+  async function handleReject(l: Load) {
+    if (!confirm(`Reject this ticket from ${l.driver_name}? Status will be set to Disputed.`)) return
+    const { error } = await supabase.from('loads').update({ status: 'disputed' }).eq('id', l.id)
+    if (error) { toast.error('Failed to reject ticket'); return }
+    setLoads(prev => prev.map(t => t.id === l.id ? { ...t, status: 'disputed' } : t))
+    toast.success('Ticket rejected')
+  }
+
   function getPhotos(l: Load): string[] {
     const slipPhotos = (l.load_tickets ?? []).map(t => t.image_url).filter(Boolean) as string[]
     return slipPhotos.length > 0 ? slipPhotos : (l.image_url ? [l.image_url] : [])
@@ -584,6 +592,9 @@ export default function TicketsPage() {
                         <div className="flex items-center gap-1.5">
                           {l.status === 'pending' && (
                             <button onClick={() => handleApprove(l)} title="Approve ticket" className="p-1 text-gray-300 hover:text-green-500 transition-colors"><CheckCircle2 className="h-3.5 w-3.5" /></button>
+                          )}
+                          {l.status === 'pending' && l.source === 'driver' && (
+                            <button onClick={() => handleReject(l)} title="Reject ticket" className="p-1 text-gray-300 hover:text-red-500 transition-colors"><XCircle className="h-3.5 w-3.5" /></button>
                           )}
                           <button onClick={() => openEdit(l)} className="p-1 text-gray-400 hover:text-[#2d7a4f] transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
                           <button onClick={() => handleDelete(l.id)} className="p-1 text-gray-400 hover:text-red-500 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>

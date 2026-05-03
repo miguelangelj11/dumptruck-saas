@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => ({}))
-  const { driverEmail, driverName, jobName, location, startTime, truckNumber, instructions, dispatchId } =
+  const { driverEmail, driverName, jobName, location, startTime, truckNumber, instructions, dispatchId, companyId } =
     body as {
       driverEmail?:  string
       driverName?:   string
@@ -24,6 +24,7 @@ export async function POST(request: Request) {
       truckNumber?:  string
       instructions?: string
       dispatchId?:   string
+      companyId?:    string
     }
 
   if (!driverEmail) return NextResponse.json({ sent: false, reason: 'no_email' })
@@ -45,6 +46,8 @@ export async function POST(request: Request) {
   const token = dispatchId ? Buffer.from(dispatchId).toString('base64') : null
   const base  = dispatchId ? `https://dumptruckboss.com/api/dispatches/respond?id=${dispatchId}&token=${token}` : null
 
+  const portalUrl = companyId ? `https://dumptruckboss.com/portal?c=${companyId}` : null
+
   const actionButtons = base ? `
     <div style="text-align:center;margin:24px 0">
       <a href="${base}&action=accepted"
@@ -60,6 +63,17 @@ export async function POST(request: Request) {
       <p style="font-size:11px;color:#9ca3af;margin:10px 0 0">
         Tap a button to respond to this dispatch
       </p>
+      ${portalUrl ? `
+      <div style="margin-top:20px;padding-top:20px;border-top:1px solid #e5e7eb">
+        <a href="${portalUrl}"
+           style="display:inline-block;background:#1e3a2a;color:#fff;font-size:14px;font-weight:600;
+                  padding:12px 24px;border-radius:10px;text-decoration:none;margin:0 6px">
+          📋 Submit Ticket
+        </a>
+        <p style="font-size:11px;color:#9ca3af;margin:8px 0 0">
+          Use this link to submit your ticket after completing work
+        </p>
+      </div>` : ''}
     </div>
   ` : ''
 
