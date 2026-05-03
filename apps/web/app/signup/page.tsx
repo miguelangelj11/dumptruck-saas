@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
@@ -26,6 +27,7 @@ const PLANS = [
 ]
 
 export default function SignupPage() {
+  const router = useRouter()
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
   const [companyName, setCompanyName]   = useState('')
   const [fullName, setFullName]         = useState('')
@@ -34,7 +36,6 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [agreedToTerms, setAgreedToTerms]     = useState(false)
   const [loading, setLoading]                   = useState(false)
-  const [sent, setSent]                         = useState(false)
   const [stripeSessionId, setStripeSessionId]   = useState<string | null>(null)
 
   // Pre-select plan and capture Stripe session_id from URL
@@ -54,48 +55,39 @@ export default function SignupPage() {
     if (!agreedToTerms) { toast.error('You must agree to the Terms of Service'); return }
 
     setLoading(true)
-    const supabase = createClient()
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-        data: {
-          company_name: companyName,
-          full_name: fullName,
-          plan: selectedPlan,
-          ...(stripeSessionId ? { stripe_session_id: stripeSessionId } : {}),
-        },
-      },
+
+    // Register server-side (creates user, company, profile, sends emails)
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        password,
+        full_name:        fullName,
+        company_name:     companyName,
+        plan:             selectedPlan,
+        stripe_session_id: stripeSessionId ?? undefined,
+      }),
     })
-    if (error) {
-      toast.error(error.message)
+
+    const data = await res.json()
+
+    if (!res.ok || data.error) {
+      toast.error(data.error ?? 'Failed to create account')
       setLoading(false)
       return
     }
-    setSent(true)
-  }
 
-  if (sent) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#0f1923', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-        <div style={{ width: '100%', maxWidth: '440px', textAlign: 'center' }}>
-          <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: '#2d7a4f', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: '28px' }}>
-            🎉
-          </div>
-          <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#fff', marginBottom: '12px' }}>Check your email</h1>
-          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.6, marginBottom: '24px' }}>
-            We sent a confirmation link to <strong style={{ color: '#fff' }}>{email}</strong>.
-            {stripeSessionId
-              ? ' Click it to activate your account — your subscription will be linked automatically.'
-              : ' Click it to activate your account and start your free 14-day trial.'}
-          </p>
-          <Link href="/login" style={{ color: '#4ade80', fontSize: '14px', textDecoration: 'none' }}>
-            Back to sign in
-          </Link>
-        </div>
-      </div>
-    )
+    // Sign in immediately — no email confirmation needed
+    const supabase = createClient()
+    const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password })
+    if (signInErr) {
+      toast.error(signInErr.message)
+      setLoading(false)
+      return
+    }
+
+    router.push(data.redirect ?? '/onboarding')
   }
 
   return (
