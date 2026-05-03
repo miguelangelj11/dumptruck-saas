@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import Nav from '@/components/landing/nav'
 import Footer from '@/components/landing/footer'
 
@@ -175,6 +176,35 @@ function Cell({ v, highlighted }: { v: V; highlighted: boolean }) {
 
 export default function PricingPage() {
   const [annual, setAnnual] = useState(false)
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
+  const router = useRouter()
+
+  async function handleStartTrial(planKey: string) {
+    setCheckoutLoading(planKey)
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: planKey }),
+      })
+      const data = await res.json() as { url?: string; redirect?: string }
+      if (res.status === 401 || data.redirect) {
+        router.push(data.redirect ?? `/signup?plan=${planKey}`)
+        return
+      }
+      if (res.status === 302) {
+        router.push(data.redirect ?? '/onboarding')
+        return
+      }
+      if (data.url) {
+        window.location.href = data.url
+        return
+      }
+    } catch {
+      // fall through to signup
+    }
+    router.push(`/signup?plan=${planKey}`)
+  }
 
   const BG = '#0f1923'
   const CARD_BG = 'rgba(255,255,255,0.04)'
@@ -332,28 +362,51 @@ export default function PricingPage() {
                 </p>
 
                 {/* CTA */}
-                <Link
-                  href={plan.ctaHref}
-                  style={{
-                    display: 'block',
-                    textAlign: 'center',
-                    padding: '12px 16px',
-                    borderRadius: '10px',
-                    fontSize: '14px',
-                    fontWeight: 700,
-                    textDecoration: 'none',
-                    marginBottom: '28px',
-                    transition: 'opacity 0.15s',
-                    ...(hl
-                      ? { background: GREEN, color: '#fff' }
-                      : isEnterprise
-                      ? { background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }
-                      : { background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.12)' }
-                    ),
-                  }}
-                >
-                  {plan.ctaLabel} →
-                </Link>
+                {isEnterprise ? (
+                  <Link
+                    href={plan.ctaHref}
+                    style={{
+                      display: 'block',
+                      textAlign: 'center',
+                      padding: '12px 16px',
+                      borderRadius: '10px',
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      textDecoration: 'none',
+                      marginBottom: '28px',
+                      background: 'transparent',
+                      color: '#fff',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                    }}
+                  >
+                    {plan.ctaLabel} →
+                  </Link>
+                ) : (
+                  <button
+                    onClick={() => handleStartTrial(plan.key)}
+                    disabled={checkoutLoading === plan.key}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      textAlign: 'center',
+                      padding: '12px 16px',
+                      borderRadius: '10px',
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      cursor: checkoutLoading === plan.key ? 'default' : 'pointer',
+                      marginBottom: '28px',
+                      transition: 'opacity 0.15s',
+                      border: 'none',
+                      opacity: checkoutLoading === plan.key ? 0.7 : 1,
+                      ...(hl
+                        ? { background: GREEN, color: '#fff' }
+                        : { background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.12)' }
+                      ),
+                    }}
+                  >
+                    {checkoutLoading === plan.key ? 'Loading…' : `${plan.ctaLabel} →`}
+                  </button>
+                )}
 
                 {/* Divider */}
                 <div style={{ height: '1px', background: hl ? 'rgba(45,122,79,0.3)' : 'rgba(255,255,255,0.07)', marginBottom: '24px' }} />
