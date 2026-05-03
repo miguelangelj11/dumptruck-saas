@@ -9,109 +9,85 @@ import { toast } from 'sonner'
 
 type Plan = 'owner_operator' | 'fleet'
 
-const PLANS = [
-  {
-    id: 'owner_operator' as Plan,
-    name: 'Owner Operator Plan',
-    price: '$80/mo',
-    desc: '1–3 trucks, solo operator',
-    color: '#f59e0b',
-  },
-  {
-    id: 'fleet' as Plan,
-    name: 'Fleet Plan',
-    price: '$150/mo',
-    desc: '4–15 trucks, growing fleet',
-    color: '#2d7a4f',
-  },
+const PLANS: { id: Plan; name: string; price: string; desc: string; color: string }[] = [
+  { id: 'owner_operator', name: 'Owner Operator Plan', price: '$80/mo', desc: '1–3 trucks, solo operator', color: '#f59e0b' },
+  { id: 'fleet',          name: 'Fleet Plan',          price: '$150/mo', desc: '4–15 trucks, growing fleet', color: '#2d7a4f' },
 ]
 
 export default function SignupPage() {
   const router = useRouter()
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
-  const [companyName, setCompanyName]   = useState('')
-  const [fullName, setFullName]         = useState('')
-  const [email, setEmail]               = useState('')
-  const [password, setPassword]         = useState('')
+  const [selectedPlan, setSelectedPlan]       = useState<Plan | null>(null)
+  const [companyName, setCompanyName]         = useState('')
+  const [email, setEmail]                     = useState('')
+  const [password, setPassword]               = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [agreedToTerms, setAgreedToTerms]     = useState(false)
-  const [loading, setLoading]                   = useState(false)
-  const [stripeSessionId, setStripeSessionId]   = useState<string | null>(null)
+  const [loading, setLoading]                 = useState(false)
 
-  // Pre-select plan and capture Stripe session_id from URL
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const p = params.get('plan')
-    if (p === 'owner_operator' || p === 'owner') setSelectedPlan('owner_operator')
-    else if (p === 'fleet') setSelectedPlan('fleet')
-    const sid = params.get('session_id')
-    if (sid) setStripeSessionId(sid)
+    const p = new URLSearchParams(window.location.search).get('plan')
+    if (p === 'fleet') setSelectedPlan('fleet')
+    else if (p === 'owner_operator' || p === 'owner') setSelectedPlan('owner_operator')
   }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!selectedPlan) { toast.error('Please select a plan'); return }
+    if (!selectedPlan)             { toast.error('Please select a plan'); return }
     if (password !== confirmPassword) { toast.error('Passwords do not match'); return }
-    if (!agreedToTerms) { toast.error('You must agree to the Terms of Service'); return }
+    if (!agreedToTerms)            { toast.error('You must agree to the Terms of Service'); return }
 
     setLoading(true)
-    console.log('[signup] submitting registration')
 
-    // 10-second timeout so the form never hangs indefinitely
-    const controller = new AbortController()
-    const timeout = setTimeout(() => {
-      console.error('[signup] register request timed out after 10s')
-      controller.abort()
-    }, 10_000)
+    // 15-second hard timeout
+    const timer = setTimeout(() => {
+      toast.error('Something went wrong. Please try again.')
+      setLoading(false)
+    }, 15_000)
 
-    let res: Response
     try {
-      console.log('[signup] calling /api/auth/register')
-      res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        body: JSON.stringify({
-          email,
-          password,
-          full_name:         fullName,
-          company_name:      companyName,
-          plan:              selectedPlan,
-          stripe_session_id: stripeSessionId ?? undefined,
-        }),
+      const supabase = createClient()
+
+      // Step 1: create auth user
+      const { data, error } = await supabase.auth.signUp({ email, password })
+      if (error) {
+        clearTimeout(timer)
+        toast.error(error.message)
+        setLoading(false)
+        return
+      }
+
+      const user = data.user
+      if (!user) {
+        clearTimeout(timer)
+        toast.error('Failed to create account. Please try again.')
+        setLoading(false)
+        return
+      }
+
+      // Step 2: create company row
+      const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
+      await supabase.from('companies').insert({
+        name:                companyName,
+        owner_id:            user.id,
+        plan:                selectedPlan,
+        trial_started_at:    new Date().toISOString(),
+        trial_ends_at:       trialEndsAt,
+        subscription_status: 'trial',
       })
-      console.log('[signup] register responded', res.status)
+
+      // Save plan to localStorage so Settings page can read it later
+      localStorage.setItem('dtb_selected_plan', selectedPlan)
+
+      clearTimeout(timer)
+
+      // Step 3: go to dashboard
+      router.push('/dashboard')
     } catch (err) {
-      clearTimeout(timeout)
-      console.error('[signup] register fetch error', err)
-      toast.error('Request timed out. Please try again.')
+      clearTimeout(timer)
+      console.error('[signup] unexpected error', err)
+      toast.error('Something went wrong. Please try again.')
       setLoading(false)
-      return
     }
-    clearTimeout(timeout)
-
-    const data = await res.json()
-    console.log('[signup] register response body', data)
-
-    if (!res.ok || data.error) {
-      toast.error(data.error ?? 'Failed to create account')
-      setLoading(false)
-      return
-    }
-
-    // Sign in immediately — no email confirmation needed
-    console.log('[signup] signing in with password')
-    const supabase = createClient()
-    const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password })
-    if (signInErr) {
-      console.error('[signup] signIn error', signInErr)
-      toast.error(signInErr.message)
-      setLoading(false)
-      return
-    }
-
-    console.log('[signup] signed in, redirecting to /dashboard')
-    router.push('/dashboard')
   }
 
   return (
@@ -133,29 +109,15 @@ export default function SignupPage() {
           <p style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: '12px' }}>Which plan are you signing up for?</p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             {PLANS.map((plan) => {
-              const isSelected = selectedPlan === plan.id
+              const sel = selectedPlan === plan.id
               return (
-                <button
-                  key={plan.id}
-                  type="button"
-                  onClick={() => setSelectedPlan(plan.id)}
-                  style={{
-                    background: isSelected ? `${plan.color}18` : 'rgba(255,255,255,0.04)',
-                    border: `2px solid ${isSelected ? plan.color : 'rgba(255,255,255,0.1)'}`,
-                    borderRadius: '12px',
-                    padding: '16px',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s',
-                    outline: 'none',
-                  }}
-                >
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: isSelected ? plan.color : '#fff', marginBottom: '4px' }}>
-                    {plan.name}
-                  </div>
-                  <div style={{ fontSize: '16px', fontWeight: 800, color: isSelected ? plan.color : 'rgba(255,255,255,0.7)', marginBottom: '4px' }}>
-                    {plan.price}
-                  </div>
+                <button key={plan.id} type="button" onClick={() => setSelectedPlan(plan.id)} style={{
+                  background: sel ? `${plan.color}18` : 'rgba(255,255,255,0.04)',
+                  border: `2px solid ${sel ? plan.color : 'rgba(255,255,255,0.1)'}`,
+                  borderRadius: '12px', padding: '16px', textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s', outline: 'none',
+                }}>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: sel ? plan.color : '#fff', marginBottom: '4px' }}>{plan.name}</div>
+                  <div style={{ fontSize: '16px', fontWeight: 800, color: sel ? plan.color : 'rgba(255,255,255,0.7)', marginBottom: '4px' }}>{plan.price}</div>
                   <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>{plan.desc}</div>
                 </button>
               )
@@ -168,74 +130,28 @@ export default function SignupPage() {
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
             <Field label="Company name">
-              <input
-                type="text"
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-                required
-                placeholder="Atlas Hauling Co."
-                style={inputStyle}
-              />
-            </Field>
-
-            <Field label="Your full name">
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-                placeholder="Jake Morrison"
-                autoComplete="name"
-                style={inputStyle}
-              />
+              <input type="text" value={companyName} onChange={e => setCompanyName(e.target.value)}
+                required placeholder="Atlas Hauling Co." style={inputStyle} />
             </Field>
 
             <Field label="Email address">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-                placeholder="you@company.com"
-                style={inputStyle}
-              />
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                required autoComplete="email" placeholder="you@company.com" style={inputStyle} />
             </Field>
 
             <Field label="Password">
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                autoComplete="new-password"
-                placeholder="Min. 6 characters"
-                style={inputStyle}
-              />
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+                required minLength={6} autoComplete="new-password" placeholder="Min. 6 characters" style={inputStyle} />
             </Field>
 
             <Field label="Confirm password">
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                minLength={6}
-                autoComplete="new-password"
-                placeholder="Re-enter your password"
-                style={inputStyle}
-              />
+              <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+                required minLength={6} autoComplete="new-password" placeholder="Re-enter your password" style={inputStyle} />
             </Field>
 
-            {/* Terms checkbox */}
             <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={agreedToTerms}
-                onChange={(e) => setAgreedToTerms(e.target.checked)}
-                style={{ marginTop: '2px', width: '16px', height: '16px', flexShrink: 0, accentColor: '#2d7a4f', cursor: 'pointer' }}
-              />
+              <input type="checkbox" checked={agreedToTerms} onChange={e => setAgreedToTerms(e.target.checked)}
+                style={{ marginTop: '2px', width: '16px', height: '16px', flexShrink: 0, accentColor: '#2d7a4f', cursor: 'pointer' }} />
               <span style={{ fontSize: '13px', color: '#6b7280', lineHeight: 1.5 }}>
                 I agree to the{' '}
                 <Link href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#2d7a4f', textDecoration: 'underline' }}>Terms of Service</Link>
@@ -244,28 +160,16 @@ export default function SignupPage() {
               </span>
             </label>
 
-            <button
-              type="submit"
-              disabled={loading || !selectedPlan}
-              style={{
-                width: '100%',
-                padding: '14px',
-                borderRadius: '10px',
-                background: !selectedPlan ? '#d1d5db' : '#2d7a4f',
-                color: '#fff',
-                fontSize: '15px',
-                fontWeight: 700,
-                border: 'none',
-                cursor: !selectedPlan ? 'not-allowed' : 'pointer',
-                transition: 'background 0.15s',
-                opacity: loading ? 0.7 : 1,
-              }}
-            >
+            <button type="submit" disabled={loading || !selectedPlan} style={{
+              width: '100%', padding: '14px', borderRadius: '10px',
+              background: !selectedPlan ? '#d1d5db' : '#2d7a4f',
+              color: '#fff', fontSize: '15px', fontWeight: 700, border: 'none',
+              cursor: !selectedPlan ? 'not-allowed' : 'pointer', transition: 'background 0.15s', opacity: loading ? 0.7 : 1,
+            }}>
               {loading ? 'Creating account…' : 'Start My Free 14-Day Trial'}
             </button>
           </form>
 
-          {/* Trust message */}
           <div style={{ marginTop: '20px', padding: '14px 16px', background: '#f9fafb', borderRadius: '10px', border: '1px solid #e5e7eb' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
               <span>🔒</span>
@@ -282,7 +186,6 @@ export default function SignupPage() {
           </p>
         </div>
 
-        {/* Enterprise note */}
         <p style={{ textAlign: 'center', fontSize: '13px', color: 'rgba(255,255,255,0.3)', marginTop: '20px' }}>
           Need 15+ trucks?{' '}
           <Link href="/schedule-demo" style={{ color: '#f59e0b', textDecoration: 'none' }}>Schedule a demo</Link>
@@ -294,23 +197,15 @@ export default function SignupPage() {
 }
 
 const inputStyle: React.CSSProperties = {
-  width: '100%',
-  borderRadius: '8px',
-  border: '1px solid #e5e7eb',
-  padding: '10px 14px',
-  fontSize: '14px',
-  color: '#111827',
-  outline: 'none',
-  boxSizing: 'border-box',
-  transition: 'border-color 0.15s',
+  width: '100%', borderRadius: '8px', border: '1px solid #e5e7eb',
+  padding: '10px 14px', fontSize: '14px', color: '#111827',
+  outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s',
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#374151', marginBottom: '6px' }}>
-        {label}
-      </label>
+      <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#374151', marginBottom: '6px' }}>{label}</label>
       {children}
     </div>
   )
