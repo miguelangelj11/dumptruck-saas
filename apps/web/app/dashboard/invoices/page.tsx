@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Loader2, Receipt, ArrowLeft, Printer, Check, CreditCard, X, ChevronDown } from 'lucide-react'
+import { Plus, Loader2, Receipt, ArrowLeft, Printer, Check, CreditCard, X, ChevronDown, FileText, Upload } from 'lucide-react'
 import InvoicePDFButton from '@/components/invoice-pdf-button'
 import CompanyAvatar from '@/components/dashboard/company-avatar'
 import { toast } from 'sonner'
@@ -274,6 +274,9 @@ export default function InvoicesPage() {
     work_end_date: '',
     notes: '',
   })
+  const [recvFile, setRecvFile]           = useState<File | null>(null)
+  const [recvFilePreview, setRecvFilePreview] = useState<string | null>(null)
+  const recvFileRef = useRef<HTMLInputElement>(null)
 
   // Detail view
   const [detailInvoice, setDetailInvoice] = useState<InvoiceWithItems | null>(null)
@@ -655,6 +658,16 @@ export default function InvoicesPage() {
     setSavingRecv(true)
     const companyId = await getCompanyId()
     if (!companyId) { toast.error('Company not found'); setSavingRecv(false); return }
+
+    let file_url: string | null = null
+    if (recvFile) {
+      const ext  = recvFile.name.split('.').pop() ?? 'bin'
+      const path = `received-invoices/${companyId}/${crypto.randomUUID()}.${ext}`
+      const { error: upErr } = await supabase.storage.from('ticket-photos').upload(path, recvFile, { upsert: true })
+      if (upErr) { toast.error('File upload failed: ' + upErr.message); setSavingRecv(false); return }
+      file_url = supabase.storage.from('ticket-photos').getPublicUrl(path).data.publicUrl
+    }
+
     const { error } = await supabase.from('received_invoices').insert({
       company_id: companyId,
       subcontractor_name: recvForm.subcontractor_name,
@@ -665,12 +678,15 @@ export default function InvoicesPage() {
       work_end_date: recvForm.work_end_date || null,
       notes: recvForm.notes || null,
       status: 'pending_review',
+      file_url,
     })
     if (error) { toast.error(error.message); setSavingRecv(false); return }
     toast.success('Invoice received added')
     setSavingRecv(false)
     setShowRecvForm(false)
     setRecvForm({ subcontractor_name: '', their_invoice_number: '', amount: '', date_received: new Date().toISOString().split('T')[0], work_start_date: '', work_end_date: '', notes: '' })
+    setRecvFile(null)
+    setRecvFilePreview(null)
     fetchInvoices()
   }
 
@@ -756,7 +772,7 @@ export default function InvoicesPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[700px] text-sm">
                     <thead className="bg-gray-50 border-b border-gray-100">
-                      <tr>{['Subcontractor', 'Their Invoice #', 'Amount', 'Date Received', 'Work Period', 'Status', ''].map(h => (
+                      <tr>{['Subcontractor', 'Their Invoice #', 'Amount', 'Date Received', 'Work Period', 'Status', 'Doc', ''].map(h => (
                         <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                       ))}</tr>
                     </thead>
@@ -781,6 +797,19 @@ export default function InvoicesPage() {
                               <option value="paid">Paid</option>
                               <option value="disputed">Disputed</option>
                             </select>
+                          </td>
+                          <td className="px-4 py-3">
+                            {r.file_url ? (
+                              r.file_url.match(/\.(jpg|jpeg|png|webp)$/i) ? (
+                                <a href={r.file_url} target="_blank" rel="noopener noreferrer">
+                                  <img src={r.file_url} alt="attachment" className="h-8 w-8 object-cover rounded border border-gray-200 hover:opacity-80 transition-opacity" />
+                                </a>
+                              ) : (
+                                <a href={r.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center h-8 w-8 rounded border border-gray-200 bg-red-50 hover:bg-red-100 transition-colors" title="View PDF">
+                                  <FileText className="h-4 w-4 text-red-500" />
+                                </a>
+                              )
+                            ) : <span className="text-gray-300">—</span>}
                           </td>
                           <td className="px-4 py-3 text-xs text-gray-400">{r.notes ? r.notes.slice(0, 40) : ''}</td>
                         </tr>
@@ -834,8 +863,60 @@ export default function InvoicesPage() {
                   <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
                   <textarea value={recvForm.notes} onChange={e => setRecvForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] resize-none" placeholder="Optional notes..." />
                 </div>
+
+                {/* ── File / Photo Upload ── */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Invoice Document / Photo</label>
+                  {recvFilePreview ? (
+                    <div className="relative rounded-xl overflow-hidden border border-gray-200">
+                      {recvFile?.type === 'application/pdf' ? (
+                        <div className="flex items-center gap-3 px-4 py-3 bg-gray-50">
+                          <FileText className="h-8 w-8 text-red-500 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{recvFile.name}</p>
+                            <p className="text-xs text-gray-400">{(recvFile.size / 1024).toFixed(0)} KB</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <img src={recvFilePreview} alt="Preview" className="w-full max-h-48 object-contain bg-gray-50" />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => { setRecvFile(null); setRecvFilePreview(null); if (recvFileRef.current) recvFileRef.current.value = '' }}
+                        className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-black/80"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => recvFileRef.current?.click()}
+                      className="w-full rounded-xl border-2 border-dashed border-gray-200 bg-white hover:border-[#2d7a4f] hover:bg-[#2d7a4f]/5 transition-all py-5 flex flex-col items-center gap-2"
+                    >
+                      <Upload className="h-5 w-5 text-gray-400" />
+                      <p className="text-sm font-medium text-gray-500">Tap to upload or take photo</p>
+                      <p className="text-xs text-gray-400">JPG, PNG, or PDF · max 10MB</p>
+                    </button>
+                  )}
+                  <input
+                    ref={recvFileRef}
+                    type="file"
+                    accept="image/*,.pdf"
+                    capture="environment"
+                    className="hidden"
+                    onChange={e => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      if (file.size > 10 * 1024 * 1024) { toast.error('File must be under 10MB'); return }
+                      setRecvFile(file)
+                      setRecvFilePreview(file.type === 'application/pdf' ? 'pdf' : URL.createObjectURL(file))
+                    }}
+                  />
+                </div>
+
                 <div className="flex gap-3 pt-1">
-                  <button type="button" onClick={() => setShowRecvForm(false)} className="flex-1 h-10 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                  <button type="button" onClick={() => { setShowRecvForm(false); setRecvFile(null); setRecvFilePreview(null) }} className="flex-1 h-10 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
                   <button type="submit" disabled={savingRecv} className="flex-1 h-10 rounded-xl bg-[#2d7a4f] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[#245f3e] disabled:opacity-60">
                     {savingRecv && <Loader2 className="h-4 w-4 animate-spin" />}
                     {savingRecv ? 'Saving…' : 'Add Invoice'}
