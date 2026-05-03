@@ -76,6 +76,8 @@ export default function TicketsPage() {
   const [userId, setUserId]       = useState('')
   const [contractors, setContractors] = useState<Contractor[]>([])
   const [clientCompanies, setClientCompanies] = useState<{ id: string; name: string }[]>([])
+  const [driversList, setDriversList] = useState<{ id: string; name: string }[]>([])
+  const [driverMode, setDriverMode] = useState<'dropdown' | 'manual'>('dropdown')
 
   // Filters
   const [search, setSearch]               = useState('')
@@ -124,11 +126,12 @@ export default function TicketsPage() {
     if (!orgId) { setLoading(false); return }
 
     const [range0, range1] = pageRange(0)
-    const [loadsRes, contractorsRes, clientCompaniesRes, countRes] = await Promise.all([
+    const [loadsRes, contractorsRes, clientCompaniesRes, countRes, driversRes] = await Promise.all([
       supabase.from('loads').select('*, load_tickets(*)').eq('company_id', orgId).order('date', { ascending: false }).range(range0, range1),
       supabase.from('contractors').select('*').eq('company_id', orgId).eq('status', 'active').order('name'),
       supabase.from('client_companies').select('id, name').eq('company_id', orgId).order('name'),
       supabase.from('loads').select('id', { count: 'exact', head: true }).eq('company_id', orgId),
+      supabase.from('drivers').select('id, name').eq('company_id', orgId).eq('status', 'active').order('name'),
     ])
     if (loadsRes.error) toast.error('Failed to load tickets: ' + loadsRes.error.message)
     const loaded = loadsRes.data ?? []
@@ -138,6 +141,7 @@ export default function TicketsPage() {
     setTotalCount(countRes.count ?? null)
     setContractors(contractorsRes.data ?? [])
     setClientCompanies(clientCompaniesRes.data ?? [])
+    setDriversList(driversRes.data ?? [])
     setLoading(false)
   }
 
@@ -219,7 +223,9 @@ export default function TicketsPage() {
   }
 
   function openAdd() {
-    setEditing(null); setForm(EMPTY_FORM); setTicketRows([makeEmptyRow()]); setShowForm(true)
+    setEditing(null); setForm(EMPTY_FORM); setTicketRows([makeEmptyRow()])
+    setDriverMode('dropdown')
+    setShowForm(true)
   }
 
   function openEdit(l: Load) {
@@ -233,6 +239,8 @@ export default function TicketsPage() {
       status: l.status, notes: l.notes ?? '',
     })
     setTicketRows([makeEmptyRow()])
+    // Keep dropdown mode if the driver exists in the list, otherwise manual
+    setDriverMode(driversList.some(d => d.name === l.driver_name) ? 'dropdown' : 'manual')
     setShowForm(true)
   }
 
@@ -660,8 +668,49 @@ export default function TicketsPage() {
                 {/* Row 4: Driver + Truck */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Driver Name *</label>
-                  <input required value={form.driver_name} onChange={e => setForm(p => ({ ...p, driver_name: e.target.value }))} list="driver-dl" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="Jake Morrison" />
-                  <datalist id="driver-dl">{drivers.map(d => <option key={d} value={d} />)}</datalist>
+                  {driverMode === 'dropdown' ? (
+                    <select
+                      required
+                      value={form.driver_name}
+                      onChange={e => {
+                        const name = e.target.value
+                        if (name === '__manual__') {
+                          setDriverMode('manual')
+                          setForm(p => ({ ...p, driver_name: '', truck_number: '' }))
+                        } else {
+                          // Auto-fill truck from most recent load for this driver
+                          const recentTruck = [...loads]
+                            .filter(l => l.driver_name === name && l.truck_number)
+                            .sort((a, b) => b.date.localeCompare(a.date))[0]?.truck_number ?? ''
+                          setForm(p => ({ ...p, driver_name: name, truck_number: recentTruck }))
+                        }
+                      }}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white"
+                    >
+                      <option value="">— Select a driver —</option>
+                      {driversList.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                      <option value="__manual__">Other / Manual Entry…</option>
+                    </select>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input
+                        required
+                        value={form.driver_name}
+                        onChange={e => setForm(p => ({ ...p, driver_name: e.target.value }))}
+                        className="flex-1 rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                        placeholder="Jake Morrison"
+                      />
+                      {driversList.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => { setDriverMode('dropdown'); setForm(p => ({ ...p, driver_name: '', truck_number: '' })) }}
+                          className="text-xs text-[#2d7a4f] hover:underline whitespace-nowrap"
+                        >
+                          ← Pick from list
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Truck #</label>
