@@ -425,6 +425,50 @@ CREATE POLICY "invitations: delete" ON invitations FOR DELETE
 
 
 -- ================================================================
+-- CREATE TABLE: activity_feed (if not exists)
+-- Columns inferred from application code in lib/workflows.ts
+-- ================================================================
+CREATE TABLE IF NOT EXISTS activity_feed (
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id   uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  type         text NOT NULL,
+  message      text NOT NULL,
+  related_id   text,
+  related_type text,
+  created_at   timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS activity_feed_company_id_idx ON activity_feed (company_id);
+CREATE INDEX IF NOT EXISTS activity_feed_created_at_idx ON activity_feed (created_at DESC);
+
+ALTER TABLE activity_feed ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "activity_feed: select" ON activity_feed;
+DROP POLICY IF EXISTS "activity_feed: insert" ON activity_feed;
+DROP POLICY IF EXISTS "activity_feed: update" ON activity_feed;
+DROP POLICY IF EXISTS "activity_feed: delete" ON activity_feed;
+
+CREATE POLICY "activity_feed: select" ON activity_feed FOR SELECT USING (company_id = my_company_id());
+CREATE POLICY "activity_feed: insert" ON activity_feed FOR INSERT WITH CHECK (company_id = my_company_id());
+CREATE POLICY "activity_feed: update" ON activity_feed FOR UPDATE USING (company_id = my_company_id()) WITH CHECK (company_id = my_company_id());
+CREATE POLICY "activity_feed: delete" ON activity_feed FOR DELETE USING (company_id = my_company_id());
+
+
+-- ================================================================
+-- AUDIT: tables with no RLS policies (run after applying above)
+-- Any table that appears here still needs policies added.
+-- ================================================================
+SELECT t.tablename
+FROM pg_tables t
+WHERE t.schemaname = 'public'
+AND NOT EXISTS (
+  SELECT 1 FROM pg_policies p
+  WHERE p.schemaname = 'public'
+  AND p.tablename = t.tablename
+);
+
+
+-- ================================================================
 -- ORPHAN CHECK
 -- Returns any auth users who have no company row
 -- ================================================================

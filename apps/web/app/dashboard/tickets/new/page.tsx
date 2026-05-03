@@ -29,6 +29,7 @@ export default function QuickTicketPage() {
   const router = useRouter()
   const supabase = createClient()
   const [userId, setUserId] = useState('')
+  const [orgId, setOrgId]   = useState('')
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState(false)
 
@@ -53,8 +54,10 @@ export default function QuickTicketPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       setUserId(user.id)
-      const orgId = await getCompanyId()
-      if (!orgId) return
+      const fetchedOrgId = await getCompanyId()
+      if (!fetchedOrgId) return
+      setOrgId(fetchedOrgId)
+      const orgId = fetchedOrgId
       const { data } = await supabase
         .from('loads')
         .select('job_name, truck_number, driver_name')
@@ -117,10 +120,12 @@ export default function QuickTicketPage() {
 
     setSaving(true)
 
+    if (!orgId) { toast.error('Company not found'); setSaving(false); return }
+
     const loadId = crypto.randomUUID()
     const { error: loadErr } = await supabase.from('loads').insert({
       id:          loadId,
-      company_id:  userId,
+      company_id:  orgId,
       job_name:    validation.data.job_name,
       load_type:   validation.data.material,
       driver_name: validation.data.driver_name,
@@ -133,7 +138,7 @@ export default function QuickTicketPage() {
     })
     if (loadErr) {
       toast.error('Failed to save ticket')
-      Sentry.captureException(loadErr, { tags: { feature: 'quick-ticket', company_id: userId } })
+      Sentry.captureException(loadErr, { tags: { feature: 'quick-ticket', company_id: orgId } })
       setSaving(false)
       return
     }
@@ -145,7 +150,7 @@ export default function QuickTicketPage() {
       await supabase.from('load_tickets').insert({
         id: slip.id,
         load_id: loadId,
-        company_id: userId,
+        company_id: orgId,
         ticket_number: slip.ticket_number || null,
         tonnage: parseFloat(slip.tonnage) || null,
         image_url: imageUrl,

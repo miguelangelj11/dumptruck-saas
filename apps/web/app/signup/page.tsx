@@ -65,8 +65,10 @@ export default function SignupPage() {
       }
 
       // Step 2: create company row
+      // id is set explicitly to user.id so companies.id === auth.uid() everywhere
       const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
       await supabase.from('companies').insert({
+        id:                  user.id,
         name:                companyName,
         owner_id:            user.id,
         plan:                selectedPlan,
