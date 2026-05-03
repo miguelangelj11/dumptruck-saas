@@ -252,6 +252,7 @@ export default function InvoicesPage() {
   const [allLoads, setAllLoads] = useState<LoadWithTickets[]>([])
   const [selectedLoadIds, setSelectedLoadIds] = useState<Set<string>>(new Set())
   const [driverFilter, setDriverFilter] = useState('')
+  const [driversList, setDriversList] = useState<{ id: string; name: string }[]>([])
   // Contractor invoice state
   const [contractors, setContractors] = useState<Contractor[]>([])
   const [selectedContractorId, setSelectedContractorId] = useState('')
@@ -397,6 +398,18 @@ export default function InvoicesPage() {
     setClientCompanies(data ?? [])
   }
 
+  async function fetchDriversForCreate() {
+    const uid = await getCompanyId()
+    if (!uid) return
+    const { data } = await supabase
+      .from('drivers')
+      .select('id, name')
+      .eq('company_id', uid)
+      .eq('status', 'active')
+      .order('name')
+    setDriversList(data ?? [])
+  }
+
   async function fetchContractorTickets(contractorId: string) {
     const uid = await getCompanyId()
     if (!uid) return
@@ -417,6 +430,7 @@ export default function InvoicesPage() {
       fetchLoadsForCreate()
       fetchContractors()
       fetchClientCompaniesForCreate()
+      fetchDriversForCreate()
     }
   }, [view])
 
@@ -965,7 +979,7 @@ export default function InvoicesPage() {
                     onChange={e => {
                       setSelectedContractorId(e.target.value)
                       const c = contractors.find(c => c.id === e.target.value)
-                      if (c) setCreateForm(p => ({ ...p, client_name: c.name, client_address: c.phone ?? '' }))
+                      if (c) setCreateForm(p => ({ ...p, client_name: c.name, client_address: '' }))
                     }}
                     className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white"
                   >
@@ -979,7 +993,23 @@ export default function InvoicesPage() {
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       {invoiceType === 'client' ? 'Client / Company Name *' : 'Driver Name *'}
                     </label>
-                    {invoiceType === 'client' && clientNameMode === 'dropdown' ? (
+                    {invoiceType === 'paystub' ? (
+                      <select
+                        required
+                        value={createForm.client_name}
+                        onChange={e => {
+                          const name = e.target.value
+                          setCreateForm(p => ({ ...p, client_name: name, client_address: '' }))
+                          setDriverFilter(name)
+                        }}
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white"
+                      >
+                        <option value="">— Select a driver —</option>
+                        {driversList.map(d => (
+                          <option key={d.id} value={d.name}>{d.name}</option>
+                        ))}
+                      </select>
+                    ) : invoiceType === 'client' && clientNameMode === 'dropdown' ? (
                       <select
                         required
                         value={createForm.client_name}
