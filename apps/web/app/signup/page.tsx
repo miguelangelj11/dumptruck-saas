@@ -33,14 +33,18 @@ export default function SignupPage() {
   const [password, setPassword]         = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [agreedToTerms, setAgreedToTerms]     = useState(false)
-  const [loading, setLoading]           = useState(false)
-  const [sent, setSent]                 = useState(false)
+  const [loading, setLoading]                   = useState(false)
+  const [sent, setSent]                         = useState(false)
+  const [stripeSessionId, setStripeSessionId]   = useState<string | null>(null)
 
-  // Pre-select plan from URL ?plan=
+  // Pre-select plan and capture Stripe session_id from URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const p = params.get('plan')
-    if (p === 'owner_operator' || p === 'fleet') setSelectedPlan(p)
+    if (p === 'owner_operator' || p === 'owner') setSelectedPlan('owner_operator')
+    else if (p === 'fleet') setSelectedPlan('fleet')
+    const sid = params.get('session_id')
+    if (sid) setStripeSessionId(sid)
   }, [])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -60,6 +64,7 @@ export default function SignupPage() {
           company_name: companyName,
           full_name: fullName,
           plan: selectedPlan,
+          ...(stripeSessionId ? { stripe_session_id: stripeSessionId } : {}),
         },
       },
     })
@@ -81,7 +86,9 @@ export default function SignupPage() {
           <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#fff', marginBottom: '12px' }}>Check your email</h1>
           <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.6, marginBottom: '24px' }}>
             We sent a confirmation link to <strong style={{ color: '#fff' }}>{email}</strong>.
-            Click it to activate your account and start your free 14-day trial.
+            {stripeSessionId
+              ? ' Click it to activate your account — your subscription will be linked automatically.'
+              : ' Click it to activate your account and start your free 14-day trial.'}
           </p>
           <Link href="/login" style={{ color: '#4ade80', fontSize: '14px', textDecoration: 'none' }}>
             Back to sign in

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Loader2, Users, Phone, Mail, X, Pencil, Trash2, DollarSign, CreditCard, Calendar, AlertCircle } from 'lucide-react'
+import { Plus, Loader2, Users, Phone, Mail, X, Pencil, Trash2, DollarSign, CreditCard, Calendar, AlertCircle, Lock } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Driver, Load, DriverPayment } from '@/lib/types'
 import { getCompanyId } from '@/lib/get-company-id'
@@ -33,6 +33,7 @@ export default function DriversPage() {
   const [payingDriver, setPayingDriver]     = useState<Driver | null>(null)
   const [payForm, setPayForm]               = useState(EMPTY_PAY)
   const [savingPay, setSavingPay]           = useState(false)
+  const [companyPlan, setCompanyPlan]       = useState<string | null>(null)
   const supabase = createClient()
 
   async function fetchData() {
@@ -47,19 +48,27 @@ export default function DriversPage() {
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
     const cutoff = sixMonthsAgo.toISOString().split('T')[0]!
 
-    const [dRes, lRes, dpRes] = await Promise.all([
+    const [dRes, lRes, dpRes, coRes] = await Promise.all([
       supabase.from('drivers').select('*').eq('company_id', companyId).order('name'),
       supabase.from('loads').select('*').eq('company_id', companyId).gte('date', cutoff),
       supabase.from('driver_payments').select('*').eq('company_id', companyId).order('payment_date', { ascending: false }),
+      supabase.from('companies').select('plan').eq('id', companyId).maybeSingle(),
     ])
     if (dRes.error) toast.error('Failed to load drivers: ' + dRes.error.message)
     setDrivers(dRes.data ?? [])
     setLoads(lRes.data ?? [])
     setDriverPayments(dpRes.data ?? [])
+    setCompanyPlan((coRes.data as Record<string, unknown> | null)?.plan as string | null ?? null)
     setLoading(false)
   }
 
   useEffect(() => { fetchData() }, [])
+
+  // ── Plan limits ───────────────────────────────────────────────────────────
+  const activeDriverCount = drivers.filter(d => d.status === 'active').length
+  const driverLimit       = companyPlan === 'enterprise' ? Infinity : companyPlan === 'fleet' ? 15 : 3
+  const limitLabel        = driverLimit === Infinity ? '∞' : String(driverLimit)
+  const atLimit           = driverLimit !== Infinity && activeDriverCount >= driverLimit
 
   // ── Derived: unpaid work per driver ─────────────────────────────────────
   const unpaidLoads = loads.filter(l => l.status === 'approved' && !l.driver_paid)
@@ -91,8 +100,13 @@ export default function DriversPage() {
       toast.success('Driver updated')
       if (selectedDriver?.id === editingDriver.id) setSelectedDriver(p => p ? { ...p, name: form.name, email: form.email || null, phone: form.phone || null, status: form.status as Driver['status'] } : null)
     } else {
-      const { error } = await supabase.from('drivers').insert({ name: form.name, email: form.email || null, phone: form.phone || null, status: form.status, company_id: companyId })
-      if (error) { toast.error(error.message); setSaving(false); return }
+      const res  = await fetch('/api/drivers', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ name: form.name, email: form.email, phone: form.phone, status: form.status }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error ?? 'Failed to add driver'); setSaving(false); return }
       toast.success('Driver added')
     }
     setSaving(false); setShowForm(false); setForm(EMPTY_DRIVER); setEditingDriver(null); fetchData()
@@ -184,11 +198,28 @@ export default function DriversPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Drivers</h1>
-          <p className="text-gray-500 text-sm mt-0.5">{drivers.filter(d => d.status === 'active').length} active · {driverUnpaidSummary.length} with unpaid work</p>
+          <p className="text-gray-500 text-sm mt-0.5">
+            {activeDriverCount}/{limitLabel} drivers used
+            {driverUnpaidSummary.length > 0 && ` · ${driverUnpaidSummary.length} with unpaid work`}
+          </p>
         </div>
-        <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-lg bg-[#2d7a4f] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors">
-          <Plus className="h-4 w-4" /> Add Driver
-        </button>
+        {/* Add Driver button — overlay captures click when at limit to show upgrade modal */}
+        <div className="relative inline-flex">
+          <button
+            onClick={openAdd}
+            disabled={atLimit}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors ${atLimit ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-[#2d7a4f] text-white hover:bg-[#245f3e]'}`}
+          >
+            <Plus className="h-4 w-4" /> Add Driver
+          </button>
+          {atLimit && (
+            <div
+              className="absolute inset-0 cursor-pointer"
+              title={`You've reached your plan limit (${activeDriverCount}/${limitLabel} drivers). Upgrade to add more.`}
+              onClick={() => { setEditingDriver(null); setForm(EMPTY_DRIVER); setShowForm(true) }}
+            />
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
@@ -318,39 +349,69 @@ export default function DriversPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-semibold text-gray-900">{editingDriver ? 'Edit Driver' : 'Add Driver'}</h2>
+              <h2 className="font-semibold text-gray-900">{editingDriver ? 'Edit Driver' : atLimit ? 'Driver Limit Reached' : 'Add Driver'}</h2>
               <button onClick={() => { setShowForm(false); setEditingDriver(null); setForm(EMPTY_DRIVER) }} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
-            <form onSubmit={handleSave} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Full Name *</label>
-                <input required value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="Jake Morrison" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
-                <input type="tel" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="(555) 000-0000" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-                <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="driver@email.com" />
-              </div>
-              {editingDriver && (
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
-                  <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]">
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
+
+            {/* Upgrade prompt when at limit and not editing */}
+            {atLimit && !editingDriver ? (
+              <div className="p-6 text-center space-y-4">
+                <div className="h-14 w-14 rounded-full bg-amber-100 flex items-center justify-center mx-auto">
+                  <Lock className="h-7 w-7 text-amber-600" />
                 </div>
-              )}
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => { setShowForm(false); setEditingDriver(null); setForm(EMPTY_DRIVER) }} className="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-                <button type="submit" disabled={saving} className="flex-1 rounded-lg bg-[#2d7a4f] py-2.5 text-sm font-semibold text-white hover:bg-[#245f3e] disabled:opacity-50 flex items-center justify-center gap-2">
-                  {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {saving ? 'Saving…' : editingDriver ? 'Save Changes' : 'Add Driver'}
-                </button>
+                <div>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    You&apos;re using <strong>{activeDriverCount}/{limitLabel}</strong> active drivers on your current plan.
+                    Upgrade to add more.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2 pt-1">
+                  <a
+                    href="/pricing"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#2d7a4f] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors"
+                  >
+                    View Plans &amp; Upgrade →
+                  </a>
+                  <a
+                    href="/dashboard/settings"
+                    className="inline-flex items-center justify-center rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                  >
+                    Manage Subscription
+                  </a>
+                </div>
               </div>
-            </form>
+            ) : (
+              <form onSubmit={handleSave} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Full Name *</label>
+                  <input required value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="Jake Morrison" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
+                  <input type="tel" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="(555) 000-0000" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                  <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="driver@email.com" />
+                </div>
+                {editingDriver && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
+                    <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]">
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  </div>
+                )}
+                <div className="flex gap-3 pt-2">
+                  <button type="button" onClick={() => { setShowForm(false); setEditingDriver(null); setForm(EMPTY_DRIVER) }} className="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                  <button type="submit" disabled={saving} className="flex-1 rounded-lg bg-[#2d7a4f] py-2.5 text-sm font-semibold text-white hover:bg-[#245f3e] disabled:opacity-50 flex items-center justify-center gap-2">
+                    {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {saving ? 'Saving…' : editingDriver ? 'Save Changes' : 'Add Driver'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

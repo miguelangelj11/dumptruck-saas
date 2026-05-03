@@ -116,22 +116,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (subscriptionStatus === 'trial' && trialEndsAt) {
     const msLeft   = new Date(trialEndsAt).getTime() - Date.now()
     const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24))
-    if (daysLeft <= 7 && daysLeft > 0) {
-      const isUrgent = daysLeft <= 3
+    if (daysLeft < 3 && daysLeft > 0) {
       trialBanner = (
         <div style={{
-          background: isUrgent ? '#fef2f2' : '#fffbeb',
-          borderBottom: `1px solid ${isUrgent ? '#fca5a5' : '#fde68a'}`,
+          background: '#fef2f2',
+          borderBottom: '1px solid #fca5a5',
           padding: '10px 24px',
           display: 'flex',
           alignItems: 'center',
           gap: '10px',
           flexWrap: 'wrap',
         }}>
-          <span style={{ fontSize: '16px' }}>{isUrgent ? '🚨' : '⏰'}</span>
-          <span style={{ fontSize: '13px', fontWeight: 600, color: isUrgent ? '#991b1b' : '#92400e', flex: 1 }}>
-            Your free trial ends in {daysLeft} day{daysLeft !== 1 ? 's' : ''}.
-            {isUrgent ? ' Subscribe now or lose access.' : ' Subscribe now to keep access.'}
+          <span style={{ fontSize: '16px' }}>🚨</span>
+          <span style={{ fontSize: '13px', fontWeight: 600, color: '#991b1b', flex: 1 }}>
+            Your free trial ends in {daysLeft} day{daysLeft !== 1 ? 's' : ''}. Subscribe now or lose access.
           </span>
           <Link
             href="/pricing"
@@ -140,13 +138,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
               fontWeight: 700,
               padding: '6px 14px',
               borderRadius: '8px',
-              background: isUrgent ? '#dc2626' : '#d97706',
+              background: '#dc2626',
               color: '#fff',
               textDecoration: 'none',
               whiteSpace: 'nowrap',
             }}
           >
-            {isUrgent ? 'Subscribe Now →' : 'Subscribe →'}
+            Subscribe Now →
           </Link>
         </div>
       )

@@ -20,6 +20,7 @@ const tiers = [
     sectionHeader: null,
     cta: 'Start Free Trial →',
     href: '/signup?plan=owner_operator',
+    checkoutPlan: 'owner' as string | null,
     ctaStyle: 'gold' as const,
     showTrustBullets: true,
     showEnterpriseNote: false,
@@ -50,6 +51,7 @@ const tiers = [
     sectionHeader: 'Everything in Owner Operator Plan, plus:',
     cta: 'Start Free Trial →',
     href: '/signup?plan=fleet',
+    checkoutPlan: 'fleet' as string | null,
     ctaStyle: 'green' as const,
     showTrustBullets: true,
     showEnterpriseNote: false,
@@ -86,6 +88,7 @@ const tiers = [
     sectionHeader: 'Everything in Fleet Plan, plus:',
     cta: 'Schedule a Demo →',
     href: '/schedule-demo',
+    checkoutPlan: null as string | null,
     ctaStyle: 'gold-outline' as const,
     showTrustBullets: false,
     showEnterpriseNote: true,
@@ -110,7 +113,29 @@ const tiers = [
 ]
 
 export default function PricingSection() {
-  const [billing, setBilling] = useState<Billing>('monthly')
+  const [billing,         setBilling]         = useState<Billing>('monthly')
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
+
+  async function handleCheckout(planKey: string, fallbackHref: string) {
+    if (checkoutLoading) return
+    setCheckoutLoading(planKey)
+    try {
+      const res  = await fetch('/api/stripe/checkout', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ plan: planKey }),
+      })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+        return
+      }
+    } catch {
+      // fall through to fallback
+    }
+    setCheckoutLoading(null)
+    window.location.href = fallbackHref
+  }
 
   return (
     <section className="bg-gray-50 py-12 md:py-16" id="pricing" style={{ overflow: 'visible' }}>
@@ -244,19 +269,29 @@ export default function PricingSection() {
                 </div>
 
                 {/* CTA button */}
-                <Link
-                  href={tier.href}
-                  style={{ marginBottom: '12px', display: 'block', textAlign: 'center', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', fontWeight: 700, textDecoration: 'none', transition: 'all 0.15s' }}
-                  className={
-                    tier.ctaStyle === 'gold'
-                      ? 'bg-[#FFB800] text-[#000000] hover:bg-[#E6A600]'
-                      : tier.ctaStyle === 'green'
-                      ? 'bg-[#2d5a3d] text-white hover:bg-[#1e3a2a]'
-                      : 'border border-[#FFB800] text-[#FFB800] hover:bg-[#FFB800]/10'
-                  }
-                >
-                  {tier.cta}
-                </Link>
+                {tier.checkoutPlan ? (
+                  <button
+                    type="button"
+                    onClick={() => handleCheckout(tier.checkoutPlan!, tier.href)}
+                    disabled={checkoutLoading === tier.checkoutPlan}
+                    style={{ marginBottom: '12px', display: 'block', width: '100%', textAlign: 'center', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', fontWeight: 700, border: 'none', cursor: checkoutLoading === tier.checkoutPlan ? 'not-allowed' : 'pointer', transition: 'all 0.15s', opacity: checkoutLoading === tier.checkoutPlan ? 0.7 : 1 }}
+                    className={
+                      tier.ctaStyle === 'gold'
+                        ? 'bg-[#FFB800] text-[#000000] hover:bg-[#E6A600]'
+                        : 'bg-[#2d5a3d] text-white hover:bg-[#1e3a2a]'
+                    }
+                  >
+                    {checkoutLoading === tier.checkoutPlan ? 'Redirecting…' : tier.cta}
+                  </button>
+                ) : (
+                  <Link
+                    href={tier.href}
+                    style={{ marginBottom: '12px', display: 'block', textAlign: 'center', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', fontWeight: 700, textDecoration: 'none', transition: 'all 0.15s' }}
+                    className="border border-[#FFB800] text-[#FFB800] hover:bg-[#FFB800]/10"
+                  >
+                    {tier.cta}
+                  </Link>
+                )}
 
                 {/* Trust bullets (non-Enterprise) */}
                 {tier.showTrustBullets && (

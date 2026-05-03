@@ -225,6 +225,13 @@ export default function SettingsPage() {
   const [deletingData,    setDeletingData]    = useState(false)
   const [deletingAccount, setDeletingAccount] = useState(false)
 
+  // ── Subscription state ───────────────────────────────────────────────────
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null)
+  const [subscriptionPlan,   setSubscriptionPlan]   = useState<string | null>(null)
+  const [trialEndsAtSub,     setTrialEndsAtSub]     = useState<string | null>(null)
+  const [stripeCustomerId,   setStripeCustomerId]   = useState<string | null>(null)
+  const [portalLoading,      setPortalLoading]      = useState(false)
+
   // ── Export state ─────────────────────────────────────────────────────────
   const today      = new Date().toISOString().split('T')[0]!
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]!
@@ -358,6 +365,20 @@ export default function SettingsPage() {
 
         fetchTrucks(c.id)
         fetchMembers(c.id)
+
+        // Subscription data
+        const { data: subData } = await supabase
+          .from('companies')
+          .select('subscription_status, plan, trial_ends_at, stripe_customer_id')
+          .eq('id', c.id)
+          .maybeSingle()
+        if (subData) {
+          const s = subData as Record<string, unknown>
+          setSubscriptionStatus(s.subscription_status as string | null ?? null)
+          setSubscriptionPlan(s.plan as string | null ?? null)
+          setTrialEndsAtSub(s.trial_ends_at as string | null ?? null)
+          setStripeCustomerId(s.stripe_customer_id as string | null ?? null)
+        }
       } else {
         setNotifEmail(user.email ?? '')
       }
@@ -375,6 +396,18 @@ export default function SettingsPage() {
   }, [])
 
   // ── Handlers ─────────────────────────────────────────────────────────────
+
+  async function handleOpenPortal() {
+    setPortalLoading(true)
+    const res  = await fetch('/api/billing/portal', { method: 'POST' })
+    const data = await res.json()
+    if (data.url) {
+      window.location.href = data.url
+    } else {
+      toast.error(data.error ?? 'Could not open billing portal')
+      setPortalLoading(false)
+    }
+  }
 
   async function fetchClientCompanies(uid: string) {
     const { data } = await supabase
@@ -1558,7 +1591,101 @@ export default function SettingsPage() {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          9. ACCOUNT SECURITY
+          9. SUBSCRIPTION
+      ═══════════════════════════════════════════════════════════════════ */}
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <SectionHeader title="Subscription" subtitle="Manage your plan and billing" />
+        <div className="p-6 space-y-5">
+
+          {/* Plan + status badge */}
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-semibold text-gray-900">
+                {subscriptionPlan === 'owner_operator' ? 'Owner Operator Plan'
+                 : subscriptionPlan === 'fleet'        ? 'Fleet Plan'
+                 : subscriptionPlan === 'enterprise'   ? 'Enterprise Plan'
+                 : 'No Active Plan'}
+              </div>
+              <div className="text-xs text-gray-400 mt-0.5">
+                {subscriptionStatus === 'active'   ? 'Paid subscription'
+                 : subscriptionStatus === 'trial'  ? 'Free trial'
+                 : subscriptionStatus === 'past_due' ? 'Payment failed'
+                 : subscriptionStatus === 'canceled' ? 'Canceled'
+                 : 'No subscription'}
+              </div>
+            </div>
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+              subscriptionStatus === 'active'   ? 'bg-green-100 text-green-700'
+              : subscriptionStatus === 'trial'  ? 'bg-amber-100 text-amber-700'
+              : subscriptionStatus === 'past_due' ? 'bg-red-100 text-red-700'
+              : 'bg-gray-100 text-gray-600'
+            }`}>
+              {subscriptionStatus === 'active'    ? 'Active'
+               : subscriptionStatus === 'trial'   ? 'Trial'
+               : subscriptionStatus === 'past_due'? 'Past Due'
+               : subscriptionStatus === 'canceled'? 'Canceled'
+               : 'Free'}
+            </span>
+          </div>
+
+          {/* Trial progress bar */}
+          {subscriptionStatus === 'trial' && trialEndsAtSub && (() => {
+            const totalMs  = 14 * 24 * 60 * 60 * 1000
+            const msLeft   = new Date(trialEndsAtSub).getTime() - Date.now()
+            const daysLeft = Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24)))
+            const pct      = Math.max(0, Math.min(100, (msLeft / totalMs) * 100))
+            const urgent   = daysLeft <= 3
+            return (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">Trial remaining</span>
+                  <span className={`text-xs font-semibold ${urgent ? 'text-red-600' : 'text-amber-600'}`}>
+                    {daysLeft === 0 ? 'Ends today' : `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left`}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full transition-all ${urgent ? 'bg-red-500' : 'bg-amber-400'}`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <p className="text-xs text-gray-400">
+                  Expires {new Date(trialEndsAtSub).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                </p>
+              </div>
+            )
+          })()}
+
+          {/* Action buttons */}
+          <div className="flex flex-wrap gap-2 pt-1">
+            {(subscriptionStatus === 'trial' || !subscriptionStatus) && (
+              <a
+                href="/pricing"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#2d7a4f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors"
+              >
+                <CreditCard className="h-4 w-4" />
+                Upgrade to Paid Plan
+              </a>
+            )}
+            {stripeCustomerId && (
+              <button
+                onClick={handleOpenPortal}
+                disabled={portalLoading}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                {portalLoading
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <CreditCard className="h-4 w-4" />}
+                {subscriptionStatus === 'active' ? 'Manage Subscription' : 'Billing Portal'}
+              </button>
+            )}
+          </div>
+
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          10. ACCOUNT SECURITY
       ═══════════════════════════════════════════════════════════════════ */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <SectionHeader title="Change Email Address" subtitle="Confirm with your password — a verification link will be sent to your current address" />

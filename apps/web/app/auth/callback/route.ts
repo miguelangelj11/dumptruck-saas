@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import type { EmailOtpType } from '@supabase/supabase-js'
+import Stripe from 'stripe'
 
 function getAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -102,6 +103,27 @@ export async function GET(request: Request) {
       organization_id: newCompany.id,
       role:            'admin',
     })
+
+    // Link Stripe subscription if the user paid before creating their account
+    const stripeSessionId = user.user_metadata?.stripe_session_id as string | undefined
+    if (stripeSessionId && process.env.STRIPE_SECRET_KEY) {
+      try {
+        const stripe   = new Stripe(process.env.STRIPE_SECRET_KEY)
+        const session  = await stripe.checkout.sessions.retrieve(stripeSessionId, { expand: ['subscription'] })
+        if (session.status === 'complete' && session.customer) {
+          const sub = session.subscription as Stripe.Subscription | null
+          await admin.from('companies').update({
+            stripe_customer_id:     session.customer as string,
+            stripe_subscription_id: sub?.id ?? null,
+            stripe_price_id:        sub?.items?.data[0]?.price?.id ?? null,
+            subscription_status:    sub?.status === 'trialing' ? 'trial' : (sub?.status ?? null),
+            ...(sub?.trial_end ? { trial_ends_at: new Date(sub.trial_end * 1000).toISOString() } : {}),
+          }).eq('id', newCompany.id)
+        }
+      } catch {
+        // Non-fatal: webhook will reconcile if linking fails
+      }
+    }
   }
 
   return NextResponse.redirect(`${origin}/onboarding`)
