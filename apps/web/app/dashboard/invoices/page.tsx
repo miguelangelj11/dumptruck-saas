@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Loader2, Receipt, ArrowLeft, Printer, Check, CreditCard, X, ChevronDown, FileText, Upload, Trash2, Mail } from 'lucide-react'
+import { Plus, Loader2, Receipt, ArrowLeft, Printer, Check, CreditCard, X, ChevronDown, FileText, Upload, Trash2, Mail, Lock } from 'lucide-react'
 import InvoicePDFButton from '@/components/invoice-pdf-button'
 import CompanyAvatar from '@/components/dashboard/company-avatar'
 import { toast } from 'sonner'
@@ -261,6 +261,7 @@ export default function InvoicesPage() {
   const [contractorTickets, setContractorTickets] = useState<CTWithSlips[]>([])
   const [selectedCTIds, setSelectedCTIds] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
+  const [companyPlan, setCompanyPlan] = useState<string | null>(null)
 
   // Received invoices tab
   const [invoiceTab, setInvoiceTab]             = useState<'sent' | 'received'>('sent')
@@ -315,7 +316,7 @@ export default function InvoicesPage() {
     // Load company info from companies table (source of truth)
     const [invRes, coRes] = await Promise.all([
       supabase.from('invoices').select('*', { count: 'exact' }).eq('company_id', effectiveId).order('created_at', { ascending: false }).range(range0, range1),
-      supabase.from('companies').select('name, address, phone, logo_url').eq('id', effectiveId).maybeSingle(),
+      supabase.from('companies').select('name, address, phone, logo_url, plan').eq('id', effectiveId).maybeSingle(),
     ])
 
     if (invRes.error) toast.error('Failed to load invoices: ' + invRes.error.message)
@@ -324,6 +325,7 @@ export default function InvoicesPage() {
     setCompanyAddress((coRes.data as { address?: string | null } | null)?.address ?? '')
     setUserPhone((coRes.data as { phone?: string | null } | null)?.phone ?? user.user_metadata?.phone ?? '')
     setCompanyLogoUrl((coRes.data as { logo_url?: string | null } | null)?.logo_url ?? null)
+    setCompanyPlan((coRes.data as { plan?: string | null } | null)?.plan ?? null)
 
     // Load received invoices
     if (companyIdForQuery) {
@@ -1076,19 +1078,29 @@ export default function InvoicesPage() {
             <p className="text-sm font-semibold text-gray-700 mb-3">Invoice Type</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {([
-                { type: 'client', label: 'Client Invoice', desc: 'Bill a client for work completed' },
-                { type: 'paystub', label: 'Driver Pay Invoice', desc: 'Pay your drivers for loads completed' },
-                { type: 'contractor', label: 'Subcontractor Invoice', desc: 'Pay a subcontractor for work completed' },
-              ] as const).map(({ type, label, desc }) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => setInvoiceType(type)}
-                  className={`rounded-xl border-2 px-4 py-3 text-left transition-all ${invoiceType === type ? 'border-[#2d7a4f] bg-[#2d7a4f]/5' : 'border-gray-200 hover:border-gray-300'}`}
-                >
-                  <p className={`text-sm font-semibold ${invoiceType === type ? 'text-[#2d7a4f]' : 'text-gray-700'}`}>{label}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
-                </button>
+                { type: 'client',     label: 'Client Invoice',        desc: 'Bill a client for work completed',          locked: false },
+                { type: 'paystub',    label: 'Driver Pay Invoice',    desc: 'Pay your drivers for loads completed',      locked: companyPlan === 'owner_operator' },
+                { type: 'contractor', label: 'Subcontractor Invoice', desc: 'Pay a subcontractor for work completed',    locked: companyPlan === 'owner_operator' },
+              ] as const).map(({ type, label, desc, locked }) => (
+                <div key={type} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (locked) { toast.error('Upgrade to Fleet to use this invoice type'); return }
+                      setInvoiceType(type)
+                    }}
+                    className={`w-full rounded-xl border-2 px-4 py-3 text-left transition-all ${
+                      locked ? 'border-gray-100 bg-gray-50 opacity-70 cursor-not-allowed' :
+                      invoiceType === type ? 'border-[#2d7a4f] bg-[#2d7a4f]/5' : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {locked && <Lock className="h-3.5 w-3.5 text-gray-400 shrink-0" />}
+                      <p className={`text-sm font-semibold ${locked ? 'text-gray-400' : invoiceType === type ? 'text-[#2d7a4f]' : 'text-gray-700'}`}>{label}</p>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">{locked ? 'Fleet Plan only' : desc}</p>
+                  </button>
+                </div>
               ))}
             </div>
           </div>

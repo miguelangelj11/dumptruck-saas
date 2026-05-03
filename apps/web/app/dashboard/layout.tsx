@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import Sidebar from '@/components/dashboard/sidebar'
@@ -16,6 +17,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  const hdrs = await headers()
+  const xPathname = hdrs.get('x-pathname') ?? ''
+  const isSettingsPath = xPathname.startsWith('/dashboard/settings')
 
   const admin = getAdmin()
 
@@ -63,8 +68,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const trialEndsAt        = (co?.trial_ends_at       as string | null | undefined) ?? null
   const subscriptionStatus = (co?.subscription_status as string | null | undefined) ?? null
 
-  if (subscriptionStatus === 'expired') {
-    redirect('/trial-expired')
+  if (subscriptionStatus === 'expired' && !isSettingsPath) {
+    redirect('/subscribe')
   }
 
   if (subscriptionStatus === 'trial' && trialEndsAt && new Date(trialEndsAt) < new Date()) {
@@ -72,7 +77,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       .from('companies')
       .update({ trial_expired: true, subscription_status: 'expired' })
       .eq('id', organizationId)
-    redirect('/trial-expired')
+    if (!isSettingsPath) redirect('/subscribe')
   }
 
   // Past-due payment banner
@@ -111,40 +116,44 @@ export default async function DashboardLayout({ children }: { children: React.Re
     )
   }
 
-  // Trial banner
+  // Trial banner — show for all 14 days
   let trialBanner: React.ReactNode = null
   if (subscriptionStatus === 'trial' && trialEndsAt) {
     const msLeft   = new Date(trialEndsAt).getTime() - Date.now()
     const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24))
-    if (daysLeft < 3 && daysLeft > 0) {
+    if (daysLeft > 0) {
+      const isUrgent = daysLeft <= 3
       trialBanner = (
         <div style={{
-          background: '#fef2f2',
-          borderBottom: '1px solid #fca5a5',
+          background: isUrgent ? '#fef2f2' : '#f0fdf4',
+          borderBottom: `1px solid ${isUrgent ? '#fca5a5' : '#86efac'}`,
           padding: '10px 24px',
           display: 'flex',
           alignItems: 'center',
           gap: '10px',
           flexWrap: 'wrap',
         }}>
-          <span style={{ fontSize: '16px' }}>🚨</span>
-          <span style={{ fontSize: '13px', fontWeight: 600, color: '#991b1b', flex: 1 }}>
-            Your free trial ends in {daysLeft} day{daysLeft !== 1 ? 's' : ''}. Subscribe now or lose access.
+          <span style={{ fontSize: '16px' }}>{isUrgent ? '🚨' : '⏰'}</span>
+          <span style={{ fontSize: '13px', fontWeight: 600, color: isUrgent ? '#991b1b' : '#166534', flex: 1 }}>
+            {isUrgent
+              ? `Your free trial ends in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}. Subscribe now or lose access.`
+              : `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left in your free trial.`
+            }
           </span>
           <Link
-            href="/pricing"
+            href="/subscribe"
             style={{
               fontSize: '13px',
               fontWeight: 700,
               padding: '6px 14px',
               borderRadius: '8px',
-              background: '#dc2626',
+              background: isUrgent ? '#dc2626' : '#2d7a4f',
               color: '#fff',
               textDecoration: 'none',
               whiteSpace: 'nowrap',
             }}
           >
-            Subscribe Now →
+            {isUrgent ? 'Subscribe Now →' : 'View Plans →'}
           </Link>
         </div>
       )
@@ -164,6 +173,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           logoUrl={(co?.logo_url as string | null | undefined) ?? null}
           companyName={(co?.name as string | null | undefined) ?? null}
           profileName={(profile as { full_name?: string | null } | null)?.full_name ?? null}
+          plan={plan}
         />
         <main className="flex-1 overflow-y-auto pt-14 md:pt-0 flex flex-col">
           {pastDueBanner}

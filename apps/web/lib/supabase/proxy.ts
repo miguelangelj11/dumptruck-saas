@@ -43,7 +43,7 @@ export async function updateSession(request: NextRequest) {
   const publicPaths = [
     '/', '/login', '/signup', '/forgot-password', '/reset-password', '/auth', '/api/test-setup',
     '/about', '/blog', '/careers', '/privacy', '/terms', '/security', '/changelog',
-    '/pricing', '/features', '/schedule-demo', '/trial-expired',
+    '/pricing', '/features', '/schedule-demo', '/trial-expired', '/subscribe',
     '/api/webhooks', '/api/stripe/webhook', '/api/health', '/api/invite', '/api/team/accept-invite', '/api/dispatches/respond',
     '/api/public',
     '/invite', '/join', '/portal',
@@ -117,6 +117,8 @@ export async function updateSession(request: NextRequest) {
       )
     }
   }
+
+  supabaseResponse.headers.set('x-pathname', pathname)
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
   return supabaseResponse

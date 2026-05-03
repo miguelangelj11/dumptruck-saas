@@ -1415,7 +1415,37 @@ export default function SettingsPage() {
             ))}
           </div>
 
-          {/* Invite form */}
+          {/* Invite form — locked for owner_operator */}
+          {subscriptionPlan === 'owner_operator' ? (
+            <div className="border-t border-gray-100 pt-5">
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 flex items-start gap-3">
+                <Lock className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-800">Team logins require the Fleet Plan</p>
+                  <p className="text-xs text-amber-700 mt-1 mb-3">
+                    The Owner Operator plan is a single-user plan. Upgrade to Fleet to add up to 3 team members (dispatchers, drivers, accountants).
+                  </p>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setUpgradePlanLoading(true)
+                      try {
+                        const res = await fetch('/api/stripe/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan: 'fleet' }) })
+                        const d = await res.json()
+                        if (d.url) { window.location.href = d.url; return }
+                      } catch { /* fall through */ }
+                      setUpgradePlanLoading(false)
+                    }}
+                    disabled={upgradePlanLoading}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#2d7a4f] text-white text-sm font-semibold hover:bg-[#1e3a2a] transition-colors disabled:opacity-60"
+                  >
+                    {upgradePlanLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                    Upgrade to Fleet — $150/mo →
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
           <form onSubmit={handleSendInvite} className="space-y-4 border-t border-gray-100 pt-5">
             <p className="text-sm font-semibold text-gray-800">Add Team Member</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1452,6 +1482,7 @@ export default function SettingsPage() {
               The team member must sign up with this email address to access the platform.
             </p>
           </form>
+          )}
 
           {/* Current Members */}
           <div className="border-t border-gray-100 pt-5">

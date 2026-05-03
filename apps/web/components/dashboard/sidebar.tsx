@@ -28,9 +28,10 @@ type Props = {
   logoUrl?: string | null
   companyName?: string | null
   profileName?: string | null
+  plan?: string | null
 }
 
-export default function Sidebar({ user, logoUrl, companyName: companyNameProp, profileName }: Props) {
+export default function Sidebar({ user, logoUrl, companyName: companyNameProp, profileName, plan }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -41,7 +42,7 @@ export default function Sidebar({ user, logoUrl, companyName: companyNameProp, p
     { href: '/dashboard', icon: LayoutDashboard, label: t('dashboard') },
     { href: '/dashboard/dispatch', icon: Clipboard, label: t('dispatch') },
     { href: '/dashboard/tickets', icon: FileText, label: t('tickets') },
-    { href: '/dashboard/contractors', icon: Truck, label: t('subcontractors') },
+    ...(plan !== 'owner_operator' ? [{ href: '/dashboard/contractors', icon: Truck, label: t('subcontractors') }] : []),
     { href: '/dashboard/drivers', icon: Users, label: t('drivers') },
     { href: '/dashboard/invoices', icon: Receipt, label: t('invoices') },
     { href: '/dashboard/revenue', icon: TrendingUp, label: t('revenue') },

@@ -289,6 +289,11 @@ export default function TicketsPage() {
       }
       toast.success('Ticket updated')
     } else {
+      if (companyPlan === 'owner_operator' && monthTicketCount >= 200) {
+        toast.error('Monthly ticket limit reached (200/mo). Upgrade to Fleet for unlimited tickets.')
+        setSaving(false)
+        return
+      }
       const jobId = crypto.randomUUID()
       const { error } = await supabase.from('loads').insert({ ...payload, id: jobId })
       if (error) { toast.error(error.message); setSaving(false); return }
@@ -302,6 +307,7 @@ export default function TicketsPage() {
         })
         if (slipErr) toast.error('Slip save failed: ' + slipErr.message)
       }
+      setMonthTicketCount(c => c + 1)
       // Workflow 1: auto-link to active dispatch for this driver on this date
       const { linked } = await linkTicketToDispatch(jobId, payload.driver_name, payload.date, supabase)
       toast.success(linked ? 'Ticket added & linked to dispatch' : 'Ticket added')

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Check } from 'lucide-react'
+import { Check, X } from 'lucide-react'
 
 type Billing = 'monthly' | 'annually'
 
@@ -86,8 +86,8 @@ const tiers = [
     description: 'For large operations with 15+ trucks or multiple locations',
     trialBanner: { icon: '🏢', line1: 'Custom Onboarding', line2: 'Tailored to your operation' },
     sectionHeader: 'Everything in Fleet Plan, plus:',
-    cta: 'Schedule a Demo →',
-    href: '/schedule-demo',
+    cta: 'Join Waitlist →',
+    href: '#',
     checkoutPlan: null as string | null,
     ctaStyle: 'gold-outline' as const,
     showTrustBullets: false,
@@ -113,8 +113,27 @@ const tiers = [
 ]
 
 export default function PricingSection() {
-  const [billing,         setBilling]         = useState<Billing>('monthly')
-  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
+  const [billing,          setBilling]          = useState<Billing>('monthly')
+  const [checkoutLoading,  setCheckoutLoading]  = useState<string | null>(null)
+  const [showWaitlist,     setShowWaitlist]     = useState(false)
+  const [waitlistEmail,    setWaitlistEmail]    = useState('')
+  const [waitlistSent,     setWaitlistSent]     = useState(false)
+  const [waitlistLoading,  setWaitlistLoading]  = useState(false)
+
+  async function handleWaitlist(e: React.FormEvent) {
+    e.preventDefault()
+    if (!waitlistEmail.trim()) return
+    setWaitlistLoading(true)
+    try {
+      await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: waitlistEmail, plan: 'enterprise' }),
+      })
+    } catch { /* best-effort */ }
+    setWaitlistLoading(false)
+    setWaitlistSent(true)
+  }
 
   async function handleCheckout(planKey: string, fallbackHref: string) {
     if (checkoutLoading) return
@@ -241,9 +260,16 @@ export default function PricingSection() {
 
                 {/* Name + price */}
                 <div style={{ marginBottom: isNavy ? '12px' : '20px' }}>
-                  <h3 className={`font-bold text-lg mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                    {tier.name}
-                  </h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                    <h3 className={`font-bold text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {tier.name}
+                    </h3>
+                    {isNavy && (
+                      <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px', background: 'rgba(255,184,0,0.15)', color: '#FFB800', whiteSpace: 'nowrap' }}>
+                        Coming Soon
+                      </span>
+                    )}
+                  </div>
 
                   {isContactEnterprise ? (
                     <div className="mb-2">
@@ -282,6 +308,14 @@ export default function PricingSection() {
                     }
                   >
                     {checkoutLoading === tier.checkoutPlan ? 'Redirecting…' : tier.cta}
+                  </button>
+                ) : isNavy ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowWaitlist(true)}
+                    style={{ marginBottom: '12px', display: 'block', width: '100%', textAlign: 'center', borderRadius: '8px', padding: '12px 16px', fontSize: '14px', fontWeight: 700, border: '1px solid #FFB800', background: 'transparent', color: '#FFB800', cursor: 'pointer', transition: 'all 0.15s' }}
+                  >
+                    {tier.cta}
                   </button>
                 ) : (
                   <Link
@@ -351,6 +385,57 @@ export default function PricingSection() {
           Owner Operator and Fleet plans include a 14-day free trial. No credit card required.
         </p>
       </div>
+
+      {/* Waitlist modal */}
+      {showWaitlist && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+          onClick={() => setShowWaitlist(false)}
+        >
+          <div
+            style={{ background: '#fff', borderRadius: '16px', padding: '32px', maxWidth: '440px', width: '100%', position: 'relative' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowWaitlist(false)}
+              style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}
+            >
+              <X style={{ width: '20px', height: '20px' }} />
+            </button>
+            {waitlistSent ? (
+              <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                <div style={{ fontSize: '40px', marginBottom: '12px' }}>🎉</div>
+                <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#111827', marginBottom: '8px' }}>You&apos;re on the list!</h3>
+                <p style={{ fontSize: '14px', color: '#6b7280' }}>We&apos;ll reach out to {waitlistEmail} when Enterprise launches.</p>
+              </div>
+            ) : (
+              <>
+                <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#111827', marginBottom: '6px' }}>Join the Enterprise Waitlist</h3>
+                <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '20px' }}>
+                  Enterprise is coming soon. Leave your email and we&apos;ll reach out first when it&apos;s ready.
+                </p>
+                <form onSubmit={handleWaitlist} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <input
+                    type="email"
+                    required
+                    value={waitlistEmail}
+                    onChange={e => setWaitlistEmail(e.target.value)}
+                    placeholder="you@company.com"
+                    style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px', outline: 'none' }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={waitlistLoading}
+                    style={{ padding: '12px 20px', borderRadius: '8px', background: '#0f1923', color: '#FFB800', fontWeight: 700, fontSize: '14px', border: 'none', cursor: waitlistLoading ? 'not-allowed' : 'pointer', opacity: waitlistLoading ? 0.7 : 1 }}
+                  >
+                    {waitlistLoading ? 'Submitting…' : 'Join Waitlist →'}
+                  </button>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   )
 }
