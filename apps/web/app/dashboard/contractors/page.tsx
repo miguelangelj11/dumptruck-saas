@@ -37,7 +37,7 @@ export default function ContractorsPage() {
   // Contractor form
   const [showContractorForm, setShowContractorForm] = useState(false)
   const [editingContractor, setEditingContractor] = useState<Contractor | null>(null)
-  const [contractorForm, setContractorForm] = useState({ name: '', phone: '', email: '', status: 'active', notes: '' })
+  const [contractorForm, setContractorForm] = useState({ name: '', address: '', phone: '', email: '', status: 'active', notes: '' })
   const [savingContractor, setSavingContractor] = useState(false)
 
   // Ticket list + form
@@ -102,13 +102,13 @@ export default function ContractorsPage() {
   // --- Contractor CRUD ---
   function openAddContractor() {
     setEditingContractor(null)
-    setContractorForm({ name: '', phone: '', email: '', status: 'active', notes: '' })
+    setContractorForm({ name: '', address: '', phone: '', email: '', status: 'active', notes: '' })
     setShowContractorForm(true)
   }
 
   function openEditContractor(c: Contractor) {
     setEditingContractor(c)
-    setContractorForm({ name: c.name, phone: c.phone ?? '', email: c.email ?? '', status: c.status, notes: c.notes ?? '' })
+    setContractorForm({ name: c.name, address: c.address ?? '', phone: c.phone ?? '', email: c.email ?? '', status: c.status, notes: c.notes ?? '' })
     setShowContractorForm(true)
   }
 
@@ -120,6 +120,7 @@ export default function ContractorsPage() {
 
     const fields = {
       name: contractorForm.name,
+      address: contractorForm.address || null,
       phone: contractorForm.phone || null,
       email: contractorForm.email || null,
       status: contractorForm.status,
@@ -278,7 +279,8 @@ export default function ContractorsPage() {
           </button>
           <div className="flex-1">
             <h1 className="text-2xl font-bold text-gray-900">{selected.name}</h1>
-            <div className="flex items-center gap-3 mt-0.5">
+            <div className="flex flex-wrap items-center gap-3 mt-0.5">
+              {selected.address && <span className="text-xs text-gray-400">{selected.address}</span>}
               {selected.phone && <span className="flex items-center gap-1 text-xs text-gray-400"><Phone className="h-3 w-3" />{selected.phone}</span>}
               {selected.email && <span className="flex items-center gap-1 text-xs text-gray-400"><Mail className="h-3 w-3" />{selected.email}</span>}
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${selected.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{selected.status}</span>
@@ -582,8 +584,9 @@ export default function ContractorsPage() {
                   <button onClick={() => handleDeleteContractor(c.id, c.name)} className="p-1 text-gray-400 hover:text-red-500 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>
               </div>
-              {(c.phone || c.email) && (
+              {(c.address || c.phone || c.email) && (
                 <div className="space-y-1 mb-4">
+                  {c.address && <p className="text-xs text-gray-500">{c.address}</p>}
                   {c.phone && <p className="flex items-center gap-1.5 text-xs text-gray-500"><Phone className="h-3 w-3 text-gray-400" />{c.phone}</p>}
                   {c.email && <p className="flex items-center gap-1.5 text-xs text-gray-500"><Mail className="h-3 w-3 text-gray-400" />{c.email}</p>}
                 </div>
@@ -608,6 +611,10 @@ export default function ContractorsPage() {
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Name *</label>
                 <input required value={contractorForm.name} onChange={e => setContractorForm(p => ({ ...p, name: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="Danny Schultz" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Address</label>
+                <input value={contractorForm.address} onChange={e => setContractorForm(p => ({ ...p, address: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="123 Main St, City, ST 00000" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>

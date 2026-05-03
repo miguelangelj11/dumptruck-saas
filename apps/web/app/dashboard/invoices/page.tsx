@@ -237,6 +237,8 @@ export default function InvoicesPage() {
   const [createForm, setCreateForm] = useState({
     client_name: '',
     client_address: '',
+    client_phone: '',
+    client_email: '',
     date_from: '',
     date_to: '',
     notes: '',
@@ -610,6 +612,8 @@ export default function InvoicesPage() {
       invoice_type: invoiceType,
       client_name: createForm.client_name,
       client_address: createForm.client_address || null,
+      client_phone: createForm.client_phone || null,
+      client_email: createForm.client_email || null,
       total: subtotal,
       status: 'draft',
       due_date: dueDate,
@@ -639,7 +643,7 @@ export default function InvoicesPage() {
 
   function resetCreateForm() {
     setInvoiceType('client')
-    setCreateForm({ client_name: '', client_address: '', date_from: '', date_to: '', notes: '' })
+    setCreateForm({ client_name: '', client_address: '', client_phone: '', client_email: '', date_from: '', date_to: '', notes: '' })
     setClientNameMode('dropdown')
     setDeductionPct('')
     setDriverPayType('percentage')
@@ -1060,7 +1064,7 @@ export default function InvoicesPage() {
                     onChange={e => {
                       setSelectedContractorId(e.target.value)
                       const c = contractors.find(c => c.id === e.target.value)
-                      if (c) setCreateForm(p => ({ ...p, client_name: c.name, client_address: '' }))
+                      if (c) setCreateForm(p => ({ ...p, client_name: c.name, client_address: c.address ?? '', client_phone: c.phone ?? '', client_email: c.email ?? '' }))
                     }}
                     className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white"
                   >
@@ -1566,10 +1570,10 @@ export default function InvoicesPage() {
                 </p>
                 <p className="text-base font-bold text-gray-900">{inv.client_name}</p>
                 {inv.client_address && (
-                  <p className="text-sm text-gray-500 mt-1 whitespace-pre-line leading-relaxed">
-                    {inv.client_address}
-                  </p>
+                  <p className="text-sm text-gray-500 mt-1 whitespace-pre-line leading-relaxed">{inv.client_address}</p>
                 )}
+                {inv.client_phone && <p className="text-sm text-gray-500 mt-0.5">{inv.client_phone}</p>}
+                {inv.client_email && <p className="text-sm text-gray-500 mt-0.5">{inv.client_email}</p>}
               </div>
 
               {/* Invoice details — 2-col key/value */}

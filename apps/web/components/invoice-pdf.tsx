@@ -117,11 +117,13 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
           </View>
         </View>
 
-        {/* ── BILL TO ── */}
+        {/* ── BILL TO / PAY TO ── */}
         <View style={s.mb8}>
-          <Text style={s.sectionLabel}>Bill To</Text>
+          <Text style={s.sectionLabel}>{invoice.invoice_type === 'paystub' || invoice.invoice_type === 'contractor' ? 'Pay To' : 'Bill To'}</Text>
           <Text style={s.clientName}>{invoice.client_name}</Text>
           {invoice.client_address && <Text style={[s.small, s.gray]}>{invoice.client_address}</Text>}
+          {invoice.client_phone && <Text style={[s.small, s.gray]}>{invoice.client_phone}</Text>}
+          {invoice.client_email && <Text style={[s.small, s.gray]}>{invoice.client_email}</Text>}
         </View>
 
         {/* ── ACCENT DIVIDER ── */}

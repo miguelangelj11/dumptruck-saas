@@ -72,6 +72,8 @@ export type Invoice = {
   invoice_type: 'client' | 'paystub' | 'contractor' | null
   client_name: string
   client_address: string | null
+  client_phone: string | null
+  client_email: string | null
   total: number
   status: "draft" | "sent" | "partially_paid" | "paid" | "overdue"
   due_date: string | null
@@ -140,6 +142,7 @@ export type Contractor = {
   id: string
   company_id: string
   name: string
+  address: string | null
   phone: string | null
   email: string | null
   status: 'active' | 'inactive'
