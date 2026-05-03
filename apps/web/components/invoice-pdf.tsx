@@ -98,7 +98,7 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
         <View style={[s.row, s.mb16]}>
           <View style={s.flex1}>
             {company.logo_url && (
-              <Image src={company.logo_url} style={{ width: 48, height: 48, marginBottom: 8, objectFit: 'contain' }} />
+              <Image src={company.logo_url} style={{ width: 120, height: 120, marginBottom: 8, objectFit: 'contain' }} />
             )}
             <Text style={s.companyName}>{company.name}</Text>
             {company.address && <Text style={[s.small, s.gray, s.mb4]}>{company.address}</Text>}
