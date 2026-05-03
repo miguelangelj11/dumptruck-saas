@@ -51,15 +51,16 @@ const s = StyleSheet.create({
   tableHeader: { flexDirection: 'row', backgroundColor: '#1e3a2a', color: '#fff', fontSize: 7.5, fontFamily: 'Helvetica-Bold', paddingVertical: 6, paddingHorizontal: 6 },
   tableRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#f3f4f6', paddingVertical: 5, paddingHorizontal: 6 },
   tableRowAlt: { backgroundColor: '#f9fafb' },
-  // Column widths — 9 columns totalling 100%
+  // Column widths — 10 columns totalling 100%
+  colPhoto:  { width: '5%' },
   colDate:   { width: '9%' },
-  colDriver: { width: '13%' },
+  colDriver: { width: '12%' },
   colTruck:  { width: '8%' },
-  colDesc:   { width: '18%' },
-  colTicket: { width: '9%' },
+  colDesc:   { width: '17%' },
+  colTicket: { width: '8%' },
   colTime:   { width: '13%' },
-  colQty:    { width: '7%', textAlign: 'right' },
-  colRate:   { width: '12%', textAlign: 'right' },
+  colQty:    { width: '6%', textAlign: 'right' },
+  colRate:   { width: '11%', textAlign: 'right' },
   colAmt:    { width: '11%', textAlign: 'right' },
   // Totals
   totalRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 4 },
@@ -86,6 +87,7 @@ const fmtRate = (rate: number | null | undefined, rateType: string | null | unde
 export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
   const lineItems = invoice.invoice_line_items ?? []
   const exhibitLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  const photoByTicket = new Map(ticketPhotos.map(p => [p.ticketNumber, p.imageUrl]))
 
   return (
     <Document title={`Invoice ${invoice.invoice_number}`}>
@@ -128,6 +130,7 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
         {/* ── LINE ITEMS TABLE ── */}
         <View style={s.mb16}>
           <View style={s.tableHeader}>
+            <Text style={s.colPhoto}></Text>
             <Text style={s.colDate}>Date</Text>
             <Text style={s.colDriver}>Driver</Text>
             <Text style={s.colTruck}>Truck</Text>
@@ -138,8 +141,15 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
             <Text style={s.colRate}>Rate</Text>
             <Text style={s.colAmt}>Amount</Text>
           </View>
-          {lineItems.map((item, i) => (
+          {lineItems.map((item, i) => {
+            const photoUrl = item.ticket_number ? photoByTicket.get(item.ticket_number) : undefined
+            return (
             <View key={item.id} style={[s.tableRow, i % 2 === 1 ? s.tableRowAlt : {}]}>
+              <View style={s.colPhoto}>
+                {photoUrl
+                  ? <Image src={photoUrl} style={{ width: 24, height: 24, objectFit: 'cover', borderRadius: 2 }} />
+                  : <View style={{ width: 24, height: 24, backgroundColor: '#f3f4f6', borderRadius: 2 }} />}
+              </View>
               <Text style={s.colDate}>{item.line_date ?? ''}</Text>
               <Text style={s.colDriver}>{item.driver_name ?? ''}</Text>
               <Text style={s.colTruck}>{item.truck_number ?? ''}</Text>
@@ -150,7 +160,7 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
               <Text style={s.colRate}>{fmtRate(item.rate, item.rate_type)}</Text>
               <Text style={s.colAmt}>{fmt(item.amount)}</Text>
             </View>
-          ))}
+          )})}
         </View>
 
         {/* ── TOTALS ── */}

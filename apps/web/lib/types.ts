@@ -124,6 +124,8 @@ export type InvoiceLineItem = {
   amount: number
   deduction_pct: number | null
   sort_order: number
+  // local-only: populated from load data, stripped before DB insert
+  photo_url?: string | null
 }
 
 export type ClientCompany = {

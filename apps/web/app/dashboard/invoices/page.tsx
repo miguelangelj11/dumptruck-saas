@@ -42,14 +42,32 @@ function calcAmount(item: { rate: number | null; rate_type: string | null; quant
   return rate * qty
 }
 
+function fmtTime(t: string | null | undefined) {
+  return t?.trim() || null
+}
+function buildTimeWorked(load: { time_in: string | null; time_out: string | null; hours_worked: string | null }): string | null {
+  const t1 = fmtTime(load.time_in)
+  const t2 = fmtTime(load.time_out)
+  if (t1 && t2) return `${t1} – ${t2}`
+  if (t1) return t1
+  return load.hours_worked ?? null
+}
+function buildMaterial(load: { material: string | null; load_type: string | null; origin: string | null; destination: string | null }): string | null {
+  const mat = load.material || load.load_type || null
+  const loc = [load.origin, load.destination].filter(Boolean).join(' → ')
+  return [mat, loc].filter(Boolean).join(' · ') || null
+}
+
 function buildLineItems(loads: LoadWithTickets[], deductionPct: number): InvoiceLineItem[] {
   const items: InvoiceLineItem[] = []
   let order = 0
 
   for (const load of loads) {
     const slips = load.load_tickets ?? []
+    const mat = buildMaterial(load)
+    const tw  = buildTimeWorked(load)
     if (slips.length === 0) {
-      const amount = load.rate_type === 'hr' ? load.rate : load.rate
+      const amount = load.rate
       const deducted = amount * (1 - deductionPct / 100)
       items.push({
         id: crypto.randomUUID(),
@@ -57,15 +75,16 @@ function buildLineItems(loads: LoadWithTickets[], deductionPct: number): Invoice
         line_date: load.date,
         truck_number: load.truck_number,
         driver_name: load.driver_name,
-        material: load.material,
+        material: mat,
         ticket_number: null,
-        time_worked: load.hours_worked,
+        time_worked: tw,
         quantity: 1,
         rate: load.rate,
         rate_type: load.rate_type,
         amount: deductionPct > 0 ? deducted : amount,
         deduction_pct: deductionPct > 0 ? deductionPct : null,
         sort_order: order++,
+        photo_url: load.image_url ?? null,
       })
     } else {
       for (const slip of slips) {
@@ -78,15 +97,16 @@ function buildLineItems(loads: LoadWithTickets[], deductionPct: number): Invoice
           line_date: load.date,
           truck_number: load.truck_number,
           driver_name: load.driver_name,
-          material: load.material,
+          material: mat,
           ticket_number: slip.ticket_number,
-          time_worked: load.hours_worked,
+          time_worked: tw,
           quantity: load.rate_type === 'hr' ? null : qty,
           rate: load.rate,
           rate_type: load.rate_type,
           amount,
           deduction_pct: deductionPct > 0 ? deductionPct : null,
           sort_order: order++,
+          photo_url: slip.image_url ?? load.image_url ?? null,
         })
       }
     }
@@ -124,16 +144,19 @@ function buildDriverPayLineItems(
   let order = 0
   for (const load of loads) {
     const slips = load.load_tickets ?? []
+    const mat = buildMaterial(load)
+    const tw  = buildTimeWorked(load)
     if (slips.length === 0) {
       const gross = load.rate
       items.push({
         id: crypto.randomUUID(), invoice_id: '',
         line_date: load.date, truck_number: load.truck_number,
-        driver_name: load.driver_name, material: load.material,
-        ticket_number: null, time_worked: load.hours_worked,
+        driver_name: load.driver_name, material: mat,
+        ticket_number: null, time_worked: tw,
         quantity: 1, rate: load.rate, rate_type: load.rate_type,
         amount: gross * (payPct / 100),
         deduction_pct: null, sort_order: order++,
+        photo_url: load.image_url ?? null,
       })
     } else {
       for (const slip of slips) {
@@ -142,12 +165,13 @@ function buildDriverPayLineItems(
         items.push({
           id: crypto.randomUUID(), invoice_id: '',
           line_date: load.date, truck_number: load.truck_number,
-          driver_name: load.driver_name, material: load.material,
-          ticket_number: slip.ticket_number, time_worked: load.hours_worked,
+          driver_name: load.driver_name, material: mat,
+          ticket_number: slip.ticket_number, time_worked: tw,
           quantity: load.rate_type === 'hr' ? null : qty,
           rate: load.rate, rate_type: load.rate_type,
           amount: gross * (payPct / 100),
           deduction_pct: null, sort_order: order++,
+          photo_url: slip.image_url ?? load.image_url ?? null,
         })
       }
     }
@@ -565,7 +589,7 @@ export default function InvoicesPage() {
 
     if (invErr) { toast.error(invErr.message); setSaving(false); return }
 
-    const lineItemsToInsert = previewItems.map(item => ({ ...item, invoice_id: invoiceId }))
+    const lineItemsToInsert = previewItems.map(({ photo_url: _p, ...item }) => ({ ...item, invoice_id: invoiceId }))
     const { error: itemErr } = await supabase.from('invoice_line_items').insert(lineItemsToInsert)
     if (itemErr) { toast.error(itemErr.message); setSaving(false); return }
 
@@ -1161,7 +1185,7 @@ export default function InvoicesPage() {
                 <table className="w-full min-w-[700px] text-xs">
                   <thead className="bg-gray-50 border-b border-gray-100">
                     <tr>
-                      {['Date', 'Truck #', 'Driver', 'Material / Location', 'Ticket #', 'Time', 'Qty', 'Rate', 'Amount'].map(h => (
+                      {['', 'Date', 'Truck #', 'Driver', 'Material / Location', 'Ticket #', 'Time', 'Qty', 'Rate', 'Amount'].map(h => (
                         <th key={h} className="text-left px-3 py-2.5 font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -1169,6 +1193,11 @@ export default function InvoicesPage() {
                   <tbody className="divide-y divide-gray-50">
                     {previewItems.map((item, i) => (
                       <tr key={i} className="hover:bg-gray-50/50">
+                        <td className="px-3 py-2.5">
+                          {item.photo_url
+                            ? <img src={item.photo_url} alt="ticket" className="h-8 w-8 object-cover rounded border border-gray-200" />
+                            : <span className="inline-block h-8 w-8 rounded border border-dashed border-gray-200 bg-gray-50" />}
+                        </td>
                         <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{fmtDate(item.line_date)}</td>
                         <td className="px-3 py-2.5 font-medium text-gray-700">{item.truck_number || '—'}</td>
                         <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{item.driver_name}</td>
@@ -1224,6 +1253,7 @@ export default function InvoicesPage() {
 
     const inv = detailInvoice
     const lineItems = inv.invoice_line_items ?? []
+    const photoByTicket = new Map(detailTicketPhotos.map(p => [p.ticketNumber, p.imageUrl]))
     const total = lineItems.reduce((s, i) => s + i.amount, 0)
     const isPaystub = inv.invoice_type === 'paystub' || inv.invoice_type === 'contractor'
     const firstDeduction = lineItems.find(i => (i.deduction_pct ?? 0) > 0)?.deduction_pct ?? 0
@@ -1405,6 +1435,7 @@ export default function InvoicesPage() {
               <table className="w-full min-w-[580px] text-sm border-collapse">
                 <thead>
                   <tr className="bg-gray-100">
+                    <th style={{paddingLeft:8,paddingRight:4,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200"></th>
                     <th style={{paddingLeft:16,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Date</th>
                     <th style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Truck #</th>
                     <th style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Driver</th>
@@ -1417,8 +1448,15 @@ export default function InvoicesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {lineItems.map((item, idx) => (
+                  {lineItems.map((item, idx) => {
+                    const photoUrl = item.ticket_number ? photoByTicket.get(item.ticket_number) : undefined
+                    return (
                     <tr key={item.id} className={`border-b border-gray-100 ${idx % 2 === 1 ? 'bg-gray-50/60' : 'bg-white'}`}>
+                      <td style={{paddingLeft:8,paddingRight:4,paddingTop:8,paddingBottom:8}}>
+                        {photoUrl
+                          ? <img src={photoUrl} alt="ticket" style={{width:32,height:32,objectFit:'cover',borderRadius:4,border:'1px solid #e5e7eb'}} />
+                          : <span style={{display:'inline-block',width:32,height:32,borderRadius:4,border:'1px dashed #e5e7eb',background:'#f9fafb'}} />}
+                      </td>
                       <td style={{paddingLeft:16,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-gray-600 whitespace-nowrap text-xs">{fmtDate(item.line_date)}</td>
                       <td style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="font-semibold text-gray-800">{item.truck_number || <span className="text-gray-300 font-normal">—</span>}</td>
                       <td style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-gray-700 whitespace-nowrap">{item.driver_name}</td>
@@ -1431,7 +1469,7 @@ export default function InvoicesPage() {
                       </td>
                       <td style={{paddingLeft:8,paddingRight:16,paddingTop:12,paddingBottom:12}} className="font-semibold text-gray-900 text-right tabular-nums whitespace-nowrap">${fmt(item.amount)}</td>
                     </tr>
-                  ))}
+                  )})}
                 </tbody>
               </table>
             </div>
