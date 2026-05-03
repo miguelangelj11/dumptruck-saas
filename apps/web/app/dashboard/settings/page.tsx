@@ -794,7 +794,8 @@ export default function SettingsPage() {
       const json = await res.json()
       if (!res.ok) { toast.error(json.error ?? 'Failed to delete account'); return }
       await supabase.auth.signOut()
-      router.push('/')
+      toast.success('Account deleted successfully')
+      setTimeout(() => { window.location.href = 'https://dumptruckboss.com' }, 1500)
     } catch {
       toast.error('An unexpected error occurred')
     } finally {
@@ -2032,13 +2033,13 @@ export default function SettingsPage() {
               <input
                 value={delAccInput}
                 onChange={e => setDelAccInput(e.target.value)}
-                placeholder={`Type "${companyName || 'company name'}" to confirm`}
+                placeholder='Type "DELETE" to confirm'
                 disabled={deletingAccount}
                 className="flex-1 rounded-lg border border-red-200 px-3 py-2 text-sm focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-200 disabled:opacity-50"
               />
               <button
                 onClick={handleDeleteAccount}
-                disabled={!companyName || delAccInput !== companyName || deletingAccount}
+                disabled={delAccInput !== 'DELETE' || deletingAccount}
                 className="flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 {deletingAccount && <Loader2 className="h-4 w-4 animate-spin" />}

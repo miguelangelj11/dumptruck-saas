@@ -94,6 +94,9 @@ async function deleteCompanyData(admin: any, companyId: string) {
     admin.from('contractors').delete().eq('company_id', companyId),
     admin.from('received_invoices').delete().eq('company_id', companyId),
     admin.from('activity_feed').delete().eq('company_id', companyId),
+    admin.from('client_companies').delete().eq('company_id', companyId),
+    admin.from('team_members').delete().eq('company_id', companyId),
+    admin.from('invitations').delete().eq('company_id', companyId),
   ])
 
   await admin.from('companies').delete().eq('id', companyId)
@@ -154,7 +157,10 @@ export async function POST(request: Request) {
     await deleteCompanyData(admin, company.id)
   }
 
-  // 5. For full account deletion, remove the auth user
+  // 5. Delete profile
+  await admin.from('profiles').delete().eq('id', user.id)
+
+  // 6. For full account deletion, remove the auth user
   if (mode === 'account') {
     const { error } = await admin.auth.admin.deleteUser(user.id)
     if (error) {
