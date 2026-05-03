@@ -157,7 +157,8 @@ export default function SettingsPage() {
 
   // ── Client companies state ──────────────────────────────────────────────
   const [clientCompanies, setClientCompanies] = useState<ClientCompany[]>([])
-  const [newCompanyName,  setNewCompanyName]  = useState('')
+  const [newCompanyName,    setNewCompanyName]    = useState('')
+  const [newCompanyAddress, setNewCompanyAddress] = useState('')
   const [addingCompany,   setAddingCompany]   = useState(false)
   const [deletingId,      setDeletingId]      = useState<string | null>(null)
 
@@ -505,10 +506,11 @@ export default function SettingsPage() {
     setAddingCompany(true)
     const { error } = await supabase
       .from('client_companies')
-      .insert({ name: newCompanyName.trim(), company_id: companyId })
+      .insert({ name: newCompanyName.trim(), address: newCompanyAddress.trim() || null, company_id: companyId })
     if (error) { toast.error(error.message); setAddingCompany(false); return }
     toast.success(`"${newCompanyName.trim()}" added`)
     setNewCompanyName('')
+    setNewCompanyAddress('')
     setAddingCompany(false)
     getCompanyId().then(orgId => { if (orgId) fetchClientCompanies(orgId) })
   }
@@ -840,21 +842,29 @@ export default function SettingsPage() {
           subtitle='These appear in the ticket form dropdown under "Working Under (Company)"'
         />
         <div className="p-6 space-y-4">
-          <form onSubmit={handleAddCompany} className="flex gap-2">
+          <form onSubmit={handleAddCompany} className="space-y-2">
+            <div className="flex gap-2">
+              <input
+                value={newCompanyName}
+                onChange={e => setNewCompanyName(e.target.value)}
+                placeholder="Company name…"
+                className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+              />
+              <button
+                type="submit"
+                disabled={addingCompany || !newCompanyName.trim()}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#2d7a4f] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors disabled:opacity-50"
+              >
+                {addingCompany ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                Add
+              </button>
+            </div>
             <input
-              value={newCompanyName}
-              onChange={e => setNewCompanyName(e.target.value)}
-              placeholder="Add a company name…"
-              className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+              value={newCompanyAddress}
+              onChange={e => setNewCompanyAddress(e.target.value)}
+              placeholder="Address (optional) — auto-fills on invoices"
+              className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
             />
-            <button
-              type="submit"
-              disabled={addingCompany || !newCompanyName.trim()}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#2d7a4f] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors disabled:opacity-50"
-            >
-              {addingCompany ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              Add
-            </button>
           </form>
 
           {clientCompanies.length === 0 ? (
@@ -871,7 +881,10 @@ export default function SettingsPage() {
                     <div className="h-7 w-7 rounded-lg bg-[#1e3a2a]/10 flex items-center justify-center">
                       <Building2 className="h-3.5 w-3.5 text-[#2d7a4f]" />
                     </div>
-                    <span className="text-sm font-medium text-gray-900">{c.name}</span>
+                    <div>
+                      <span className="text-sm font-medium text-gray-900">{c.name}</span>
+                      {c.address && <p className="text-xs text-gray-400 mt-0.5">{c.address}</p>}
+                    </div>
                   </div>
                   <button
                     onClick={() => handleDeleteCompany(c.id, c.name)}

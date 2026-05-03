@@ -132,6 +132,7 @@ export type ClientCompany = {
   id: string
   company_id: string
   name: string
+  address: string | null
   created_at: string
 }
 
