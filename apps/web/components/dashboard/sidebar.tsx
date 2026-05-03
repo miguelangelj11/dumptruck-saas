@@ -16,6 +16,7 @@ import {
   Clipboard,
 } from 'lucide-react'
 import { useState } from 'react'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import CompanyAvatar from '@/components/dashboard/company-avatar'
 import { clearCompanyIdCache } from '@/lib/get-company-id'
@@ -63,11 +64,14 @@ export default function Sidebar({ user, logoUrl, companyName: companyNameProp, p
   const SidebarContent = () => (
     <div className="flex h-full flex-col">
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-5 py-5 border-b border-white/10">
-        {logoUrl
-          ? <CompanyAvatar logoUrl={logoUrl} name={companyName} size={32} rounded="lg" bg="var(--hf-sidebar-accent)" />
-          : <div className="h-8 w-8 rounded-lg shrink-0 bg-[var(--hf-sidebar-accent)] flex items-center justify-center"><Truck className="h-4 w-4 text-white" /></div>
-        }
+      <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/10">
+        <Image
+          src="/dtb-logo.png"
+          alt="DumpTruckBoss"
+          width={48}
+          height={48}
+          className="rounded-full shrink-0 object-contain"
+        />
         <div>
           <span className="text-base font-bold text-white">DumpTruckBoss</span>
           <p className="text-[10px] text-white/40 -mt-0.5 leading-tight truncate max-w-[120px]">{companyName}</p>

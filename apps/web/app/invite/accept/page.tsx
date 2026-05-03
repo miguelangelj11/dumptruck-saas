@@ -38,7 +38,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       <div style={{ width: '100%', maxWidth: '420px' }}>
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-            <Image src="/logo.png" alt="DumpTruckBoss" width={36} height={36} style={{ objectFit: 'contain' }} />
+            <Image src="/dtb-logo.png" alt="DumpTruckBoss" width={48} height={48} className="rounded-full object-contain" style={{ width: '48px', height: '48px' }} />
             <span style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>DumpTruckBoss</span>
           </Link>
         </div>

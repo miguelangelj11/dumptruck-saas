@@ -38,9 +38,9 @@ export default function Nav() {
           <Image
             src="/dtb-logo.png"
             alt="DumpTruckBoss"
-            width={56}
-            height={56}
-            className="object-contain w-14 h-14"
+            width={64}
+            height={64}
+            className="object-contain w-16 h-16 rounded-full"
             priority
           />
           <span className="font-bold text-[17px] text-white whitespace-nowrap">

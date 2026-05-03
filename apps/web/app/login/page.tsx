@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Truck } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function LoginPage() {
@@ -42,9 +42,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="h-10 w-10 rounded-xl bg-[#2d7a4f] flex items-center justify-center">
-              <Truck className="h-5 w-5 text-white" />
-            </div>
+            <Image src="/dtb-logo.png" alt="DumpTruckBoss" width={48} height={48} className="rounded-full object-contain" />
             <span className="text-2xl font-bold text-white">DumpTruckBoss</span>
           </Link>
           <h1 className="text-2xl font-bold text-white mb-1">Welcome back</h1>

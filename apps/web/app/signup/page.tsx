@@ -105,7 +105,7 @@ export default function SignupPage() {
         {/* Logo + heading */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', textDecoration: 'none', marginBottom: '20px' }}>
-            <Image src="/logo.png" alt="DumpTruckBoss" width={40} height={40} style={{ objectFit: 'contain', width: '40px', height: '40px' }} />
+            <Image src="/dtb-logo.png" alt="DumpTruckBoss" width={48} height={48} className="rounded-full object-contain" style={{ width: '48px', height: '48px' }} />
             <span style={{ fontSize: '20px', fontWeight: 700, color: '#fff' }}>DumpTruckBoss</span>
           </Link>
           <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#fff', marginBottom: '6px' }}>Start your free 14-day trial</h1>
