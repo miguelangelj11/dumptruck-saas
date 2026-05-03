@@ -19,7 +19,15 @@ export default function CompanyAvatar({
   bg = '#2d7a4f',
   className = '',
 }: Props) {
-  const initials = (name || 'CO').slice(0, 2).toUpperCase()
+  // Build initials from first letter of each significant word, max 2 chars
+  // e.g. "Atlas Hauling Co." → "AH", "ACME TRUCKING LLC" → "AT"
+  const SKIP = new Set(['llc', 'inc', 'corp', 'ltd', 'co', 'the', 'and', '&'])
+  const initials = (name || 'CO')
+    .split(/\s+/)
+    .filter(w => w.length > 0 && !SKIP.has(w.toLowerCase()))
+    .map(w => w[0]!.toUpperCase())
+    .slice(0, 2)
+    .join('') || (name || 'CO').slice(0, 2).toUpperCase()
   const radiusCls = rounded === 'lg' ? 'rounded-lg' : 'rounded-full'
 
   return (

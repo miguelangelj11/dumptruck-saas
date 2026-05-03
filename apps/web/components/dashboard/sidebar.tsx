@@ -63,19 +63,16 @@ export default function Sidebar({ user, logoUrl, companyName: companyNameProp, p
 
   const SidebarContent = () => (
     <div className="flex h-full flex-col">
-      {/* Logo */}
+      {/* App brand — DTB logo only, no company info here */}
       <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/10">
         <Image
           src="/dtb-logo.png"
           alt="DumpTruckBoss"
-          width={48}
-          height={48}
+          width={36}
+          height={36}
           className="rounded-full shrink-0 object-contain"
         />
-        <div>
-          <span className="text-base font-bold text-white">DumpTruckBoss</span>
-          <p className="text-[10px] text-white/40 -mt-0.5 leading-tight truncate max-w-[120px]">{companyName}</p>
-        </div>
+        <span className="text-base font-bold text-white">DumpTruckBoss</span>
       </div>
 
       {/* Nav links */}
