@@ -27,7 +27,7 @@ type Props = {
 }
 
 const s = StyleSheet.create({
-  page: { fontFamily: 'Helvetica', fontSize: 10, color: '#1a1a1a', padding: 40 },
+  page: { fontFamily: 'Helvetica', fontSize: 9.5, color: '#1a1a1a', padding: 36 },
   row: { flexDirection: 'row' },
   flex1: { flex: 1 },
   mb4: { marginBottom: 4 },
@@ -42,18 +42,25 @@ const s = StyleSheet.create({
   // Invoice title
   invoiceTitle: { fontSize: 22, fontFamily: 'Helvetica-Bold', color: '#1e3a2a', textAlign: 'right' },
   // Section header
-  sectionLabel: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+  sectionLabel: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+  // Bill To client name — large and bold
+  clientName: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#111827', marginBottom: 3 },
+  // Colored divider
+  accentDivider: { borderTopWidth: 2, borderTopColor: '#2d7a4f', marginVertical: 14 },
   // Table
-  tableHeader: { flexDirection: 'row', backgroundColor: '#1e3a2a', color: '#fff', fontSize: 8, fontFamily: 'Helvetica-Bold', paddingVertical: 6, paddingHorizontal: 8 },
-  tableRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#f3f4f6', paddingVertical: 5, paddingHorizontal: 8 },
+  tableHeader: { flexDirection: 'row', backgroundColor: '#1e3a2a', color: '#fff', fontSize: 7.5, fontFamily: 'Helvetica-Bold', paddingVertical: 6, paddingHorizontal: 6 },
+  tableRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#f3f4f6', paddingVertical: 5, paddingHorizontal: 6 },
   tableRowAlt: { backgroundColor: '#f9fafb' },
-  colDate: { width: '12%' },
-  colDriver: { width: '18%' },
-  colTruck: { width: '10%' },
-  colDesc: { width: '25%' },
-  colQty: { width: '10%', textAlign: 'right' },
-  colRate: { width: '12%', textAlign: 'right' },
-  colAmt: { width: '13%', textAlign: 'right' },
+  // Column widths — 9 columns totalling 100%
+  colDate:   { width: '9%' },
+  colDriver: { width: '13%' },
+  colTruck:  { width: '8%' },
+  colDesc:   { width: '18%' },
+  colTicket: { width: '9%' },
+  colTime:   { width: '13%' },
+  colQty:    { width: '7%', textAlign: 'right' },
+  colRate:   { width: '12%', textAlign: 'right' },
+  colAmt:    { width: '11%', textAlign: 'right' },
   // Totals
   totalRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 4 },
   totalLabel: { width: 100, textAlign: 'right', color: '#6b7280' },
@@ -67,7 +74,14 @@ const s = StyleSheet.create({
   exhibitLabel: { position: 'absolute', bottom: 40, right: 40, fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#6b7280' },
 })
 
-const fmt = (v: number) => `$${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const fmt = (v: number) =>
+  `$${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+const fmtRate = (rate: number | null | undefined, rateType: string | null | undefined): string => {
+  if (rate == null) return ''
+  const label = rateType === 'hr' ? 'hr' : rateType === 'ton' ? 'ton' : 'load'
+  return `${fmt(rate)}/${label}`
+}
 
 export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
   const lineItems = invoice.invoice_line_items ?? []
@@ -77,8 +91,9 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
     <Document title={`Invoice ${invoice.invoice_number}`}>
       {/* PAGE 1: Invoice summary */}
       <Page size="LETTER" style={s.page}>
-        {/* Header */}
-        <View style={[s.row, s.mb24]}>
+
+        {/* ── HEADER ── */}
+        <View style={[s.row, s.mb16]}>
           <View style={s.flex1}>
             {company.logo_url && (
               <Image src={company.logo_url} style={{ width: 48, height: 48, marginBottom: 8, objectFit: 'contain' }} />
@@ -88,8 +103,10 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
             {company.phone && <Text style={[s.small, s.gray]}>{company.phone}</Text>}
           </View>
           <View style={{ alignItems: 'flex-end' }}>
-            <Text style={s.invoiceTitle}>INVOICE</Text>
-            <Text style={[s.mb4]}># {invoice.invoice_number}</Text>
+            <Text style={s.invoiceTitle}>
+              {invoice.invoice_type === 'paystub' ? 'DRIVER PAY' : invoice.invoice_type === 'contractor' ? 'SUBCONTRACTOR' : 'INVOICE'}
+            </Text>
+            <Text style={s.mb4}># {invoice.invoice_number}</Text>
             <Text style={[s.small, s.gray]}>Date: {invoice.created_at?.split('T')[0]}</Text>
             {invoice.due_date && <Text style={[s.small, s.gray]}>Due: {invoice.due_date}</Text>}
             {invoice.date_from && invoice.date_to && (
@@ -98,20 +115,25 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
           </View>
         </View>
 
-        {/* Bill To */}
-        <View style={s.mb24}>
+        {/* ── BILL TO ── */}
+        <View style={s.mb8}>
           <Text style={s.sectionLabel}>Bill To</Text>
-          <Text style={[s.bold]}>{invoice.client_name}</Text>
+          <Text style={s.clientName}>{invoice.client_name}</Text>
           {invoice.client_address && <Text style={[s.small, s.gray]}>{invoice.client_address}</Text>}
         </View>
 
-        {/* Line Items Table */}
+        {/* ── ACCENT DIVIDER ── */}
+        <View style={s.accentDivider} />
+
+        {/* ── LINE ITEMS TABLE ── */}
         <View style={s.mb16}>
           <View style={s.tableHeader}>
             <Text style={s.colDate}>Date</Text>
             <Text style={s.colDriver}>Driver</Text>
             <Text style={s.colTruck}>Truck</Text>
-            <Text style={s.colDesc}>Description</Text>
+            <Text style={s.colDesc}>Material / Location</Text>
+            <Text style={s.colTicket}>Ticket #</Text>
+            <Text style={s.colTime}>Time In / Out</Text>
             <Text style={s.colQty}>Qty</Text>
             <Text style={s.colRate}>Rate</Text>
             <Text style={s.colAmt}>Amount</Text>
@@ -121,47 +143,59 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
               <Text style={s.colDate}>{item.line_date ?? ''}</Text>
               <Text style={s.colDriver}>{item.driver_name ?? ''}</Text>
               <Text style={s.colTruck}>{item.truck_number ?? ''}</Text>
-              <Text style={s.colDesc}>{[item.material, item.ticket_number ? `#${item.ticket_number}` : null].filter(Boolean).join(' · ')}</Text>
+              <Text style={s.colDesc}>{item.material || '—'}</Text>
+              <Text style={s.colTicket}>{item.ticket_number ?? '—'}</Text>
+              <Text style={s.colTime}>{item.time_worked || '—'}</Text>
               <Text style={s.colQty}>{item.quantity ?? ''}</Text>
-              <Text style={s.colRate}>{item.rate ? `${item.rate_type === 'hr' ? '/hr' : '/ld'} $${item.rate}` : ''}</Text>
+              <Text style={s.colRate}>{fmtRate(item.rate, item.rate_type)}</Text>
               <Text style={s.colAmt}>{fmt(item.amount)}</Text>
             </View>
           ))}
         </View>
 
-        {/* Totals */}
+        {/* ── TOTALS ── */}
         <View style={{ alignItems: 'flex-end' }}>
           <View style={s.totalRow}>
             <Text style={s.totalLabel}>Subtotal</Text>
             <Text style={s.totalValue}>{fmt(invoice.total)}</Text>
           </View>
           <View style={[s.totalRow, { borderTopWidth: 1.5, borderTopColor: '#1e3a2a', paddingTop: 4 }]}>
-            <Text style={[s.totalLabel, s.bold]}>Total Due</Text>
+            <Text style={[s.totalLabel, s.bold]}>
+              {invoice.invoice_type === 'paystub' ? 'Net Pay' : 'Total Due'}
+            </Text>
             <Text style={[s.totalValue, s.bold, { color: '#1e3a2a', fontSize: 12 }]}>{fmt(invoice.total)}</Text>
           </View>
         </View>
 
-        {/* Footer */}
+        {/* ── NOTES / PAYMENT TERMS (above thank-you) ── */}
         {(invoice.payment_terms || invoice.notes) && (
           <>
             <View style={s.divider} />
             {invoice.payment_terms && (
-              <Text style={[s.small, s.gray, s.mb4]}><Text style={s.bold}>Payment Terms: </Text>{invoice.payment_terms}</Text>
+              <Text style={[s.small, s.gray, s.mb4]}>
+                <Text style={s.bold}>Payment Terms: </Text>{invoice.payment_terms}
+              </Text>
             )}
             {invoice.notes && (
-              <Text style={[s.small, s.gray]}><Text style={s.bold}>Notes: </Text>{invoice.notes}</Text>
+              <Text style={[s.small, s.gray]}>
+                <Text style={s.bold}>Notes: </Text>{invoice.notes}
+              </Text>
             )}
           </>
         )}
-        <View style={[s.divider]} />
+
+        {/* ── FOOTER ── */}
+        <View style={s.divider} />
         <Text style={[s.small, s.gray, { textAlign: 'center' }]}>
           Thank you for your business. Make checks payable to {company.name}.
         </Text>
         {ticketPhotos.length > 0 && (
           <Text style={[s.small, s.gray, { textAlign: 'center', marginTop: 4 }]}>
-            See attached Exhibit{ticketPhotos.length > 1 ? 's' : ''} A{ticketPhotos.length > 1 ? `–${exhibitLetters[ticketPhotos.length - 1]}` : ''} for supporting ticket photos.
+            See attached Exhibit{ticketPhotos.length > 1 ? 's' : ''} A
+            {ticketPhotos.length > 1 ? `–${exhibitLetters[ticketPhotos.length - 1]}` : ''} for supporting ticket photos.
           </Text>
         )}
+
       </Page>
 
       {/* PAGES 2+: Ticket Photos */}
