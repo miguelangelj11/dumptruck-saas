@@ -231,6 +231,7 @@ export default function SettingsPage() {
   const [trialEndsAtSub,     setTrialEndsAtSub]     = useState<string | null>(null)
   const [stripeCustomerId,   setStripeCustomerId]   = useState<string | null>(null)
   const [portalLoading,      setPortalLoading]      = useState(false)
+  const [upgradePlanLoading, setUpgradePlanLoading] = useState(false)
 
   // ── Export state ─────────────────────────────────────────────────────────
   const today      = new Date().toISOString().split('T')[0]!
@@ -396,6 +397,21 @@ export default function SettingsPage() {
   }, [])
 
   // ── Handlers ─────────────────────────────────────────────────────────────
+
+  async function handleUpgradePlan(plan: string) {
+    setUpgradePlanLoading(true)
+    try {
+      const res  = await fetch('/api/stripe/checkout', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ plan }),
+      })
+      const data = await res.json()
+      if (data.url) { window.location.href = data.url; return }
+    } catch { /* fall through */ }
+    setUpgradePlanLoading(false)
+    toast.error('Could not start checkout')
+  }
 
   async function handleOpenPortal() {
     setPortalLoading(true)
@@ -1656,15 +1672,60 @@ export default function SettingsPage() {
             )
           })()}
 
+          {/* Plan comparison card — next tier up */}
+          {subscriptionPlan !== 'enterprise' && (subscriptionStatus === 'trial' || subscriptionStatus === 'active') && (() => {
+            const isOwner = subscriptionPlan === 'owner_operator' || !subscriptionPlan
+            const next = isOwner
+              ? { label: 'Fleet Plan', price: '$150/mo', planKey: 'fleet', features: ['Up to 15 drivers (you have 3)', 'Unlimited tickets per month', 'Full dispatch board with assignments', '3 team logins (owner + 2 staff)', 'Send invoices via email', 'Weekly auto-invoice builder'] }
+              : { label: 'Enterprise Plan', price: 'Custom pricing', planKey: 'enterprise', features: ['Unlimited drivers & trucks', 'Mobile driver app for field teams', 'AI ticket photo reader (auto-fill)', 'Send invoices via SMS', 'Dedicated account manager', 'Custom onboarding included'] }
+            return (
+              <div className="rounded-xl border-2 border-[#2d7a4f]/20 bg-[#f0f9f4] p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-[#2d7a4f] uppercase tracking-wide">Next tier up</p>
+                    <p className="text-sm font-bold text-gray-900 mt-0.5">{next.label} — {next.price}</p>
+                  </div>
+                  <span className="text-xs bg-[#2d7a4f] text-white px-2.5 py-1 rounded-full font-semibold">Upgrade</span>
+                </div>
+                <ul className="space-y-1">
+                  {next.features.map(f => (
+                    <li key={f} className="flex items-start gap-2 text-xs text-gray-700">
+                      <span className="text-[#2d7a4f] font-bold mt-0.5">✓</span>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                {isOwner ? (
+                  <button
+                    onClick={() => handleUpgradePlan('fleet')}
+                    disabled={upgradePlanLoading}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[#2d7a4f] py-2.5 text-sm font-bold text-white hover:bg-[#245f3e] transition-colors disabled:opacity-60"
+                  >
+                    {upgradePlanLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                    {upgradePlanLoading ? 'Redirecting…' : 'Upgrade to Fleet Plan →'}
+                  </button>
+                ) : (
+                  <a
+                    href="/schedule-demo"
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[#2d7a4f] py-2.5 text-sm font-bold text-white hover:bg-[#245f3e] transition-colors"
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    Talk to Sales →
+                  </a>
+                )}
+              </div>
+            )
+          })()}
+
           {/* Action buttons */}
-          <div className="flex flex-wrap gap-2 pt-1">
-            {(subscriptionStatus === 'trial' || !subscriptionStatus) && (
+          <div className="flex flex-wrap gap-2">
+            {(subscriptionStatus === 'trial' || !subscriptionStatus) && subscriptionPlan === 'enterprise' && (
               <a
                 href="/pricing"
                 className="inline-flex items-center gap-1.5 rounded-lg bg-[#2d7a4f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors"
               >
                 <CreditCard className="h-4 w-4" />
-                Upgrade to Paid Plan
+                View All Plans
               </a>
             )}
             {stripeCustomerId && (
@@ -1678,6 +1739,15 @@ export default function SettingsPage() {
                   : <CreditCard className="h-4 w-4" />}
                 {subscriptionStatus === 'active' ? 'Manage Subscription' : 'Billing Portal'}
               </button>
+            )}
+            {!stripeCustomerId && !subscriptionPlan && (
+              <a
+                href="/pricing"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#2d7a4f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors"
+              >
+                <CreditCard className="h-4 w-4" />
+                Upgrade to Paid Plan
+              </a>
             )}
           </div>
 

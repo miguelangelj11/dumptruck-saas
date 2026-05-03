@@ -78,6 +78,9 @@ export default function TicketsPage() {
   const [clientCompanies, setClientCompanies] = useState<{ id: string; name: string }[]>([])
   const [driversList, setDriversList] = useState<{ id: string; name: string }[]>([])
   const [driverMode, setDriverMode] = useState<'dropdown' | 'manual'>('dropdown')
+  const [companyPlan,          setCompanyPlan]          = useState<string | null>(null)
+  const [monthTicketCount,     setMonthTicketCount]     = useState(0)
+  const [ticketBannerDismissed, setTicketBannerDismissed] = useState(false)
 
   // Filters
   const [search, setSearch]               = useState('')
@@ -126,12 +129,16 @@ export default function TicketsPage() {
     if (!orgId) { setLoading(false); return }
 
     const [range0, range1] = pageRange(0)
-    const [loadsRes, contractorsRes, clientCompaniesRes, countRes, driversRes] = await Promise.all([
+    const now = new Date()
+    const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+    const [loadsRes, contractorsRes, clientCompaniesRes, countRes, driversRes, coRes, monthRes] = await Promise.all([
       supabase.from('loads').select('*, load_tickets(*)').eq('company_id', orgId).order('date', { ascending: false }).range(range0, range1),
       supabase.from('contractors').select('*').eq('company_id', orgId).eq('status', 'active').order('name'),
       supabase.from('client_companies').select('id, name').eq('company_id', orgId).order('name'),
       supabase.from('loads').select('id', { count: 'exact', head: true }).eq('company_id', orgId),
       supabase.from('drivers').select('id, name').eq('company_id', orgId).eq('status', 'active').order('name'),
+      supabase.from('companies').select('plan').eq('id', orgId).maybeSingle(),
+      supabase.from('loads').select('id', { count: 'exact', head: true }).eq('company_id', orgId).gte('date', monthStart),
     ])
     if (loadsRes.error) toast.error('Failed to load tickets: ' + loadsRes.error.message)
     const loaded = loadsRes.data ?? []
@@ -142,6 +149,8 @@ export default function TicketsPage() {
     setContractors(contractorsRes.data ?? [])
     setClientCompanies(clientCompaniesRes.data ?? [])
     setDriversList(driversRes.data ?? [])
+    setCompanyPlan((coRes.data as Record<string, unknown> | null)?.plan as string | null ?? null)
+    setMonthTicketCount(monthRes.count ?? 0)
     setLoading(false)
   }
 
@@ -394,6 +403,25 @@ export default function TicketsPage() {
           </button>
         </div>
       </div>
+
+      {/* Monthly ticket limit banner (owner_operator at 80%+ of 200/mo) */}
+      {!ticketBannerDismissed && companyPlan === 'owner_operator' && monthTicketCount >= 160 && (
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <span className="text-base shrink-0">📋</span>
+          <p className="flex-1 text-sm font-medium text-amber-800">
+            You&apos;ve used <strong>{monthTicketCount}/200</strong> tickets this month.{' '}
+            {monthTicketCount >= 200
+              ? 'You\'ve hit your monthly limit. '
+              : 'Approaching your monthly limit. '}
+            <a href="/pricing" className="underline font-semibold hover:no-underline">
+              Upgrade to Fleet for unlimited tickets →
+            </a>
+          </p>
+          <button onClick={() => setTicketBannerDismissed(true)} className="text-amber-500 hover:text-amber-700 shrink-0">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Source filter tabs */}
       <div className="flex gap-1 mb-3 bg-gray-100 rounded-lg p-1 w-fit">

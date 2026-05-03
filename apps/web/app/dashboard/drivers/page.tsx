@@ -33,8 +33,26 @@ export default function DriversPage() {
   const [payingDriver, setPayingDriver]     = useState<Driver | null>(null)
   const [payForm, setPayForm]               = useState(EMPTY_PAY)
   const [savingPay, setSavingPay]           = useState(false)
-  const [companyPlan, setCompanyPlan]       = useState<string | null>(null)
+  const [companyPlan, setCompanyPlan]           = useState<string | null>(null)
+  const [nearLimitDismissed, setNearLimitDismissed] = useState(false)
+  const [atLimitCardDismissed, setAtLimitCardDismissed] = useState(false)
+  const [upgradeLoading, setUpgradeLoading]     = useState(false)
   const supabase = createClient()
+
+  async function startUpgradeCheckout(plan: string) {
+    setUpgradeLoading(true)
+    try {
+      const res  = await fetch('/api/stripe/checkout', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ plan }),
+      })
+      const data = await res.json()
+      if (data.url) { window.location.href = data.url; return }
+    } catch { /* fall through */ }
+    setUpgradeLoading(false)
+    toast.error('Could not start checkout')
+  }
 
   async function fetchData() {
     setLoading(true)
@@ -222,6 +240,26 @@ export default function DriversPage() {
         </div>
       </div>
 
+      {/* Near-limit warning banner (80%+) */}
+      {!nearLimitDismissed && !atLimit && driverLimit !== Infinity && activeDriverCount / driverLimit >= 0.8 && (
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <span className="text-base">⚠️</span>
+          <p className="flex-1 text-sm font-medium text-amber-800">
+            You&apos;re almost at your driver limit ({activeDriverCount}/{limitLabel} used). Upgrade your plan to add more drivers.{' '}
+            <button
+              onClick={() => startUpgradeCheckout(companyPlan === 'owner_operator' ? 'fleet' : 'enterprise')}
+              disabled={upgradeLoading}
+              className="underline font-semibold hover:no-underline disabled:opacity-60"
+            >
+              Upgrade now →
+            </button>
+          </p>
+          <button onClick={() => setNearLimitDismissed(true)} className="text-amber-500 hover:text-amber-700 shrink-0">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex gap-1 mb-5 bg-gray-100 rounded-lg p-1 w-fit">
         {(['all', 'unpaid'] as const).map(tab => (
@@ -342,6 +380,52 @@ export default function DriversPage() {
             })}
           </div>
         )
+      )}
+
+      {/* At-limit upgrade card */}
+      {!atLimitCardDismissed && atLimit && companyPlan !== 'enterprise' && (
+        <div className="mt-4 relative rounded-2xl overflow-hidden border-2 border-[#2d7a4f] bg-[#1e3a2a] text-white p-6">
+          <button
+            onClick={() => setAtLimitCardDismissed(true)}
+            className="absolute top-3 right-3 text-white/50 hover:text-white"
+          >
+            <X className="h-4 w-4" />
+          </button>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex-1">
+              {companyPlan === 'owner_operator' ? (
+                <>
+                  <p className="text-xs font-semibold text-[#4ade80] uppercase tracking-wide mb-1">Growing your fleet?</p>
+                  <p className="text-base font-bold text-white mb-1">Upgrade to Fleet Plan — up to 15 drivers</p>
+                  <p className="text-sm text-white/60">Unlimited tickets · Full dispatch board · 3 team logins · Email invoices · <strong className="text-white">$150/mo</strong></p>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs font-semibold text-[#4ade80] uppercase tracking-wide mb-1">Running a large operation?</p>
+                  <p className="text-base font-bold text-white mb-1">Upgrade to Enterprise — unlimited drivers</p>
+                  <p className="text-sm text-white/60">Mobile driver app · AI ticket reader · SMS invoicing · Dedicated manager · <strong className="text-white">$300+/mo</strong></p>
+                </>
+              )}
+            </div>
+            {companyPlan === 'owner_operator' ? (
+              <button
+                onClick={() => startUpgradeCheckout('fleet')}
+                disabled={upgradeLoading}
+                className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-[#2d7a4f] px-5 py-3 text-sm font-bold text-white hover:bg-[#3a9462] transition-colors disabled:opacity-60"
+              >
+                {upgradeLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                Upgrade to Fleet →
+              </button>
+            ) : (
+              <a
+                href="/schedule-demo"
+                className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-[#FFB800] px-5 py-3 text-sm font-bold text-black hover:bg-[#E6A600] transition-colors"
+              >
+                Talk to Sales →
+              </a>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Add / Edit Modal */}

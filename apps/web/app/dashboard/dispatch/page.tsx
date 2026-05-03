@@ -76,6 +76,8 @@ export default function DispatchPage() {
   const [loading,     setLoading]     = useState(true)
   const [userId,      setUserId]      = useState('')
   const [orgId,       setOrgId]       = useState('')
+  const [companyPlan, setCompanyPlan] = useState<string | null>(null)
+  const [dispatchBannerDismissed, setDispatchBannerDismissed] = useState(false)
 
   const [mainTab,     setMainTab]     = useState<'board' | 'today' | 'subs'>('board')
   const [jobFilter,   setJobFilter]   = useState<'active' | 'on_hold' | 'completed' | 'all'>('active')
@@ -118,12 +120,13 @@ export default function DispatchPage() {
     if (!companyId) { setLoading(false); return }
     setOrgId(companyId)
 
-    const [loadsRes, driversRes, jobsRes, dispRes, contractorsRes] = await Promise.all([
+    const [loadsRes, driversRes, jobsRes, dispRes, contractorsRes, coRes] = await Promise.all([
       supabase.from('loads').select('id,job_name,driver_name,truck_number,date,status,rate,rate_type').eq('company_id', companyId).gte('date', cutoff),
       supabase.from('drivers').select('id,name').eq('company_id', companyId).order('name'),
       supabase.from('jobs').select('*').eq('company_id', companyId).order('created_at', { ascending: false }),
       supabase.from('dispatches').select('*').eq('company_id', companyId).eq('dispatch_date', today).order('created_at', { ascending: false }),
       supabase.from('contractors').select('id,name,phone,email').eq('company_id', companyId).eq('status', 'active').order('name'),
+      supabase.from('companies').select('plan').eq('id', companyId).maybeSingle(),
     ])
 
     if (jobsRes.error && !jobsRes.error.message.includes('schema cache'))
@@ -137,6 +140,7 @@ export default function DispatchPage() {
     setJobs((jobsRes.data ?? []).map((j: Job) => ({ ...j, loads: loads.filter(l => l.job_name === j.job_name) })))
     setDrivers(driversRes.data ?? [])
     setContractors(contractorsRes.data ?? [])
+    setCompanyPlan((coRes.data as Record<string, unknown> | null)?.plan as string | null ?? null)
     if (!dispRes.error || dispRes.error.message.includes('schema cache'))
       setDispatches((dispRes.data ?? []) as Dispatch[])
 
@@ -514,6 +518,25 @@ export default function DispatchPage() {
               <p className={`text-2xl font-bold ${alert ? 'text-yellow-700' : 'text-gray-900'}`}>{value}</p>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* All-drivers-dispatched upsell banner */}
+      {!loading && !dispatchBannerDismissed && availableDrivers.length === 0 && drivers.length > 0 && companyPlan !== 'enterprise' && (
+        <div className="mx-6 mb-4 flex items-center gap-3 rounded-xl border border-[#2d7a4f]/30 bg-[#2d7a4f]/8 px-4 py-3" style={{ background: 'rgba(45,122,79,0.07)' }}>
+          <span className="text-base shrink-0">🚛</span>
+          <p className="flex-1 text-sm text-[#1e3a2a] font-medium">
+            All {drivers.length} driver{drivers.length !== 1 ? 's' : ''} are out! Need more capacity?{' '}
+            <a
+              href={companyPlan === 'owner_operator' ? '/pricing' : '/schedule-demo'}
+              className="font-semibold text-[#2d7a4f] underline hover:no-underline"
+            >
+              Upgrade your plan →
+            </a>
+          </p>
+          <button onClick={() => setDispatchBannerDismissed(true)} className="text-gray-400 hover:text-gray-600 shrink-0">
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
 
