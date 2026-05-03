@@ -140,6 +140,7 @@ export default function SettingsPage() {
   const [saving,         setSaving]         = useState(false)
   const [userId,         setUserId]         = useState('')
   const [email,          setEmail]          = useState('')
+  const [fullName,       setFullName]       = useState('')
   const [companyId,      setCompanyId]      = useState('')
   const [companyName,    setCompanyName]    = useState('')
   const [companyAddress, setCompanyAddress] = useState('')
@@ -245,9 +246,13 @@ export default function SettingsPage() {
       // 1. Profile lookup — single source of truth for both owners and team members
       const { data: prof } = await supabase
         .from('profiles')
-        .select('organization_id')
+        .select('organization_id, full_name')
         .eq('id', user.id)
         .maybeSingle()
+
+      if ((prof as { full_name?: string | null } | null)?.full_name != null) {
+        setFullName((prof as { full_name?: string | null }).full_name ?? '')
+      }
 
       let co: CompanyRow | null = null
 
@@ -438,6 +443,12 @@ export default function SettingsPage() {
     }
 
     await supabase.auth.updateUser({ data: { company_name: companyName.trim() } })
+
+    // Save full_name to the user's profile row
+    if (userId) {
+      await supabase.from('profiles').update({ full_name: fullName.trim() || null }).eq('id', userId)
+    }
+
     toast.success('Company info saved')
     setSaving(false)
   }
@@ -816,6 +827,17 @@ export default function SettingsPage() {
               className={inputCls}
               placeholder="(555) 123-4567"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Your Full Name</label>
+            <input
+              type="text"
+              value={fullName}
+              onChange={e => setFullName(e.target.value)}
+              className={inputCls}
+              placeholder="e.g. Miguel Jimenez"
+            />
+            <p className="text-xs text-gray-400 mt-1">Shown in the welcome message and sidebar.</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>

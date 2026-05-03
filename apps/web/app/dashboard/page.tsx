@@ -43,10 +43,11 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('organization_id')
+    .select('organization_id, full_name')
     .eq('id', uid)
     .maybeSingle()
   const effectiveCompanyId = profile?.organization_id ?? uid
+  const profileFullName    = (profile as { full_name?: string | null } | null)?.full_name ?? null
 
   // ── Date helpers ──────────────────────────────────────────────────────────
   const now        = new Date()
@@ -106,11 +107,12 @@ export default async function DashboardPage() {
   const companyName = companyRes.data?.name ?? ''
   const activityFeed = activityRes.error ? [] : (activityRes.data ?? [])
 
-  // ── Display name ──────────────────────────────────────────────────────────
-  const meta      = user?.user_metadata ?? {}
-  const fullName  = (meta.full_name as string | undefined) || (meta.name as string | undefined) || ''
-  const rawFirst  = fullName
-    ? (fullName.split(' ')[0] ?? '')
+  // ── Display name: profiles.full_name → auth metadata → email prefix ──────
+  const meta         = user?.user_metadata ?? {}
+  const metaFullName = (meta.full_name as string | undefined) || (meta.name as string | undefined) || ''
+  const sourceName   = profileFullName || metaFullName
+  const rawFirst     = sourceName
+    ? (sourceName.split(' ')[0] ?? '')
     : ((user?.email ?? '').split('@')[0] ?? '').split('.')[0] ?? ''
   const displayName = rawFirst
     ? rawFirst.charAt(0).toUpperCase() + rawFirst.slice(1)

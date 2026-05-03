@@ -22,7 +22,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // Single source of truth: profile.organization_id
   const { data: profile } = await admin
     .from('profiles')
-    .select('organization_id, role')
+    .select('organization_id, role, full_name')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -165,6 +165,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           user={user}
           logoUrl={(co?.logo_url as string | null | undefined) ?? null}
           companyName={(co?.name as string | null | undefined) ?? null}
+          profileName={(profile as { full_name?: string | null } | null)?.full_name ?? null}
         />
         <main className="flex-1 overflow-y-auto pt-14 md:pt-0 flex flex-col">
           {pastDueBanner}
