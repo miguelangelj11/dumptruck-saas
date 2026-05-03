@@ -47,7 +47,10 @@ export default async function DashboardPage() {
     .eq('id', uid)
     .maybeSingle()
   const effectiveCompanyId = profile?.organization_id ?? uid
-  const profileFullName    = (profile as { full_name?: string | null } | null)?.full_name ?? null
+  const profileFullName    = typeof (profile as Record<string, unknown> | null)?.full_name === 'string'
+    ? ((profile as Record<string, unknown>).full_name as string)
+    : null
+  console.log('[dashboard] profile full_name:', profileFullName)
 
   // ── Date helpers ──────────────────────────────────────────────────────────
   const now        = new Date()

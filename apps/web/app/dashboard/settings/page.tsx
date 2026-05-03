@@ -244,14 +244,18 @@ export default function SettingsPage() {
       const companySelect = 'id, name, address, phone, logo_url, primary_color, accent_color'
 
       // 1. Profile lookup — single source of truth for both owners and team members
-      const { data: prof } = await supabase
+      const { data: prof, error: profFetchErr } = await supabase
         .from('profiles')
         .select('organization_id, full_name')
         .eq('id', user.id)
         .maybeSingle()
 
-      if ((prof as { full_name?: string | null } | null)?.full_name != null) {
-        setFullName((prof as { full_name?: string | null }).full_name ?? '')
+      console.log('[settings] profile fetch:', { prof, error: profFetchErr?.message })
+
+      const loadedFullName = (prof as Record<string, unknown> | null)?.full_name
+      if (typeof loadedFullName === 'string' && loadedFullName) {
+        console.log('[settings] loaded full_name:', loadedFullName)
+        setFullName(loadedFullName)
       }
 
       let co: CompanyRow | null = null
@@ -444,9 +448,15 @@ export default function SettingsPage() {
 
     await supabase.auth.updateUser({ data: { company_name: companyName.trim() } })
 
-    // Save full_name to the user's profile row
+    // Save full_name to the user's profile row (upsert handles missing row)
     if (userId) {
-      await supabase.from('profiles').update({ full_name: fullName.trim() || null }).eq('id', userId)
+      const nameToSave = fullName.trim() || null
+      console.log('[settings] saving full_name:', nameToSave, 'for user:', userId)
+      const { error: profErr } = await supabase
+        .from('profiles')
+        .upsert({ id: userId, full_name: nameToSave }, { onConflict: 'id' })
+      if (profErr) console.error('[settings] full_name save error:', profErr.message)
+      else console.log('[settings] full_name saved ok')
     }
 
     toast.success('Company info saved')
