@@ -36,11 +36,11 @@ export default function Nav() {
         {/* Logo + wordmark */}
         <Link href="/" className="flex items-center gap-2.5 shrink-0 no-underline">
           <Image
-            src="/logo.png"
+            src="/dtb-logo.png"
             alt="DumpTruckBoss"
-            width={36}
-            height={36}
-            className="object-contain w-9 h-9"
+            width={56}
+            height={56}
+            className="object-contain w-14 h-14"
             priority
           />
           <span className="font-bold text-[17px] text-white whitespace-nowrap">
