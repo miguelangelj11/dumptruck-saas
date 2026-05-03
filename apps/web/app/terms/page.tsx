@@ -3,10 +3,10 @@ import Footer from '@/components/landing/footer'
 
 export const metadata = {
   title: 'Terms of Service — DumpTruckBoss',
-  description: 'DumpTruckBoss Terms of Service — your agreement with us.',
+  description: 'DumpTruckBoss Terms of Service — your agreement with SALAO TRANSPORT INC.',
 }
 
-const LAST_UPDATED = 'April 30, 2026'
+const EFFECTIVE_DATE = 'May 3, 2026'
 
 export default function TermsPage() {
   return (
@@ -18,7 +18,7 @@ export default function TermsPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 text-center">
           <p className="text-sm font-semibold text-[#4ade80] uppercase tracking-wider mb-4">Legal</p>
           <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4">Terms of Service</h1>
-          <p className="text-white/50 text-sm">Last updated: {LAST_UPDATED}</p>
+          <p className="text-white/50 text-sm">Effective date: {EFFECTIVE_DATE}</p>
         </div>
       </div>
 
@@ -27,211 +27,286 @@ export default function TermsPage() {
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-16">
           <div className="prose prose-gray max-w-none">
 
-            <p className="text-gray-600 leading-relaxed mb-8">
-              These Terms of Service ("Terms") govern your access to and use of the DumpTruckBoss platform and
-              services provided by DumpTruckBoss, Inc. ("DumpTruckBoss," "we," "us," or "our"). By creating an
-              account or using our services, you agree to be bound by these Terms.
+            <p className="text-gray-600 leading-relaxed mb-4">
+              These Terms of Service ("Terms") govern your access to and use of the DumpTruckBoss platform
+              and related services (collectively, the "Service") operated by <strong>SALAO TRANSPORT INC</strong>,
+              doing business as DumpTruckBoss ("DumpTruckBoss," "we," "us," or "our"), a company registered
+              in the State of Georgia, USA.
             </p>
             <p className="text-gray-600 leading-relaxed mb-12">
-              Please read these Terms carefully. If you do not agree to any part of these Terms, you must not
-              use our services.
+              By creating an account or using the Service, you agree to be bound by these Terms. Please read
+              them carefully. If you do not agree to any part of these Terms, do not use the Service.
             </p>
 
             <Section title="1. Acceptance of Terms">
               <p className="text-gray-600 leading-relaxed">
-                By accessing or using DumpTruckBoss, you confirm that you are at least 18 years old, have the
-                legal capacity to enter into this agreement, and are authorized to bind the business entity on
-                whose behalf you are using the service (if applicable). If you are using DumpTruckBoss on behalf
-                of a company, these Terms bind both you and that company.
+                By accessing or using DumpTruckBoss, you represent that you are at least 18 years of age, have
+                the legal capacity to enter into a binding agreement, and, if using the Service on behalf of a
+                business, are authorized to bind that business. These Terms apply to both the individual user
+                and the business entity the user represents.
               </p>
             </Section>
 
             <Section title="2. Description of Service">
               <p className="text-gray-600 leading-relaxed mb-4">
-                DumpTruckBoss provides a cloud-based platform for dump truck and hauling companies, including:
+                DumpTruckBoss provides a cloud-based software platform designed for dump truck and hauling
+                operations. Features include, but are not limited to:
               </p>
               <ul className="list-disc list-inside space-y-2 text-gray-600 mb-4">
-                <li>Driver dispatch management</li>
-                <li>Load ticket creation and approval</li>
-                <li>Invoice generation and tracking</li>
-                <li>Revenue and expense reporting</li>
+                <li>Driver dispatch management and scheduling</li>
+                <li>Load ticket creation, tracking, and photo upload</li>
+                <li>Invoice generation, delivery, and payment tracking</li>
+                <li>Revenue and expense reporting and dashboards</li>
                 <li>Driver and subcontractor management</li>
-                <li>Team and role management</li>
+                <li>Team role management (Admin, Dispatcher, Driver, Accountant)</li>
+                <li>Client and job site management</li>
               </ul>
               <p className="text-gray-600 leading-relaxed">
-                We reserve the right to modify, suspend, or discontinue any feature of the service at any time
-                with reasonable notice.
+                We reserve the right to modify, suspend, or discontinue any feature or aspect of the Service
+                at any time with reasonable notice to active subscribers.
               </p>
             </Section>
 
-            <Section title="3. Account Registration">
+            <Section title="3. Subscription Plans and Billing">
+              <Subsection title="Available Plans">
+                DumpTruckBoss offers the following subscription tiers:
+                <ul className="list-disc list-inside space-y-1 mt-2">
+                  <li><strong>Owner Operator Plan</strong> — Up to 3 drivers, 200 tickets/month, basic invoicing. $80/month or $64/month billed annually.</li>
+                  <li><strong>Fleet Plan</strong> — Up to 15 drivers, unlimited tickets, all invoice types, subcontractor management, 3 team logins. $150/month or $120/month billed annually.</li>
+                  <li><strong>Enterprise Plan</strong> — Custom pricing for large operations. Contact us.</li>
+                </ul>
+              </Subsection>
+              <Subsection title="Billing Cycle">
+                Subscriptions are billed in advance on a monthly or annual basis, depending on the plan you
+                select. Your billing cycle begins on the date you subscribe and renews automatically on the same
+                date each month or year unless you cancel.
+              </Subsection>
+              <Subsection title="Price Changes">
+                We may change subscription prices with at least 30 days' advance notice by email. Continued use
+                of the Service after a price change takes effect constitutes acceptance of the new pricing.
+              </Subsection>
+              <Subsection title="Payment Processing">
+                All payments are processed by Stripe, Inc., a PCI-DSS-compliant third-party payment processor.
+                By providing payment information, you authorize us to charge your payment method on a recurring
+                basis for the fees applicable to your plan. You represent that you are authorized to use the
+                payment method you provide. Failed payments may result in temporary or permanent suspension of
+                your account.
+              </Subsection>
+            </Section>
+
+            <Section title="4. Free Trial Policy">
               <p className="text-gray-600 leading-relaxed mb-4">
-                To use DumpTruckBoss, you must create an account. You agree to:
+                We offer a <strong>14-day free trial</strong> for the Owner Operator and Fleet plans. During the
+                trial period:
+              </p>
+              <ul className="list-disc list-inside space-y-2 text-gray-600 mb-4">
+                <li>No credit card is required to start</li>
+                <li>You have full access to the features of your selected plan</li>
+                <li>No charges are made during the 14-day period</li>
+              </ul>
+              <p className="text-gray-600 leading-relaxed">
+                At the end of the trial period, you must subscribe to a paid plan to continue using the Service.
+                If you do not subscribe, your account will be suspended. Your data will remain available for
+                export for 30 days following suspension before permanent deletion.
+              </p>
+            </Section>
+
+            <Section title="5. Payment Terms and Refund Policy">
+              <p className="text-gray-600 leading-relaxed mb-4">
+                All subscription fees are due in advance and are <strong>non-refundable</strong>, except:
+              </p>
+              <ul className="list-disc list-inside space-y-2 text-gray-600 mb-4">
+                <li>Where required by applicable law</li>
+                <li>In the event of a verified billing error by DumpTruckBoss</li>
+                <li>At our sole discretion for exceptional circumstances, upon written request</li>
+              </ul>
+              <p className="text-gray-600 leading-relaxed">
+                If you believe you have been charged in error, contact us within 30 days of the charge at{' '}
+                <a href="mailto:miguelangel.j11@gmail.com" className="text-[#2d7a4f] hover:underline">miguelangel.j11@gmail.com</a>.
+              </p>
+            </Section>
+
+            <Section title="6. Cancellation Policy">
+              <p className="text-gray-600 leading-relaxed mb-4">
+                You may cancel your subscription at any time through your account Settings page (Settings →
+                Subscription → Manage Billing). Cancellation takes effect at the end of your current paid
+                billing period. After cancellation:
+              </p>
+              <ul className="list-disc list-inside space-y-2 text-gray-600">
+                <li>You retain access to the Service through the end of your paid period</li>
+                <li>Your account is suspended at the end of the billing period</li>
+                <li>Your data remains available for export for 30 days</li>
+                <li>After 30 days, your data is permanently and irreversibly deleted</li>
+                <li>No pro-rated refunds are issued for unused time</li>
+              </ul>
+            </Section>
+
+            <Section title="7. User Accounts">
+              <p className="text-gray-600 leading-relaxed mb-4">
+                When you create an account, you agree to:
               </p>
               <ul className="list-disc list-inside space-y-2 text-gray-600 mb-4">
                 <li>Provide accurate, current, and complete registration information</li>
-                <li>Maintain and promptly update your account information</li>
-                <li>Keep your password secure and not share it with others</li>
+                <li>Maintain and promptly update your account information as needed</li>
+                <li>Keep your login credentials confidential and not share your password</li>
                 <li>Notify us immediately of any unauthorized use of your account</li>
-                <li>Be responsible for all activity that occurs under your account</li>
+                <li>Take responsibility for all activity that occurs under your account</li>
               </ul>
               <p className="text-gray-600 leading-relaxed">
-                You may not create accounts for others without authorization. Each account is associated with
-                one company. Team members may be added with designated roles under your company account.
+                Each account is associated with one business entity. Team members (up to the limit of your
+                plan) may be added with designated roles. You are responsible for ensuring team members comply
+                with these Terms. Account credentials may not be shared with or transferred to third parties
+                outside your organization.
               </p>
             </Section>
 
-            <Section title="4. Billing and Payment">
-              <Subsection title="Free Trial">
-                We offer a 14-day free trial on paid plans, with no credit card required. At the end of the
-                trial, you must subscribe to continue using the service.
-              </Subsection>
-              <Subsection title="Subscriptions">
-                Paid subscriptions are billed in advance on a monthly or annual basis. Prices are listed on
-                our pricing page and may change with 30 days' notice. All fees are non-refundable except as
-                required by law or as described in our refund policy.
-              </Subsection>
-              <Subsection title="Payment Processing">
-                Payments are processed by Stripe. By providing payment information, you authorize us to charge
-                your payment method on a recurring basis. Failed payments may result in service suspension.
-              </Subsection>
-              <Subsection title="Cancellation">
-                You may cancel your subscription at any time through your account settings. Cancellation takes
-                effect at the end of your current billing period. You retain access to your data for 30 days
-                after cancellation.
-              </Subsection>
-            </Section>
-
-            <Section title="5. Acceptable Use">
+            <Section title="8. Acceptable Use">
               <p className="text-gray-600 leading-relaxed mb-4">You agree not to use DumpTruckBoss to:</p>
               <ul className="list-disc list-inside space-y-2 text-gray-600 mb-4">
-                <li>Violate any applicable laws or regulations</li>
-                <li>Infringe the intellectual property rights of others</li>
-                <li>Upload malicious code, viruses, or any harmful software</li>
+                <li>Violate any applicable federal, state, or local laws or regulations</li>
+                <li>Infringe the intellectual property rights, privacy, or other rights of any third party</li>
+                <li>Upload or transmit malicious code, viruses, or any harmful software</li>
                 <li>Attempt to gain unauthorized access to other accounts or our systems</li>
-                <li>Reverse engineer, decompile, or attempt to extract the source code</li>
-                <li>Scrape, crawl, or systematically extract data from the platform</li>
-                <li>Use the service to build a competing product</li>
-                <li>Submit false or misleading information</li>
+                <li>Reverse engineer, decompile, or attempt to extract our source code</li>
+                <li>Systematically scrape, crawl, or extract data from the platform</li>
+                <li>Use the Service to develop a competing product or service</li>
+                <li>Falsify, misrepresent, or submit fraudulent information</li>
+                <li>Harass, threaten, or harm any individual through the platform</li>
               </ul>
               <p className="text-gray-600 leading-relaxed">
-                We reserve the right to suspend or terminate accounts that violate these terms.
+                We reserve the right to suspend or permanently terminate accounts that violate these terms,
+                without notice or refund.
               </p>
             </Section>
 
-            <Section title="6. Intellectual Property">
+            <Section title="9. Data and Privacy">
               <p className="text-gray-600 leading-relaxed mb-4">
-                <strong>Our IP:</strong> DumpTruckBoss and its original content, features, and functionality are
-                owned by DumpTruckBoss, Inc. and protected by copyright, trademark, and other intellectual
-                property laws. You may not copy, modify, distribute, or create derivative works based on our
-                platform without written permission.
-              </p>
-              <p className="text-gray-600 leading-relaxed">
-                <strong>Your Data:</strong> You retain full ownership of all data you upload or create in
-                DumpTruckBoss. You grant us a limited license to store, process, and display your data
-                solely for the purpose of providing the service.
-              </p>
-            </Section>
-
-            <Section title="7. Privacy">
-              <p className="text-gray-600 leading-relaxed">
                 Our collection and use of personal information is governed by our{' '}
                 <a href="/privacy" className="text-[#2d7a4f] hover:underline">Privacy Policy</a>, which is
-                incorporated into these Terms. By using DumpTruckBoss, you agree to our data practices as
-                described there.
+                incorporated into these Terms by reference. By using DumpTruckBoss, you consent to our data
+                practices as described in the Privacy Policy.
               </p>
-            </Section>
-
-            <Section title="8. Confidentiality">
               <p className="text-gray-600 leading-relaxed">
-                Both parties agree to keep confidential any non-public information received from the other
-                that is designated as confidential or that reasonably should be understood to be confidential.
-                This includes your business data, pricing, and any proprietary technology we share. This
-                obligation survives termination of your account.
+                You retain full ownership of all business data you input into the Service (tickets, invoices,
+                driver records, etc.). You grant DumpTruckBoss a limited, non-exclusive license to store,
+                process, and display your data solely as necessary to operate and improve the Service. We do
+                not sell your data to third parties.
               </p>
             </Section>
 
-            <Section title="9. Disclaimers">
+            <Section title="10. Intellectual Property">
               <p className="text-gray-600 leading-relaxed mb-4">
-                DumpTruckBoss is provided "as is" and "as available" without warranties of any kind, express
-                or implied. We do not warrant that:
+                The DumpTruckBoss platform, including its design, software, source code, branding, logos,
+                text, graphics, and all other content created by us, is owned by SALAO TRANSPORT INC and
+                protected by U.S. and international copyright, trademark, and other intellectual property laws.
               </p>
-              <ul className="list-disc list-inside space-y-2 text-gray-600 mb-4">
-                <li>The service will be uninterrupted or error-free</li>
-                <li>All defects will be corrected</li>
-                <li>The service is free of viruses or harmful components</li>
-                <li>The results obtained from using the service will be accurate</li>
-              </ul>
               <p className="text-gray-600 leading-relaxed">
-                We disclaim all implied warranties, including merchantability, fitness for a particular purpose,
-                and non-infringement, to the fullest extent permitted by law.
+                You may not copy, reproduce, modify, distribute, create derivative works of, publicly display,
+                or exploit any part of our platform without express written permission from us. Nothing in
+                these Terms grants you any license to our intellectual property beyond the right to use the
+                Service as described herein.
               </p>
             </Section>
 
-            <Section title="10. Limitation of Liability">
+            <Section title="11. Limitation of Liability">
               <p className="text-gray-600 leading-relaxed mb-4">
-                To the maximum extent permitted by law, DumpTruckBoss, Inc. and its officers, directors,
-                employees, and agents shall not be liable for any indirect, incidental, special, consequential,
-                or punitive damages, including loss of profits, data, business, or goodwill, even if we have
-                been advised of the possibility of such damages.
+                TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, SALAO TRANSPORT INC, ITS OFFICERS,
+                DIRECTORS, EMPLOYEES, AGENTS, AND AFFILIATES SHALL NOT BE LIABLE FOR ANY INDIRECT,
+                INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, INCLUDING BUT NOT
+                LIMITED TO LOSS OF PROFITS, DATA, BUSINESS, GOODWILL, OR OTHER INTANGIBLE LOSSES, ARISING
+                OUT OF OR IN CONNECTION WITH YOUR USE OF THE SERVICE, EVEN IF WE HAVE BEEN ADVISED OF THE
+                POSSIBILITY OF SUCH DAMAGES.
               </p>
               <p className="text-gray-600 leading-relaxed">
-                Our total cumulative liability for any claims under these Terms is limited to the amount you
-                paid us in the 12 months preceding the claim.
+                Our total cumulative liability to you for any claims arising under or related to these Terms
+                shall not exceed the total amount you paid us in the twelve (12) months immediately preceding
+                the claim. This limitation applies regardless of the form of action, whether in contract, tort,
+                negligence, strict liability, or otherwise.
               </p>
             </Section>
 
-            <Section title="11. Indemnification">
+            <Section title="12. Indemnification">
               <p className="text-gray-600 leading-relaxed">
-                You agree to indemnify, defend, and hold harmless DumpTruckBoss, Inc. and its affiliates from
-                any claims, liabilities, damages, and expenses (including reasonable legal fees) arising out of
-                your use of the service, your violation of these Terms, or your violation of any rights of
-                a third party.
+                You agree to indemnify, defend, and hold harmless SALAO TRANSPORT INC and its affiliates,
+                officers, directors, employees, and agents from and against any claims, liabilities, damages,
+                judgments, awards, losses, costs, and expenses (including reasonable attorneys' fees) arising
+                out of or relating to: (a) your use of the Service; (b) your violation of these Terms;
+                (c) your violation of any third-party rights, including intellectual property or privacy rights;
+                or (d) any content or data you submit to the Service.
               </p>
             </Section>
 
-            <Section title="12. Termination">
+            <Section title="13. Termination">
               <p className="text-gray-600 leading-relaxed mb-4">
                 Either party may terminate this agreement at any time. We may suspend or terminate your access
-                immediately if you materially breach these Terms. Upon termination:
+                immediately, without notice or refund, if you materially breach these Terms, engage in
+                fraudulent activity, or if required to do so by law. Upon termination for any reason:
               </p>
               <ul className="list-disc list-inside space-y-2 text-gray-600">
-                <li>Your right to access the service ceases immediately</li>
-                <li>Your data remains available for 30 days for export</li>
-                <li>After 30 days, your data is permanently deleted</li>
-                <li>Provisions that by their nature should survive termination will do so</li>
+                <li>Your right to access the Service ceases immediately</li>
+                <li>Your data remains available for export for 30 days (unless terminated for fraud)</li>
+                <li>After 30 days, your data is permanently deleted from our systems</li>
+                <li>Sections that by their nature should survive termination will remain in effect</li>
               </ul>
             </Section>
 
-            <Section title="13. Governing Law and Disputes">
+            <Section title="14. Governing Law and Dispute Resolution">
               <p className="text-gray-600 leading-relaxed mb-4">
-                These Terms are governed by and construed in accordance with the laws of the State of Delaware,
-                without regard to its conflict of law principles.
+                These Terms are governed by and construed in accordance with the laws of the{' '}
+                <strong>State of Georgia, USA</strong>, without regard to its conflict of law principles.
+                Any legal action or proceeding arising out of or relating to these Terms or the Service shall
+                be brought exclusively in the state or federal courts located in Georgia, and you hereby
+                consent to the personal jurisdiction of such courts.
               </p>
               <p className="text-gray-600 leading-relaxed">
-                Any disputes arising from these Terms or your use of the service shall first be addressed
-                through good-faith negotiation. If that fails, disputes shall be resolved by binding
-                arbitration in accordance with the AAA Commercial Arbitration Rules. You waive any right
-                to a jury trial or to participate in a class action.
+                Before initiating formal legal proceedings, both parties agree to attempt to resolve disputes
+                through good-faith negotiation for at least 30 days. This requirement does not prevent either
+                party from seeking emergency injunctive or equitable relief from a court of competent
+                jurisdiction.
               </p>
             </Section>
 
-            <Section title="14. Changes to These Terms">
+            <Section title="15. Disclaimers">
+              <p className="text-gray-600 leading-relaxed mb-4">
+                THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER
+                EXPRESS OR IMPLIED. TO THE FULLEST EXTENT PERMITTED BY LAW, DUMTRUCKBOSS DISCLAIMS ALL
+                IMPLIED WARRANTIES, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
+                AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT:
+              </p>
+              <ul className="list-disc list-inside space-y-2 text-gray-600 mb-4">
+                <li>The Service will be uninterrupted, error-free, or completely secure</li>
+                <li>All defects or errors will be corrected</li>
+                <li>Results obtained from the Service will be accurate or reliable</li>
+              </ul>
               <p className="text-gray-600 leading-relaxed">
-                We may revise these Terms from time to time. We will notify you of material changes by email
-                and by updating the "Last updated" date above. If you continue using DumpTruckBoss after
-                changes take effect, you accept the revised Terms. If you do not agree, you must stop using
-                the service.
+                Your use of the Service is at your sole risk.
               </p>
             </Section>
 
-            <Section title="15. Contact">
+            <Section title="16. Changes to These Terms">
               <p className="text-gray-600 leading-relaxed">
-                Questions about these Terms? Contact us:
+                We reserve the right to modify these Terms at any time. We will notify you of material changes
+                by email and by updating the effective date at the top of this page. If you continue using
+                DumpTruckBoss after changes take effect, you accept the revised Terms. If you do not agree to
+                the revised Terms, you must stop using the Service and cancel your account.
               </p>
-              <div className="mt-4 bg-gray-50 rounded-xl p-6 text-sm text-gray-600 space-y-1">
-                <p className="font-semibold text-gray-800">DumpTruckBoss, Inc.</p>
-                <p>Email: <a href="mailto:legal@dumptruckboss.com" className="text-[#2d7a4f] hover:underline">legal@dumptruckboss.com</a></p>
+            </Section>
+
+            <Section title="17. Contact Information">
+              <p className="text-gray-600 leading-relaxed mb-4">
+                For questions, concerns, or legal notices regarding these Terms of Service, contact us:
+              </p>
+              <div className="bg-gray-50 rounded-xl p-6 text-sm text-gray-700 space-y-2">
+                <p className="font-bold text-gray-900 text-base">SALAO TRANSPORT INC</p>
+                <p className="text-gray-500 italic">Operating as DumpTruckBoss</p>
+                <p>State of Incorporation: Georgia, USA</p>
+                <p>
+                  Email:{' '}
+                  <a href="mailto:miguelangel.j11@gmail.com" className="text-[#2d7a4f] hover:underline font-medium">
+                    miguelangel.j11@gmail.com
+                  </a>
+                </p>
+                <p>Website: <span className="text-[#2d7a4f]">dumptruckboss.com</span></p>
               </div>
             </Section>
 
@@ -247,7 +322,7 @@ export default function TermsPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mb-10">
-      <h2 className="text-xl font-bold text-gray-900 mb-4 pb-2 border-b border-gray-100">{title}</h2>
+      <h2 className="text-xl font-bold text-gray-900 mb-4 pb-2 border-b-2 border-[#2d7a4f]/20">{title}</h2>
       {children}
     </section>
   )
@@ -255,9 +330,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Subsection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mb-4">
-      <h3 className="text-sm font-semibold text-gray-800 mb-1">{title}</h3>
-      <p className="text-gray-600 leading-relaxed">{children}</p>
+    <div className="mb-5 pl-4 border-l-2 border-gray-100">
+      <h3 className="text-sm font-bold text-gray-800 mb-1.5">{title}</h3>
+      <p className="text-gray-600 leading-relaxed text-sm">{children}</p>
     </div>
   )
 }

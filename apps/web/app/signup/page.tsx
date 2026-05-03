@@ -222,9 +222,9 @@ export default function SignupPage() {
               />
               <span style={{ fontSize: '13px', color: '#6b7280', lineHeight: 1.5 }}>
                 I agree to the{' '}
-                <Link href="#" style={{ color: '#2d7a4f', textDecoration: 'underline' }}>Terms of Service</Link>
+                <Link href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#2d7a4f', textDecoration: 'underline' }}>Terms of Service</Link>
                 {' '}and{' '}
-                <Link href="#" style={{ color: '#2d7a4f', textDecoration: 'underline' }}>Privacy Policy</Link>
+                <Link href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#2d7a4f', textDecoration: 'underline' }}>Privacy Policy</Link>
               </span>
             </label>
 
