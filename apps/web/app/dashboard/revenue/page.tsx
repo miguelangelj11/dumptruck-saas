@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { getCompanyId } from '@/lib/get-company-id'
-import { Loader2, Plus, DollarSign, TrendingUp, TrendingDown, AlertCircle, CreditCard } from 'lucide-react'
+import { Loader2, Plus, DollarSign, TrendingUp, TrendingDown, AlertCircle, CreditCard, Download, Percent } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   RevenueByDriverChart,
@@ -16,6 +16,144 @@ import type { Load, Expense, ContractorTicket, Invoice, Payment } from '@/lib/ty
 const categories = ['Fuel', 'Maintenance', 'Insurance', 'Labor', 'Equipment', 'Other']
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const BILLABLE_STATUSES = ['approved', 'invoiced', 'paid'] as const
+
+type DateRange = 'week' | 'month' | 'quarter' | 'year'
+
+function getRangeBounds(range: DateRange): { start: string; end: string } {
+  const now = new Date()
+  const today = now.toISOString().split('T')[0]!
+  if (range === 'week') {
+    const day = now.getDay()
+    const daysToMon = day === 0 ? 6 : day - 1
+    const mon = new Date(now)
+    mon.setDate(now.getDate() - daysToMon)
+    return { start: mon.toISOString().split('T')[0]!, end: today }
+  }
+  if (range === 'month') {
+    return { start: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`, end: today }
+  }
+  if (range === 'quarter') {
+    const q = Math.floor(now.getMonth() / 3)
+    const mon = new Date(now.getFullYear(), q * 3, 1)
+    return { start: mon.toISOString().split('T')[0]!, end: today }
+  }
+  return { start: `${now.getFullYear()}-01-01`, end: today }
+}
+
+function invDate(inv: Invoice): string {
+  return inv.date_from ?? inv.created_at.split('T')[0]!
+}
+
+function buildRevExpChartData(
+  range: DateRange,
+  bounds: { start: string; end: string },
+  invoices: Invoice[],
+  expenses: Expense[],
+): { label: string; revenue: number; expenses: number }[] {
+  const start = new Date(bounds.start + 'T00:00:00')
+  const end = new Date(bounds.end + 'T00:00:00')
+  const paidInvoices = invoices.filter(i => i.status === 'paid')
+
+  if (range === 'week') {
+    const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(start)
+      d.setDate(start.getDate() + i)
+      const key = d.toISOString().split('T')[0]!
+      const rev = paidInvoices.filter(inv => invDate(inv) === key).reduce((s, inv) => s + inv.total, 0)
+      const exp = expenses.filter(e => e.date === key).reduce((s, e) => s + e.amount, 0)
+      return { label: DAY_NAMES[d.getDay()]!, revenue: rev, expenses: exp }
+    })
+  }
+
+  if (range === 'month') {
+    const result: { label: string; revenue: number; expenses: number }[] = []
+    let cur = new Date(start)
+    let w = 1
+    while (cur <= end) {
+      const wEnd = new Date(cur)
+      wEnd.setDate(cur.getDate() + 6)
+      if (wEnd > end) wEnd.setTime(end.getTime())
+      const s = cur.toISOString().split('T')[0]!
+      const e2 = wEnd.toISOString().split('T')[0]!
+      const rev = paidInvoices.filter(inv => { const d = invDate(inv); return d >= s && d <= e2 }).reduce((s2, inv) => s2 + inv.total, 0)
+      const exp = expenses.filter(e => e.date >= s && e.date <= e2).reduce((s2, e) => s2 + e.amount, 0)
+      result.push({ label: `W${w++}`, revenue: rev, expenses: exp })
+      cur = new Date(cur)
+      cur.setDate(cur.getDate() + 7)
+    }
+    return result
+  }
+
+  if (range === 'quarter') {
+    const startMonth = start.getMonth()
+    return Array.from({ length: 3 }, (_, i) => {
+      const mo = startMonth + i
+      const key = `${start.getFullYear()}-${String(mo + 1).padStart(2, '0')}`
+      const rev = paidInvoices.filter(inv => invDate(inv).startsWith(key)).reduce((s, inv) => s + inv.total, 0)
+      const exp = expenses.filter(e => (e.date ?? '').startsWith(key)).reduce((s, e) => s + e.amount, 0)
+      return { label: MONTH_NAMES[mo % 12]!, revenue: rev, expenses: exp }
+    })
+  }
+
+  return Array.from({ length: 12 }, (_, i) => {
+    const key = `${start.getFullYear()}-${String(i + 1).padStart(2, '0')}`
+    const rev = paidInvoices.filter(inv => invDate(inv).startsWith(key)).reduce((s, inv) => s + inv.total, 0)
+    const exp = expenses.filter(e => (e.date ?? '').startsWith(key)).reduce((s, e) => s + e.amount, 0)
+    return { label: MONTH_NAMES[i]!, revenue: rev, expenses: exp }
+  })
+}
+
+function buildLoadsChartData(
+  range: DateRange,
+  bounds: { start: string; end: string },
+  loads: Load[],
+): { label: string; loads: number }[] {
+  const start = new Date(bounds.start + 'T00:00:00')
+  const end = new Date(bounds.end + 'T00:00:00')
+
+  if (range === 'week') {
+    const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(start)
+      d.setDate(start.getDate() + i)
+      const key = d.toISOString().split('T')[0]!
+      return { label: DAY_NAMES[d.getDay()]!, loads: loads.filter(l => l.date === key).length }
+    })
+  }
+
+  if (range === 'month') {
+    const result: { label: string; loads: number }[] = []
+    const cur = new Date(start)
+    while (cur <= end) {
+      const key = cur.toISOString().split('T')[0]!
+      result.push({ label: String(cur.getDate()), loads: loads.filter(l => l.date === key).length })
+      cur.setDate(cur.getDate() + 1)
+    }
+    return result
+  }
+
+  if (range === 'quarter') {
+    const result: { label: string; loads: number }[] = []
+    const cur = new Date(start)
+    let w = 1
+    while (cur <= end) {
+      const wEnd = new Date(cur)
+      wEnd.setDate(cur.getDate() + 6)
+      if (wEnd > end) wEnd.setTime(end.getTime())
+      const s = cur.toISOString().split('T')[0]!
+      const e2 = wEnd.toISOString().split('T')[0]!
+      result.push({ label: `W${w++}`, loads: loads.filter(l => l.date >= s && l.date <= e2).length })
+      cur.setDate(cur.getDate() + 7)
+    }
+    return result
+  }
+
+  return Array.from({ length: 12 }, (_, i) => {
+    const key = `${start.getFullYear()}-${String(i + 1).padStart(2, '0')}`
+    return { label: MONTH_NAMES[i]!, loads: loads.filter(l => (l.date ?? '').startsWith(key)).length }
+  })
+}
 
 function getWeekBounds(offset: 0 | -1) {
   const now = new Date()
@@ -36,6 +174,7 @@ export default function RevenuePage() {
   const [contractorTickets, setContractorTickets] = useState<ContractorTicket[]>([])
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [payments, setPayments] = useState<Payment[]>([])
+  const [jobNames, setJobNames] = useState<Map<string, string>>(new Map())
   const [loading, setLoading] = useState(true)
   const [showExpenseForm, setShowExpenseForm] = useState(false)
   const [expForm, setExpForm] = useState({
@@ -46,14 +185,8 @@ export default function RevenuePage() {
   const [userId, setUserId] = useState('')
   const [activeTab, setActiveTab] = useState<'overview' | 'driverpay'>('overview')
   const [payWeek, setPayWeek] = useState<0 | -1>(0)
+  const [dateRange, setDateRange] = useState<DateRange>('month')
   const supabase = createClient()
-
-  async function getUid(): Promise<string | null> {
-    if (userId) return userId
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) setUserId(user.id)
-    return user?.id ?? null
-  }
 
   async function fetchData() {
     setLoading(true)
@@ -63,25 +196,31 @@ export default function RevenuePage() {
     const orgId = await getCompanyId()
     if (!orgId) { setLoading(false); return }
 
-    const sixMonthsAgo = new Date()
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
-    const cutoff = sixMonthsAgo.toISOString().split('T')[0]!
+    const cutoff = new Date()
+    cutoff.setFullYear(cutoff.getFullYear() - 1)
+    const fetchCutoff = cutoff.toISOString().split('T')[0]!
 
-    const [lRes, eRes, ctRes, invRes, payRes] = await Promise.all([
-      supabase.from('loads').select('*').eq('company_id', orgId).gte('date', cutoff),
+    const [lRes, eRes, ctRes, invRes, payRes, jobsRes] = await Promise.all([
+      supabase.from('loads')
+        .select('*, dispatches!loads_dispatch_id_fkey(job_id, jobs!dispatches_job_id_fkey(job_name))')
+        .eq('company_id', orgId).gte('date', fetchCutoff),
       supabase.from('expenses').select('*').eq('company_id', orgId).order('date', { ascending: false }),
-      supabase.from('contractor_tickets').select('*').eq('company_id', orgId).gte('date', cutoff),
+      supabase.from('contractor_tickets').select('*').eq('company_id', orgId).gte('date', fetchCutoff),
       supabase.from('invoices').select('*').eq('company_id', orgId),
       supabase.from('payments').select('*').eq('company_id', orgId),
+      supabase.from('jobs').select('id, job_name').eq('company_id', orgId),
     ])
 
     if (lRes.error) console.error('[revenue] loads:', lRes.error.message)
     if (invRes.error) console.error('[revenue] invoices:', invRes.error.message)
-    if (payRes.error && !payRes.error.message.includes('schema cache')) {
-      console.error('[revenue] payments:', payRes.error.message)
-    }
 
-    setLoads(lRes.data ?? [])
+    const jobMap = new Map<string, string>()
+    for (const j of (jobsRes.data ?? [])) {
+      jobMap.set(j.id, j.job_name)
+    }
+    setJobNames(jobMap)
+
+    setLoads((lRes.data ?? []) as Load[])
     setExpenses(eRes.data ?? [])
     setContractorTickets(ctRes.data ?? [])
     setInvoices(invRes.data ?? [])
@@ -111,27 +250,49 @@ export default function RevenuePage() {
     fetchData()
   }
 
-  // ── Derived stats ──────────────────────────────────────────────────────────
+  // ── Date range filtering ──────────────────────────────────────────────────
+  const bounds = getRangeBounds(dateRange)
 
-  // Revenue = paid invoice totals (invoices fully paid to completion)
-  const paidInvoices = invoices.filter(i => i.status === 'paid')
-  const totalRevenue = paidInvoices.reduce((s, i) => s + (i.total ?? 0), 0)
+  const filteredLoads = loads.filter(l => l.date >= bounds.start && l.date <= bounds.end)
+  const filteredInvoices = invoices.filter(i => {
+    const d = invDate(i)
+    return d >= bounds.start && d <= bounds.end
+  })
+  const filteredExpenses = expenses.filter(e => (e.date ?? '') >= bounds.start && (e.date ?? '') <= bounds.end)
 
-  // Actual cash collected = sum of all payment records
-  const totalCollected = payments.reduce((s, p) => s + (p.amount ?? 0), 0)
+  // ── Derived stats (all scoped to selected date range) ─────────────────────
 
-  // Outstanding = sent + overdue + partially_paid
-  const unpaidInvoices = invoices.filter(i => ['sent', 'overdue', 'partially_paid'].includes(i.status))
-  const unpaidTotal = unpaidInvoices.reduce((s, i) => s + (i.total ?? 0), 0)
+  // Payments map: invoice_id → total paid
+  const paymentsByInvoiceId = payments.reduce<Record<string, number>>((acc, p) => {
+    acc[p.invoice_id] = (acc[p.invoice_id] ?? 0) + p.amount
+    return acc
+  }, {})
 
-  const totalExpenses = expenses.reduce((s, e) => s + (e.amount ?? 0), 0)
+  // Cash Collected: for paid invoices in range, use payment records if available else invoice total
+  const paidInvoices = filteredInvoices.filter(i => i.status === 'paid')
+  const cashCollected = paidInvoices.reduce((s, i) => {
+    const pmtSum = paymentsByInvoiceId[i.id]
+    return s + (pmtSum !== undefined ? pmtSum : i.total)
+  }, 0)
 
-  // Use total collected as the most accurate revenue figure; fall back to paid invoice totals if no payments recorded
-  const revenueForProfit = totalCollected > 0 ? totalCollected : totalRevenue
-  const profit = revenueForProfit - totalExpenses
+  // Outstanding: draft + sent invoices in range
+  const outstandingInvoices = filteredInvoices.filter(i => ['draft', 'sent'].includes(i.status))
+  const outstandingTotal = outstandingInvoices.reduce((s, i) => s + (i.total ?? 0), 0)
 
-  // Revenue by driver — all billable loads (approved/invoiced/paid)
-  const billableLoads = loads.filter(l => (BILLABLE_STATUSES as readonly string[]).includes(l.status))
+  const totalExpenses = filteredExpenses.reduce((s, e) => s + (e.amount ?? 0), 0)
+
+  // Driver costs = paystub invoices (what we pay drivers)
+  const driverCostInvoices = filteredInvoices.filter(i => i.invoice_type === 'paystub')
+  const driverCosts = driverCostInvoices.reduce((s, i) => s + (i.total ?? 0), 0)
+
+  // Net profit
+  const profit = cashCollected - totalExpenses
+
+  // Profit margin: (Revenue - Driver Costs) / Revenue
+  const profitMarginPct = cashCollected > 0 ? Math.round(((cashCollected - driverCosts) / cashCollected) * 100) : 0
+
+  // Revenue by driver
+  const billableLoads = filteredLoads.filter(l => (BILLABLE_STATUSES as readonly string[]).includes(l.status))
   const driverData = Object.entries(
     billableLoads.reduce<Record<string, number>>((acc, l) => {
       const key = l.driver_name || 'Unknown'
@@ -142,20 +303,25 @@ export default function RevenuePage() {
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 6)
 
-  // Revenue by job — all billable loads
+  // Revenue by job — resolve job name via dispatch join if available
   const jobData = Object.entries(
     billableLoads.reduce<Record<string, number>>((acc, l) => {
-      const key = l.job_name || 'No Job'
-      acc[key] = (acc[key] ?? 0) + (l.rate ?? 0)
+      const raw = l as Load & { dispatches?: { job_id?: string | null; jobs?: { job_name?: string } | null } | null }
+      const resolvedName = raw.dispatches?.jobs?.job_name
+        ?? (raw.dispatches?.job_id ? jobNames.get(raw.dispatches.job_id) : undefined)
+        ?? l.job_name
+        ?? 'No Job'
+      acc[resolvedName] = (acc[resolvedName] ?? 0) + (l.rate ?? 0)
       return acc
     }, {})
   ).map(([name, revenue]) => ({ name, revenue }))
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 6)
 
-  // Top 5 contractors by ticket revenue (all statuses — represents work done)
+  // Top contractors
+  const filteredCTs = contractorTickets.filter(t => (t.date ?? '') >= bounds.start && (t.date ?? '') <= bounds.end)
   const contractorData = Object.entries(
-    contractorTickets.reduce<Record<string, number>>((acc, t) => {
+    filteredCTs.reduce<Record<string, number>>((acc, t) => {
       const key = t.job_name || 'No Job'
       acc[key] = (acc[key] ?? 0) + (t.rate ?? 0)
       return acc
@@ -164,46 +330,31 @@ export default function RevenuePage() {
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 5)
 
-  // Monthly revenue = paid invoices bucketed by created_at month
-  // Monthly expenses = expenses by date month
-  const now = new Date()
-  const monthlyData = Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1)
-    const yr = d.getFullYear()
-    const mo = d.getMonth()
-    const key = `${yr}-${String(mo + 1).padStart(2, '0')}`
+  // Chart data
+  const chartData = buildRevExpChartData(dateRange, bounds, filteredInvoices, filteredExpenses)
+  const loadsChartData = buildLoadsChartData(dateRange, bounds, filteredLoads)
 
-    // Revenue: paid invoices created in this month
-    const rev = paidInvoices
-      .filter(inv => (inv.created_at ?? '').startsWith(key))
-      .reduce((s, inv) => s + (inv.total ?? 0), 0)
-
-    // Also add payments made in this month (for partially-paid invoices)
-    const payRev = payments
-      .filter(p => (p.payment_date ?? '').startsWith(key))
-      .reduce((s, p) => s + (p.amount ?? 0), 0)
-
-    const exp = expenses
-      .filter(e => (e.date ?? '').startsWith(key))
-      .reduce((s, e) => s + (e.amount ?? 0), 0)
-
-    // Use whichever is higher: paid invoice totals or actual payments for that month
-    // Avoids double-counting while capturing both paths
-    return { month: MONTH_NAMES[mo] ?? '', revenue: Math.max(rev, payRev), expenses: exp }
-  })
-
-  // Loads per day (last 30 days) — all loads regardless of status
-  const loadsPerDay = (() => {
-    const map: Record<string, number> = {}
-    const today = new Date()
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(today)
-      d.setDate(d.getDate() - i)
-      map[d.toISOString().split('T')[0]!] = 0
-    }
-    loads.forEach(l => { if (l.date && l.date in map) map[l.date] = (map[l.date] ?? 0) + 1 })
-    return Object.entries(map).map(([date, count]) => ({ day: date.slice(5), loads: count }))
-  })()
+  // Export CSV
+  function handleExportCSV() {
+    const headers = ['Date', 'Driver', 'Job', 'Truck #', 'Material', 'Rate', 'Rate Type', 'Status']
+    const rows = filteredLoads.map(l => {
+      const raw = l as Load & { dispatches?: { job_id?: string | null; jobs?: { job_name?: string } | null } | null }
+      const jobName = raw.dispatches?.jobs?.job_name
+        ?? (raw.dispatches?.job_id ? jobNames.get(raw.dispatches.job_id) : undefined)
+        ?? l.job_name ?? ''
+      return [l.date, l.driver_name, jobName, l.truck_number ?? '', l.material ?? '', l.rate, l.rate_type ?? 'load', l.status]
+    })
+    const csv = [headers, ...rows]
+      .map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `revenue-${bounds.start}-to-${bounds.end}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   if (loading) {
     return (
@@ -239,6 +390,10 @@ export default function RevenuePage() {
 
   const grandTotalOwed = contractorBlocks.reduce((s, b) => s + b.total, 0)
 
+  const rangeLabels: Record<DateRange, string> = {
+    week: 'This Week', month: 'This Month', quarter: 'This Quarter', year: 'This Year',
+  }
+
   return (
     <div className="p-6 md:p-8 max-w-7xl">
       <div className="flex items-center justify-between mb-6">
@@ -258,7 +413,6 @@ export default function RevenuePage() {
       {/* ── Driver Pay Tab ─────────────────────────────────────────────── */}
       {activeTab === 'driverpay' && (
         <div>
-          {/* Week toggle */}
           <div className="flex items-center justify-between mb-5">
             <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit">
               {([0, -1] as const).map(w => (
@@ -311,7 +465,6 @@ export default function RevenuePage() {
                   </table>
                 </div>
               ))}
-              {/* Grand Total */}
               <div className="bg-[#1e3a2a] rounded-xl px-5 py-4 flex items-center justify-between">
                 <span className="text-white font-semibold">Grand Total — All Drivers</span>
                 <span className="text-2xl font-extrabold text-[#4ade80]">${grandTotalOwed.toLocaleString()}</span>
@@ -324,25 +477,36 @@ export default function RevenuePage() {
       {/* ── Overview Tab ───────────────────────────────────────────────── */}
       {activeTab === 'overview' && (<>
 
+      {/* Date range filter + Export */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+          {(['week', 'month', 'quarter', 'year'] as DateRange[]).map(r => (
+            <button
+              key={r}
+              onClick={() => setDateRange(r)}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${dateRange === r ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              {rangeLabels[r]}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={handleExportCSV}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          <Download className="h-3.5 w-3.5" /> Export CSV
+        </button>
+      </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <div className="inline-flex rounded-lg p-2 mb-3 text-[#2d7a4f] bg-[#2d7a4f]/10">
-            <DollarSign className="h-4 w-4" />
-          </div>
-          <p className="text-xl font-bold text-gray-900">${totalRevenue.toLocaleString()}</p>
-          <p className="text-xs text-gray-400 mt-0.5">Paid Invoices</p>
-          <p className="text-xs text-gray-300 mt-0.5">{paidInvoices.length} invoices</p>
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <div className="inline-flex rounded-lg p-2 mb-3 text-purple-600 bg-purple-50">
             <CreditCard className="h-4 w-4" />
           </div>
-          <p className="text-xl font-bold text-gray-900">${totalCollected.toLocaleString()}</p>
+          <p className="text-xl font-bold text-gray-900">${cashCollected.toLocaleString()}</p>
           <p className="text-xs text-gray-400 mt-0.5">Cash Collected</p>
-          <p className="text-xs text-gray-300 mt-0.5">{payments.length} payments</p>
+          <p className="text-xs text-gray-300 mt-0.5">{paidInvoices.length} paid invoices</p>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-100 p-5">
@@ -351,41 +515,59 @@ export default function RevenuePage() {
           </div>
           <p className="text-xl font-bold text-gray-900">${totalExpenses.toLocaleString()}</p>
           <p className="text-xs text-gray-400 mt-0.5">Expenses</p>
-          <p className="text-xs text-gray-300 mt-0.5">{expenses.length} entries</p>
+          <p className="text-xs text-gray-300 mt-0.5">{filteredExpenses.length} entries</p>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <div className={`inline-flex rounded-lg p-2 mb-3 ${profit >= 0 ? 'text-[#2d7a4f] bg-[#2d7a4f]/10' : 'text-red-500 bg-red-50'}`}>
             <TrendingUp className="h-4 w-4" />
           </div>
-          <p className="text-xl font-bold text-gray-900">${profit.toLocaleString()}</p>
+          <p className={`text-xl font-bold ${profit >= 0 ? 'text-gray-900' : 'text-red-600'}`}>${profit.toLocaleString()}</p>
           <p className="text-xs text-gray-400 mt-0.5">Net Profit</p>
           <p className="text-xs text-gray-300 mt-0.5">Revenue − Expenses</p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-100 p-5">
+          <div className={`inline-flex rounded-lg p-2 mb-3 ${profitMarginPct >= 0 ? 'text-[#2d7a4f] bg-[#2d7a4f]/10' : 'text-red-500 bg-red-50'}`}>
+            <Percent className="h-4 w-4" />
+          </div>
+          <p className={`text-xl font-bold ${profitMarginPct >= 0 ? 'text-gray-900' : 'text-red-600'}`}>{profitMarginPct}%</p>
+          <p className="text-xs text-gray-400 mt-0.5">Profit Margin</p>
+          <p className="text-xs text-gray-300 mt-0.5">After driver costs</p>
         </div>
 
         <div className="bg-white rounded-xl border border-orange-100 p-5">
           <div className="inline-flex rounded-lg p-2 mb-3 text-orange-500 bg-orange-50">
             <AlertCircle className="h-4 w-4" />
           </div>
-          <p className="text-xl font-bold text-gray-900">${unpaidTotal.toLocaleString()}</p>
+          <p className="text-xl font-bold text-gray-900">${outstandingTotal.toLocaleString()}</p>
           <p className="text-xs text-gray-400 mt-0.5">Outstanding</p>
-          <p className="text-xs text-gray-300 mt-0.5">{unpaidInvoices.length} invoices</p>
+          <p className="text-xs text-gray-300 mt-0.5">{outstandingInvoices.length} invoices</p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-100 p-5">
+          <div className="inline-flex rounded-lg p-2 mb-3 text-[#2d7a4f] bg-[#2d7a4f]/10">
+            <DollarSign className="h-4 w-4" />
+          </div>
+          <p className="text-xl font-bold text-gray-900">${driverCosts.toLocaleString()}</p>
+          <p className="text-xs text-gray-400 mt-0.5">Driver Costs</p>
+          <p className="text-xs text-gray-300 mt-0.5">{driverCostInvoices.length} pay stubs</p>
         </div>
       </div>
 
-      {/* Loads per day */}
+      {/* Loads per period */}
       <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
-        <h2 className="font-semibold text-sm text-gray-900 mb-0.5">Loads Per Day</h2>
-        <p className="text-xs text-gray-400 mb-4">All loads — last 30 days</p>
-        <LoadsPerDayChart data={loadsPerDay} />
+        <h2 className="font-semibold text-sm text-gray-900 mb-0.5">Loads Over Time</h2>
+        <p className="text-xs text-gray-400 mb-4">{rangeLabels[dateRange]} · all loads</p>
+        <LoadsPerDayChart data={loadsChartData} />
       </div>
 
       {/* Revenue vs Expenses + Revenue by Driver */}
       <div className="grid lg:grid-cols-2 gap-6 mb-6">
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <h2 className="font-semibold text-sm text-gray-900 mb-0.5">Revenue vs Expenses</h2>
-          <p className="text-xs text-gray-400 mb-4">Paid invoices vs expenses — last 6 months</p>
-          <RevenueByMonthChart data={monthlyData} />
+          <p className="text-xs text-gray-400 mb-4">{rangeLabels[dateRange]} · by invoice date</p>
+          <RevenueByMonthChart data={chartData} />
         </div>
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <h2 className="font-semibold text-sm text-gray-900 mb-0.5">Revenue by Driver</h2>
@@ -431,11 +613,11 @@ export default function RevenuePage() {
       </div>
 
       {/* Outstanding invoices */}
-      {unpaidInvoices.length > 0 && (
+      {outstandingInvoices.length > 0 && (
         <div className="bg-white rounded-xl border border-orange-100 overflow-hidden mb-6">
           <div className="px-5 py-4 border-b border-orange-100 bg-orange-50/50">
             <h2 className="font-semibold text-sm text-orange-800">Outstanding Invoices</h2>
-            <p className="text-xs text-orange-500">{unpaidInvoices.length} invoices · ${unpaidTotal.toLocaleString()} owed</p>
+            <p className="text-xs text-orange-500">{outstandingInvoices.length} invoices · ${outstandingTotal.toLocaleString()} owed</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[480px] text-sm">
@@ -447,13 +629,8 @@ export default function RevenuePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {unpaidInvoices
-                  .sort((a, b) => {
-                    // Sort overdue first, then by due date
-                    if (a.status === 'overdue' && b.status !== 'overdue') return -1
-                    if (b.status === 'overdue' && a.status !== 'overdue') return 1
-                    return (a.due_date ?? '').localeCompare(b.due_date ?? '')
-                  })
+                {outstandingInvoices
+                  .sort((a, b) => (a.due_date ?? '').localeCompare(b.due_date ?? ''))
                   .map(inv => (
                     <tr key={inv.id} className="hover:bg-gray-50/50">
                       <td className="px-5 py-3 font-mono text-xs text-gray-500">{inv.invoice_number}</td>
@@ -461,12 +638,10 @@ export default function RevenuePage() {
                       <td className="px-5 py-3 font-semibold text-gray-900">${(inv.total ?? 0).toLocaleString()}</td>
                       <td className="px-5 py-3">
                         <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-                          inv.status === 'overdue'        ? 'bg-red-100 text-red-700'      :
-                          inv.status === 'partially_paid' ? 'bg-yellow-100 text-yellow-700' :
-                                                            'bg-blue-100 text-blue-700'
+                          inv.status === 'sent' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
                         }`}>{inv.status.replace('_', ' ')}</span>
                       </td>
-                      <td className={`px-5 py-3 ${inv.status === 'overdue' ? 'font-semibold text-red-600' : 'text-gray-500'}`}>
+                      <td className="px-5 py-3 text-gray-500">
                         {inv.due_date ? new Date(inv.due_date + 'T00:00:00').toLocaleDateString() : '—'}
                       </td>
                     </tr>
@@ -482,7 +657,7 @@ export default function RevenuePage() {
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <div>
             <h2 className="font-semibold text-sm text-gray-900">Expense Tracker</h2>
-            <p className="text-xs text-gray-400">{expenses.length} expenses · ${totalExpenses.toLocaleString()} total</p>
+            <p className="text-xs text-gray-400">{filteredExpenses.length} expenses · ${totalExpenses.toLocaleString()} total</p>
           </div>
           <button
             onClick={() => setShowExpenseForm(true)}
@@ -491,9 +666,9 @@ export default function RevenuePage() {
             <Plus className="h-3.5 w-3.5" /> Add Expense
           </button>
         </div>
-        {expenses.length === 0 ? (
+        {filteredExpenses.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-sm text-gray-400">No expenses recorded yet</p>
+            <p className="text-sm text-gray-400">No expenses for {rangeLabels[dateRange].toLowerCase()}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -506,7 +681,7 @@ export default function RevenuePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {expenses.map(exp => (
+                {filteredExpenses.map(exp => (
                   <tr key={exp.id} className="hover:bg-gray-50/50">
                     <td className="px-5 py-3 font-medium text-gray-900">{exp.description}</td>
                     <td className="px-5 py-3">
