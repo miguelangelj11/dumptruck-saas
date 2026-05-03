@@ -31,6 +31,7 @@ export default function ContractorsPage() {
   const [userId, setUserId] = useState('')
   const [contractors, setContractors] = useState<Contractor[]>([])
   const [loading, setLoading] = useState(true)
+  const [companyPlan, setCompanyPlan] = useState<string | null>(null)
   const [selected, setSelected] = useState<Contractor | null>(null)
   const [clientCompanies, setClientCompanies] = useState<ClientCompany[]>([])
 
@@ -71,13 +72,15 @@ export default function ContractorsPage() {
     setUserId(user.id)
     const orgId = await getCompanyId()
     if (!orgId) { setLoading(false); return }
-    const [contractorsRes, companiesRes] = await Promise.all([
+    const [contractorsRes, companiesRes, planRes] = await Promise.all([
       supabase.from('contractors').select('*').eq('company_id', orgId).order('name'),
       supabase.from('client_companies').select('*').eq('company_id', orgId).order('name'),
+      supabase.from('companies').select('plan').eq('id', orgId).maybeSingle(),
     ])
     if (contractorsRes.error) toast.error('Failed to load subcontractors: ' + contractorsRes.error.message)
     setContractors(contractorsRes.data ?? [])
     setClientCompanies(companiesRes.data ?? [])
+    setCompanyPlan((planRes.data as { plan?: string | null } | null)?.plan ?? null)
     setLoading(false)
   }
 
@@ -542,6 +545,31 @@ export default function ContractorsPage() {
             </div>
           </div>
         )}
+      </div>
+    )
+  }
+
+  // Fleet plan gate — owner_operator cannot access subcontractors
+  if (!loading && companyPlan === 'owner_operator') {
+    return (
+      <div className="p-6 md:p-8 max-w-2xl">
+        <div className="rounded-xl border-2 border-[#2d7a4f]/20 bg-[#f0f9f4] p-8 text-center space-y-4">
+          <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#2d7a4f]/10 mx-auto">
+            <Truck className="h-7 w-7 text-[#2d7a4f]" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Subcontractor management is a Fleet Plan feature</h2>
+            <p className="text-sm text-gray-500 mt-1.5 max-w-sm mx-auto">
+              Manage independent operators, log contractor tickets, and track what you owe — all in one place. Available on the Fleet Plan ($150/mo).
+            </p>
+          </div>
+          <a
+            href="/dashboard/settings#subscription"
+            className="inline-flex items-center gap-2 rounded-lg bg-[#2d7a4f] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#245f3e] transition-colors"
+          >
+            Upgrade to Fleet Plan →
+          </a>
+        </div>
       </div>
     )
   }

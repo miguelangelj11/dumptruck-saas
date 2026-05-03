@@ -1646,59 +1646,81 @@ export default function SettingsPage() {
         <div className="p-6 space-y-5">
 
           {/* Plan + status badge */}
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-semibold text-gray-900">
-                {subscriptionPlan === 'owner_operator' ? 'Owner Operator Plan'
-                 : subscriptionPlan === 'fleet'        ? 'Fleet Plan'
-                 : subscriptionPlan === 'enterprise'   ? 'Enterprise Plan'
-                 : 'No Active Plan'}
-              </div>
-              <div className="text-xs text-gray-400 mt-0.5">
-                {subscriptionStatus === 'active'   ? 'Paid subscription'
-                 : subscriptionStatus === 'trial'  ? 'Free trial'
-                 : subscriptionStatus === 'past_due' ? 'Payment failed'
-                 : subscriptionStatus === 'canceled' ? 'Canceled'
-                 : 'No subscription'}
-              </div>
-            </div>
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-              subscriptionStatus === 'active'   ? 'bg-green-100 text-green-700'
-              : subscriptionStatus === 'trial'  ? 'bg-amber-100 text-amber-700'
-              : subscriptionStatus === 'past_due' ? 'bg-red-100 text-red-700'
-              : 'bg-gray-100 text-gray-600'
-            }`}>
-              {subscriptionStatus === 'active'    ? 'Active'
-               : subscriptionStatus === 'trial'   ? 'Trial'
-               : subscriptionStatus === 'past_due'? 'Past Due'
-               : subscriptionStatus === 'canceled'? 'Canceled'
-               : 'Free'}
-            </span>
-          </div>
+          {(() => {
+            const isTrial = subscriptionStatus === 'trial' || (!subscriptionStatus && !!trialEndsAtSub)
+            const msLeft  = trialEndsAtSub ? new Date(trialEndsAtSub).getTime() - Date.now() : null
+            const daysLeft = msLeft !== null ? Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24))) : null
+            const trialExpired = msLeft !== null && msLeft <= 0
+            const urgent  = daysLeft !== null && daysLeft <= 3
 
-          {/* Trial progress bar */}
-          {subscriptionStatus === 'trial' && trialEndsAtSub && (() => {
+            const planLabel =
+              subscriptionPlan === 'owner_operator' ? 'Owner Operator Plan' :
+              subscriptionPlan === 'fleet'          ? 'Fleet Plan' :
+              subscriptionPlan === 'enterprise'     ? 'Enterprise Plan' :
+              'Free Trial'
+
+            const statusLabel =
+              subscriptionStatus === 'active'    ? 'Paid subscription' :
+              subscriptionStatus === 'past_due'  ? 'Payment failed' :
+              subscriptionStatus === 'canceled'  ? 'Canceled' :
+              isTrial && trialExpired            ? 'Trial expired' :
+              isTrial                            ? 'Free trial' :
+              'No subscription'
+
+            const badgeClass =
+              subscriptionStatus === 'active'   ? 'bg-green-100 text-green-700' :
+              subscriptionStatus === 'past_due' ? 'bg-red-100 text-red-700'     :
+              subscriptionStatus === 'canceled' ? 'bg-gray-100 text-gray-500'   :
+              isTrial && urgent                 ? 'bg-red-100 text-red-700'     :
+              isTrial                           ? 'bg-amber-100 text-amber-700' :
+              'bg-gray-100 text-gray-600'
+
+            const badgeText =
+              subscriptionStatus === 'active'    ? 'Active'   :
+              subscriptionStatus === 'past_due'  ? 'Past Due' :
+              subscriptionStatus === 'canceled'  ? 'Canceled' :
+              isTrial && trialExpired            ? 'Expired'  :
+              isTrial && daysLeft !== null       ? `${daysLeft}d left` :
+              'Trial'
+
+            return (
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-semibold text-gray-900">{planLabel}</div>
+                  <div className="text-xs text-gray-400 mt-0.5">{statusLabel}</div>
+                </div>
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${badgeClass}`}>
+                  {badgeText}
+                </span>
+              </div>
+            )
+          })()}
+
+          {/* Trial progress bar — shows whenever trial_ends_at is set */}
+          {trialEndsAtSub && (() => {
             const totalMs  = 14 * 24 * 60 * 60 * 1000
             const msLeft   = new Date(trialEndsAtSub).getTime() - Date.now()
             const daysLeft = Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24)))
             const pct      = Math.max(0, Math.min(100, (msLeft / totalMs) * 100))
             const urgent   = daysLeft <= 3
+            const expired  = msLeft <= 0
             return (
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">Trial remaining</span>
-                  <span className={`text-xs font-semibold ${urgent ? 'text-red-600' : 'text-amber-600'}`}>
-                    {daysLeft === 0 ? 'Ends today' : `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left`}
+                  <span className="text-xs text-gray-500">Trial period</span>
+                  <span className={`text-xs font-semibold ${expired ? 'text-red-600' : urgent ? 'text-red-600' : 'text-amber-600'}`}>
+                    {expired ? 'Trial ended' : daysLeft === 0 ? 'Ends today' : `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left`}
                   </span>
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-2">
                   <div
-                    className={`h-2 rounded-full transition-all ${urgent ? 'bg-red-500' : 'bg-amber-400'}`}
-                    style={{ width: `${pct}%` }}
+                    className={`h-2 rounded-full transition-all ${expired ? 'bg-red-400' : urgent ? 'bg-red-500' : 'bg-amber-400'}`}
+                    style={{ width: `${expired ? 100 : pct}%` }}
                   />
                 </div>
                 <p className="text-xs text-gray-400">
-                  Expires {new Date(trialEndsAtSub).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                  {expired ? 'Expired' : 'Expires'}{' '}
+                  {new Date(trialEndsAtSub).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                 </p>
               </div>
             )
@@ -1706,8 +1728,14 @@ export default function SettingsPage() {
 
           {/* Next-tier upsell card */}
           {(() => {
-            // Plan ladder — order matters
-            const NEXT: Record<string, { label: string; price: string; checkoutKey: string | null; features: string[] } | null> = {
+            // Normalize plan key — handles null, '', 'owner' (Stripe metadata key), unknown values
+            const normalizePlan = (p: string | null): 'owner_operator' | 'fleet' | 'enterprise' => {
+              if (p === 'fleet')      return 'fleet'
+              if (p === 'enterprise') return 'enterprise'
+              return 'owner_operator' // null, '', 'owner', or anything else → base tier
+            }
+
+            const NEXT: Record<'owner_operator' | 'fleet' | 'enterprise', { label: string; price: string; checkoutKey: string | null; features: string[] } | null> = {
               owner_operator: {
                 label:       'Fleet Plan',
                 price:       '$150/mo',
@@ -1734,14 +1762,14 @@ export default function SettingsPage() {
                   'Custom onboarding & data migration',
                 ],
               },
-              enterprise: null, // top plan — no upsell
+              enterprise: null,
             }
 
-            const currentPlan = subscriptionPlan ?? 'owner_operator'
+            const currentPlan = normalizePlan(subscriptionPlan)
             const next = NEXT[currentPlan]
 
-            // Enterprise — top plan confirmation
-            if (!next) {
+            // Enterprise — top plan confirmation (only for explicitly enterprise accounts)
+            if (currentPlan === 'enterprise') {
               return (
                 <div className="rounded-xl border-2 border-[#2d7a4f]/30 bg-[#f0f9f4] p-4 flex items-start gap-3">
                   <span className="text-xl mt-0.5">🏆</span>
@@ -1749,15 +1777,18 @@ export default function SettingsPage() {
                     <p className="text-sm font-bold text-[#1e3a2a]">You&apos;re on our top plan</p>
                     <p className="text-xs text-gray-600 mt-0.5">
                       Enterprise gives you everything DumpTruckBoss offers. Contact us any time at{' '}
-                      <a href="mailto:miguelangel.j11@gmail.com" className="text-[#2d7a4f] underline">miguelangel.j11@gmail.com</a>.
+                      <a href="mailto:hello@dumptruckboss.com" className="text-[#2d7a4f] underline">hello@dumptruckboss.com</a>.
                     </p>
                   </div>
                 </div>
               )
             }
 
-            // Only show upsell when on trial or active (not canceled/expired)
-            if (subscriptionStatus !== 'trial' && subscriptionStatus !== 'active' && subscriptionStatus) return null
+            // TypeScript narrowing — next is non-null for owner_operator and fleet
+            if (!next) return null
+
+            // Only show upsell for trial, active, or no-status (new accounts)
+            if (subscriptionStatus === 'canceled' || subscriptionStatus === 'expired') return null
 
             return (
               <div className="rounded-xl border-2 border-[#2d7a4f]/20 bg-[#f0f9f4] p-4 space-y-3">
