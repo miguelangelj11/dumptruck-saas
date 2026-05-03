@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Loader2, Receipt, ArrowLeft, Printer, Check, CreditCard, X, ChevronDown, FileText, Upload } from 'lucide-react'
+import { Plus, Loader2, Receipt, ArrowLeft, Printer, Check, CreditCard, X, ChevronDown, FileText, Upload, Trash2 } from 'lucide-react'
 import InvoicePDFButton from '@/components/invoice-pdf-button'
 import CompanyAvatar from '@/components/dashboard/company-avatar'
 import { toast } from 'sonner'
@@ -694,6 +694,15 @@ export default function InvoicesPage() {
     fetchInvoices()
   }
 
+  async function handleDeleteInvoice(inv: Invoice) {
+    if (!confirm(`Are you sure you want to delete invoice ${inv.invoice_number}? This cannot be undone.`)) return
+    await supabase.from('invoice_line_items').delete().eq('invoice_id', inv.id)
+    const { error } = await supabase.from('invoices').delete().eq('id', inv.id)
+    if (error) { toast.error('Delete failed: ' + error.message); return }
+    setInvoices(prev => prev.filter(i => i.id !== inv.id))
+    toast.success('Invoice deleted')
+  }
+
   async function updateReceivedStatus(id: string, status: ReceivedInvoice['status']) {
     const updates: Partial<ReceivedInvoice> = { status }
     if (status === 'paid') updates.paid_date = new Date().toISOString().split('T')[0]
@@ -983,9 +992,14 @@ export default function InvoicesPage() {
                         </select>
                       </td>
                       <td className="px-4 py-3">
-                        <button onClick={() => openDetail(inv)} className="text-xs text-[#2d7a4f] hover:text-[#245f3e] font-medium">
-                          View →
-                        </button>
+                        <div className="flex items-center gap-3">
+                          <button onClick={() => openDetail(inv)} className="text-xs text-[#2d7a4f] hover:text-[#245f3e] font-medium">
+                            View →
+                          </button>
+                          <button onClick={() => handleDeleteInvoice(inv)} className="p-1 text-gray-300 hover:text-red-500 transition-colors" title="Delete invoice">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
