@@ -10,7 +10,9 @@ function getAdmin() {
 
 export async function POST(request: Request) {
   try {
-    const { email, password, full_name, company_name, plan, stripe_session_id } = await request.json()
+    const body = await request.json()
+    const { email, password, full_name, company_name, plan, stripe_session_id } = body
+    console.log('[register] start', { email, company_name, plan })
 
     if (!email || !password || !company_name || !plan) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -19,6 +21,7 @@ export async function POST(request: Request) {
     const admin = getAdmin()
 
     // Create user with email pre-confirmed (bypasses confirmation email)
+    console.log('[register] creating auth user')
     const { data: { user }, error: createErr } = await admin.auth.admin.createUser({
       email,
       password,
@@ -32,8 +35,10 @@ export async function POST(request: Request) {
     })
 
     if (createErr || !user) {
+      console.error('[register] createUser error', createErr)
       return NextResponse.json({ error: createErr?.message ?? 'Failed to create account' }, { status: 400 })
     }
+    console.log('[register] auth user created', user.id)
 
     // Check for invitation
     const { data: invitation } = await admin
@@ -45,6 +50,7 @@ export async function POST(request: Request) {
       .maybeSingle()
 
     if (invitation?.company_id) {
+      console.log('[register] invitation found, linking to company', invitation.company_id)
       await admin.from('profiles').insert({
         id:              user.id,
         email:           user.email,
@@ -54,12 +60,14 @@ export async function POST(request: Request) {
       await admin.from('invitations')
         .update({ accepted_at: new Date().toISOString() })
         .eq('id', invitation.id)
+      console.log('[register] invited user done, returning')
       return NextResponse.json({ success: true, redirect: '/dashboard' })
     }
 
     // New owner signup — create company
+    console.log('[register] creating company')
     const now = new Date()
-    const { data: newCompany } = await admin
+    const { data: newCompany, error: companyErr } = await admin
       .from('companies')
       .insert({
         owner_id:            user.id,
@@ -73,68 +81,69 @@ export async function POST(request: Request) {
       .single()
 
     if (!newCompany) {
+      console.error('[register] company insert error', companyErr)
       return NextResponse.json({ error: 'Failed to create company' }, { status: 500 })
     }
+    console.log('[register] company created', newCompany.id)
 
+    console.log('[register] creating profile')
     await admin.from('profiles').insert({
       id:              user.id,
       email:           user.email,
       organization_id: newCompany.id,
       role:            'admin',
     })
+    console.log('[register] profile created — returning success immediately')
 
-    // Send welcome + admin notification emails (non-fatal)
+    // Fire-and-forget emails — do NOT await, return success right away
     if (process.env.RESEND_API_KEY) {
-      try {
-        const resend      = new Resend(process.env.RESEND_API_KEY)
-        const firstName   = (full_name as string | undefined)?.split(' ')[0]?.trim() || 'there'
-        const trialEnd    = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
-        const trialEndStr = trialEnd.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-        const planLabel   = plan === 'fleet' ? 'Fleet Plan' : plan === 'enterprise' ? 'Enterprise Plan' : 'Owner Operator Plan'
+      const resend      = new Resend(process.env.RESEND_API_KEY)
+      const firstName   = (full_name as string | undefined)?.split(' ')[0]?.trim() || 'there'
+      const trialEnd    = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
+      const trialEndStr = trialEnd.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+      const planLabel   = plan === 'fleet' ? 'Fleet Plan' : plan === 'enterprise' ? 'Enterprise Plan' : 'Owner Operator Plan'
 
-        await Promise.allSettled([
-          resend.emails.send({
-            from:    'DumpTruckBoss <noreply@dumptruckboss.com>',
-            to:      email,
-            subject: 'Welcome to DumpTruckBoss! Here\'s how to get started 🚛',
-            html:    buildWelcomeEmail({ firstName, trialEndStr }),
-          }),
-          resend.emails.send({
-            from:    'DumpTruckBoss Alerts <noreply@dumptruckboss.com>',
-            to:      'miguelangel.j11@gmail.com',
-            subject: `New signup: ${company_name}`,
-            html:    buildAdminNotificationEmail({ email, companyName: company_name, planLabel, trialEndStr }),
-          }),
-        ])
-      } catch {
-        // Non-fatal
-      }
+      resend.emails.send({
+        from:    'DumpTruckBoss <noreply@dumptruckboss.com>',
+        to:      email,
+        subject: 'Welcome to DumpTruckBoss! Here\'s how to get started 🚛',
+        html:    buildWelcomeEmail({ firstName, trialEndStr }),
+      }).catch(err => console.error('[register] welcome email failed:', err))
+
+      resend.emails.send({
+        from:    'DumpTruckBoss Alerts <noreply@dumptruckboss.com>',
+        to:      'miguelangel.j11@gmail.com',
+        subject: `New signup: ${company_name}`,
+        html:    buildAdminNotificationEmail({ email, companyName: company_name, planLabel, trialEndStr }),
+      }).catch(err => console.error('[register] admin notification failed:', err))
     }
 
-    // Link Stripe subscription if paid before signup
+    // Fire-and-forget Stripe session linking
     if (stripe_session_id && process.env.STRIPE_SECRET_KEY) {
-      try {
-        const { default: Stripe } = await import('stripe')
-        const stripe  = new Stripe(process.env.STRIPE_SECRET_KEY)
-        const session = await stripe.checkout.sessions.retrieve(stripe_session_id, { expand: ['subscription'] })
-        if (session.status === 'complete' && session.customer) {
-          const sub = session.subscription as import('stripe').Stripe.Subscription | null
-          await admin.from('companies').update({
-            stripe_customer_id:     session.customer as string,
-            stripe_subscription_id: sub?.id ?? null,
-            stripe_price_id:        sub?.items?.data[0]?.price?.id ?? null,
-            subscription_status:    sub?.status === 'trialing' ? 'trial' : (sub?.status ?? null),
-            ...(sub?.trial_end ? { trial_ends_at: new Date(sub.trial_end * 1000).toISOString() } : {}),
-          }).eq('id', newCompany.id)
+      ;(async () => {
+        try {
+          const { default: Stripe } = await import('stripe')
+          const stripe  = new Stripe(process.env.STRIPE_SECRET_KEY!)
+          const session = await stripe.checkout.sessions.retrieve(stripe_session_id, { expand: ['subscription'] })
+          if (session.status === 'complete' && session.customer) {
+            const sub = session.subscription as import('stripe').Stripe.Subscription | null
+            await admin.from('companies').update({
+              stripe_customer_id:     session.customer as string,
+              stripe_subscription_id: sub?.id ?? null,
+              stripe_price_id:        sub?.items?.data[0]?.price?.id ?? null,
+              subscription_status:    sub?.status === 'trialing' ? 'trial' : (sub?.status ?? null),
+              ...(sub?.trial_end ? { trial_ends_at: new Date(sub.trial_end * 1000).toISOString() } : {}),
+            }).eq('id', newCompany.id)
+          }
+        } catch (err) {
+          console.error('[register] stripe linking failed:', err)
         }
-      } catch {
-        // Non-fatal: webhook will reconcile
-      }
+      })()
     }
 
-    return NextResponse.json({ success: true, redirect: '/onboarding' })
+    return NextResponse.json({ success: true, redirect: '/dashboard' })
   } catch (err) {
-    console.error('register error', err)
+    console.error('[register] unexpected error', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

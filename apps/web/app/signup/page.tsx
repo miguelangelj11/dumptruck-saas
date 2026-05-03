@@ -55,22 +55,43 @@ export default function SignupPage() {
     if (!agreedToTerms) { toast.error('You must agree to the Terms of Service'); return }
 
     setLoading(true)
+    console.log('[signup] submitting registration')
 
-    // Register server-side (creates user, company, profile, sends emails)
-    const res = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email,
-        password,
-        full_name:        fullName,
-        company_name:     companyName,
-        plan:             selectedPlan,
-        stripe_session_id: stripeSessionId ?? undefined,
-      }),
-    })
+    // 10-second timeout so the form never hangs indefinitely
+    const controller = new AbortController()
+    const timeout = setTimeout(() => {
+      console.error('[signup] register request timed out after 10s')
+      controller.abort()
+    }, 10_000)
+
+    let res: Response
+    try {
+      console.log('[signup] calling /api/auth/register')
+      res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          email,
+          password,
+          full_name:         fullName,
+          company_name:      companyName,
+          plan:              selectedPlan,
+          stripe_session_id: stripeSessionId ?? undefined,
+        }),
+      })
+      console.log('[signup] register responded', res.status)
+    } catch (err) {
+      clearTimeout(timeout)
+      console.error('[signup] register fetch error', err)
+      toast.error('Request timed out. Please try again.')
+      setLoading(false)
+      return
+    }
+    clearTimeout(timeout)
 
     const data = await res.json()
+    console.log('[signup] register response body', data)
 
     if (!res.ok || data.error) {
       toast.error(data.error ?? 'Failed to create account')
@@ -79,15 +100,18 @@ export default function SignupPage() {
     }
 
     // Sign in immediately — no email confirmation needed
+    console.log('[signup] signing in with password')
     const supabase = createClient()
     const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password })
     if (signInErr) {
+      console.error('[signup] signIn error', signInErr)
       toast.error(signInErr.message)
       setLoading(false)
       return
     }
 
-    router.push(data.redirect ?? '/onboarding')
+    console.log('[signup] signed in, redirecting to /dashboard')
+    router.push('/dashboard')
   }
 
   return (
