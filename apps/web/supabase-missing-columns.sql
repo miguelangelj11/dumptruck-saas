@@ -181,6 +181,79 @@ ALTER TABLE load_tickets
 
 
 -- ----------------------------------------------------------------
+-- invoices
+-- invoices/page.tsx sends: id, company_id, invoice_number, invoice_type,
+--   client_name, client_address, client_phone, client_email, total,
+--   status, due_date, date_from, date_to, notes
+-- ----------------------------------------------------------------
+ALTER TABLE invoices
+  ADD COLUMN IF NOT EXISTS invoice_number text,
+  ADD COLUMN IF NOT EXISTS invoice_type   text,
+  ADD COLUMN IF NOT EXISTS client_name    text,
+  ADD COLUMN IF NOT EXISTS client_address text,
+  ADD COLUMN IF NOT EXISTS client_phone   text,
+  ADD COLUMN IF NOT EXISTS client_email   text,
+  ADD COLUMN IF NOT EXISTS total          numeric     NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS status         text        NOT NULL DEFAULT 'draft',
+  ADD COLUMN IF NOT EXISTS due_date       date,
+  ADD COLUMN IF NOT EXISTS date_from      date,
+  ADD COLUMN IF NOT EXISTS date_to        date,
+  ADD COLUMN IF NOT EXISTS notes          text;
+
+
+-- ----------------------------------------------------------------
+-- invoice_line_items
+-- invoices/page.tsx spreads previewItems which include: invoice_id,
+--   date, truck_number, driver_name, material, location, ticket_number,
+--   time_range, quantity, rate, rate_type, amount, photo_url
+-- ----------------------------------------------------------------
+ALTER TABLE invoice_line_items
+  ADD COLUMN IF NOT EXISTS date          date,
+  ADD COLUMN IF NOT EXISTS truck_number  text,
+  ADD COLUMN IF NOT EXISTS driver_name   text,
+  ADD COLUMN IF NOT EXISTS material      text,
+  ADD COLUMN IF NOT EXISTS location      text,
+  ADD COLUMN IF NOT EXISTS ticket_number text,
+  ADD COLUMN IF NOT EXISTS time_range    text,
+  ADD COLUMN IF NOT EXISTS quantity      numeric,
+  ADD COLUMN IF NOT EXISTS rate          numeric,
+  ADD COLUMN IF NOT EXISTS rate_type     text,
+  ADD COLUMN IF NOT EXISTS amount        numeric,
+  ADD COLUMN IF NOT EXISTS photo_url     text;
+
+
+-- ----------------------------------------------------------------
+-- payments
+-- invoices/page.tsx sends: company_id, invoice_id, amount,
+--   payment_date, payment_method, notes
+-- ----------------------------------------------------------------
+ALTER TABLE payments
+  ADD COLUMN IF NOT EXISTS invoice_id      uuid,
+  ADD COLUMN IF NOT EXISTS amount          numeric,
+  ADD COLUMN IF NOT EXISTS payment_date    date,
+  ADD COLUMN IF NOT EXISTS payment_method  text,
+  ADD COLUMN IF NOT EXISTS notes           text;
+
+
+-- ----------------------------------------------------------------
+-- received_invoices
+-- invoices/page.tsx sends: company_id, subcontractor_name,
+--   their_invoice_number, amount, date_received, work_start_date,
+--   work_end_date, notes, status, file_url
+-- ----------------------------------------------------------------
+ALTER TABLE received_invoices
+  ADD COLUMN IF NOT EXISTS subcontractor_name    text,
+  ADD COLUMN IF NOT EXISTS their_invoice_number  text,
+  ADD COLUMN IF NOT EXISTS amount                numeric,
+  ADD COLUMN IF NOT EXISTS date_received         date,
+  ADD COLUMN IF NOT EXISTS work_start_date       date,
+  ADD COLUMN IF NOT EXISTS work_end_date         date,
+  ADD COLUMN IF NOT EXISTS notes                 text,
+  ADD COLUMN IF NOT EXISTS status                text NOT NULL DEFAULT 'pending_review',
+  ADD COLUMN IF NOT EXISTS file_url              text;
+
+
+-- ----------------------------------------------------------------
 -- Reload PostgREST schema cache so new columns are immediately visible
 -- ----------------------------------------------------------------
 NOTIFY pgrst, 'reload schema';
