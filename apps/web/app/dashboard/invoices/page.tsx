@@ -1450,7 +1450,7 @@ export default function InvoicesPage() {
                 <table className="w-full min-w-[700px] text-xs">
                   <thead className="bg-gray-50 border-b border-gray-100">
                     <tr>
-                      {['', 'Date', 'Truck #', 'Driver', 'Material / Location', 'Ticket #', 'Time', 'Qty', 'Rate', 'Amount'].map(h => (
+                      {['', 'Date', 'Truck #', 'Material', 'Location', 'Ticket #', 'Time', 'Qty', 'Rate', 'Amount'].map(h => (
                         <th key={h} className="text-left px-3 py-2.5 font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -1465,8 +1465,8 @@ export default function InvoicesPage() {
                         </td>
                         <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{fmtDate(item.line_date)}</td>
                         <td className="px-3 py-2.5 font-medium text-gray-700">{item.truck_number || '—'}</td>
-                        <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{item.driver_name}</td>
                         <td className="px-3 py-2.5 text-gray-600">{item.material || '—'}</td>
+                        <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{item.driver_name || '—'}</td>
                         <td className="px-3 py-2.5 font-mono text-gray-600">{item.ticket_number || '—'}</td>
                         <td className="px-3 py-2.5 text-gray-500 whitespace-nowrap">{item.time_worked || '—'}</td>
                         <td className="px-3 py-2.5 text-gray-600">{item.quantity != null ? item.quantity : '—'}</td>
