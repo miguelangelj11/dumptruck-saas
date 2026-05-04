@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { resolveCompanyId } from '@/lib/resolve-company'
 
 const DRIVER_LIMITS: Record<string, number> = {
   owner_operator: 3,
@@ -27,42 +28,21 @@ export async function POST(request: Request) {
 
   const admin = getAdmin()
 
-  // Look up company by owner first, then by team membership
-  const { data: ownedCompany } = await admin
-    .from('companies')
-    .select('id, plan, is_internal')
-    .eq('owner_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  let companyId: string | null = ownedCompany?.id ?? null
-  let companyPlan: string | null = ownedCompany?.plan ?? null
-  let companyIsInternal: boolean = ownedCompany?.is_internal ?? false
-
-  if (!companyId) {
-    const { data: membership } = await admin
-      .from('team_members')
-      .select('company_id')
-      .eq('user_id', user.id)
-      .maybeSingle()
-    companyId = membership?.company_id ?? null
-    if (companyId) {
-      const { data: memberCompany } = await admin
-        .from('companies')
-        .select('plan, is_internal')
-        .eq('id', companyId)
-        .maybeSingle()
-      companyPlan = memberCompany?.plan ?? null
-      companyIsInternal = memberCompany?.is_internal ?? false
-    }
-  }
-
+  // Single shared resolver: profiles → owner → team_member (auto-backfills profile)
+  const companyId = await resolveCompanyId(user.id, admin)
   if (!companyId) return NextResponse.json({ error: 'Company not found' }, { status: 404 })
 
-  if (!companyIsInternal) {
-    const limit = getLimit(companyPlan)
+  const { data: company } = await admin
+    .from('companies')
+    .select('plan, is_internal')
+    .eq('id', companyId)
+    .maybeSingle()
 
+  const plan       = company?.plan as string | null
+  const isInternal = company?.is_internal as boolean ?? false
+
+  if (!isInternal) {
+    const limit = getLimit(plan)
     if (limit !== Infinity) {
       const { count } = await admin
         .from('drivers')

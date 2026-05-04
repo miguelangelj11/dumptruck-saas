@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient } from '@supabase/supabase-js'
+import { resolveCompanyId } from '@/lib/resolve-company'
 
 function getAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -15,36 +16,7 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const admin = getAdmin()
-
-  // Resolve company via profiles → owner → team_members
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('organization_id')
-    .eq('id', user.id)
-    .maybeSingle()
-
-  let companyId = profile?.organization_id ?? null
-
-  if (!companyId) {
-    const { data: co } = await admin
-      .from('companies')
-      .select('id')
-      .eq('owner_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    companyId = co?.id ?? null
-  }
-
-  if (!companyId) {
-    const { data: mem } = await admin
-      .from('team_members')
-      .select('company_id')
-      .eq('user_id', user.id)
-      .maybeSingle()
-    companyId = mem?.company_id ?? null
-  }
-
+  const companyId = await resolveCompanyId(user.id, admin)
   if (!companyId) return NextResponse.json({ drivers: [] })
 
   const { data: drivers, error } = await admin
@@ -55,6 +27,5 @@ export async function GET() {
     .order('name')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
   return NextResponse.json({ drivers: drivers ?? [] })
 }
