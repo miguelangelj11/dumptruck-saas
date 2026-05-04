@@ -18,8 +18,13 @@ const materials = ['Dirt', 'Gravel', 'Sand', 'Rock', 'Concrete', 'Asphalt', 'Mul
 
 type SlipRow = { id: string; tonnage: string; imageFile: File | null; imagePreview: string | null }
 
+function localToday(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 const EMPTY_TICKET = {
-  job_name: '', client_company: '', date: new Date().toISOString().split('T')[0],
+  job_name: '', client_company: '', date: '',
   hours_worked: '', truck_number: '', material: '', rate: '', rate_type: 'load', status: 'pending', notes: '',
 }
 
@@ -161,7 +166,7 @@ export default function ContractorsPage() {
   // --- Ticket CRUD ---
   function openAddTicket() {
     setEditingTicket(null)
-    setTicketForm(EMPTY_TICKET)
+    setTicketForm({ ...EMPTY_TICKET, date: localToday() })
     setTruckMode(trucks.length > 0 ? 'dropdown' : 'manual')
     setSlipRows([makeEmptySlip()])
     setShowTicketForm(true)
@@ -360,7 +365,7 @@ export default function ContractorsPage() {
                           ) : <span className="text-gray-300">—</span>}
                         </td>
                         <td className="px-4 py-3 text-gray-500 text-xs">{t.hours_worked || <span className="text-gray-300">—</span>}</td>
-                        <td className="px-4 py-3 text-gray-500">{new Date(t.date).toLocaleDateString()}</td>
+                        <td className="px-4 py-3 text-gray-500">{new Date(t.date + 'T00:00:00').toLocaleDateString()}</td>
                         <td className="px-4 py-3">
                           <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${statusColor[t.status as keyof typeof statusColor] ?? 'bg-gray-100 text-gray-600'}`}>{t.status}</span>
                         </td>
