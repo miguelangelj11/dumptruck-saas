@@ -200,6 +200,7 @@ ALTER TABLE invoices
   ADD COLUMN IF NOT EXISTS total          numeric     NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS status         text        NOT NULL DEFAULT 'draft',
   ADD COLUMN IF NOT EXISTS due_date       date,
+  ADD COLUMN IF NOT EXISTS date_paid      date,
   ADD COLUMN IF NOT EXISTS date_from      date,
   ADD COLUMN IF NOT EXISTS date_to        date,
   ADD COLUMN IF NOT EXISTS notes          text;

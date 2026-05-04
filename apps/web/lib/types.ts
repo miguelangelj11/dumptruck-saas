@@ -77,6 +77,7 @@ export type Invoice = {
   total: number
   status: "draft" | "sent" | "partially_paid" | "paid" | "overdue"
   due_date: string | null
+  date_paid: string | null
   date_from: string | null
   date_to: string | null
   payment_terms: string | null

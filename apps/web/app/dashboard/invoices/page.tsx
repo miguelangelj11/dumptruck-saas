@@ -38,6 +38,12 @@ function fmtDate(d: string | null | undefined) {
   return `${months[parseInt(m!) - 1]} ${parseInt(day!)}, ${y}`
 }
 
+function localDatePlus(days: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() + days)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 function calcAmount(item: { rate: number | null; rate_type: string | null; quantity: number | null }): number {
   const rate = item.rate ?? 0
   const qty = item.quantity ?? 1
@@ -246,6 +252,8 @@ export default function InvoicesPage() {
     date_from: '',
     date_to: '',
     notes: '',
+    due_date: localDatePlus(30),
+    date_paid: '',
   })
   const [clientCompanies, setClientCompanies] = useState<{ id: string; name: string; address: string | null }[]>([])
   const [clientNameMode, setClientNameMode] = useState<'dropdown' | 'manual'>('dropdown')
@@ -276,7 +284,7 @@ export default function InvoicesPage() {
     subcontractor_name: '',
     their_invoice_number: '',
     amount: '',
-    date_received: new Date().toISOString().split('T')[0],
+    date_received: localDatePlus(0),
     work_start_date: '',
     work_end_date: '',
     notes: '',
@@ -290,7 +298,7 @@ export default function InvoicesPage() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [payments, setPayments] = useState<Payment[]>([])
   const [showPaymentForm, setShowPaymentForm] = useState(false)
-  const [paymentForm, setPaymentForm] = useState({ amount: '', payment_date: new Date().toISOString().split('T')[0], payment_method: 'Check', notes: '' })
+  const [paymentForm, setPaymentForm] = useState({ amount: '', payment_date: localDatePlus(0), payment_method: 'Check', notes: '' })
   const [savingPayment, setSavingPayment] = useState(false)
   const [showSendModal, setShowSendModal] = useState(false)
   const [sendForm, setSendForm] = useState({ toEmail: '', subject: '', message: '' })
@@ -587,7 +595,7 @@ export default function InvoicesPage() {
     setPayments(data ?? [])
     toast.success(newStatus === 'paid' ? 'Invoice fully paid!' : 'Partial payment recorded')
     setShowPaymentForm(false)
-    setPaymentForm({ amount: '', payment_date: new Date().toISOString().split('T')[0], payment_method: 'Check', notes: '' })
+    setPaymentForm({ amount: '', payment_date: localDatePlus(0), payment_method: 'Check', notes: '' })
     setSavingPayment(false)
   }
 
@@ -609,11 +617,6 @@ export default function InvoicesPage() {
     const num = `${prefix}-${String(seq).padStart(4, '0')}`
     const invoiceId = crypto.randomUUID()
 
-    // Auto-set due_date to net 30 from today
-    const due = new Date()
-    due.setDate(due.getDate() + 30)
-    const dueDate = due.toISOString().split('T')[0]
-
     const { error: invErr } = await supabase.from('invoices').insert({
       id: invoiceId,
       company_id: uid,
@@ -625,7 +628,8 @@ export default function InvoicesPage() {
       client_email: createForm.client_email || null,
       total: subtotal,
       status: 'draft',
-      due_date: dueDate,
+      due_date: createForm.due_date || null,
+      date_paid: createForm.date_paid || null,
       date_from: createForm.date_from || null,
       date_to: createForm.date_to || null,
       notes: createForm.notes || null,
@@ -652,7 +656,7 @@ export default function InvoicesPage() {
 
   function resetCreateForm() {
     setInvoiceType('client')
-    setCreateForm({ client_name: '', client_address: '', client_phone: '', client_email: '', date_from: '', date_to: '', notes: '' })
+    setCreateForm({ client_name: '', client_address: '', client_phone: '', client_email: '', date_from: '', date_to: '', notes: '', due_date: localDatePlus(30), date_paid: '' })
     setClientNameMode('dropdown')
     setDeductionPct('')
     setDriverPayType('percentage')
@@ -697,7 +701,7 @@ export default function InvoicesPage() {
     toast.success('Invoice received added')
     setSavingRecv(false)
     setShowRecvForm(false)
-    setRecvForm({ subcontractor_name: '', their_invoice_number: '', amount: '', date_received: new Date().toISOString().split('T')[0], work_start_date: '', work_end_date: '', notes: '' })
+    setRecvForm({ subcontractor_name: '', their_invoice_number: '', amount: '', date_received: localDatePlus(0), work_start_date: '', work_end_date: '', notes: '' })
     setRecvFile(null)
     setRecvFilePreview(null)
     fetchInvoices()
@@ -996,7 +1000,7 @@ export default function InvoicesPage() {
               <table className="w-full min-w-[600px] text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
-                    {['Invoice #', 'Type', 'Bill To', 'Date Range', 'Total', 'Status', ''].map(h => (
+                    {['Invoice #', 'Type', 'Bill To', 'Date Range', 'Total', 'Due Date', 'Status', ''].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                     ))}
                   </tr>
@@ -1015,6 +1019,7 @@ export default function InvoicesPage() {
                         {inv.date_from ? `${fmtDate(inv.date_from)} – ${fmtDate(inv.date_to)}` : '—'}
                       </td>
                       <td className="px-4 py-3 font-semibold text-gray-900">${fmt(inv.total)}</td>
+                      <td className={`px-4 py-3 text-xs ${inv.status === 'overdue' ? 'text-red-600 font-medium' : 'text-gray-500'}`}>{fmtDate(inv.due_date)}</td>
                       <td className="px-4 py-3">
                         <select
                           value={inv.status}
@@ -1294,6 +1299,24 @@ export default function InvoicesPage() {
                   rows={2}
                   className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] resize-none"
                   placeholder="Optional notes..."
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Due Date</label>
+                <input
+                  type="date"
+                  value={createForm.due_date}
+                  onChange={e => setCreateForm(p => ({ ...p, due_date: e.target.value }))}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Date Paid</label>
+                <input
+                  type="date"
+                  value={createForm.date_paid}
+                  onChange={e => setCreateForm(p => ({ ...p, date_paid: e.target.value }))}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
                 />
               </div>
             </div>
@@ -1651,10 +1674,11 @@ export default function InvoicesPage() {
                       ['Invoice No',   inv.invoice_number],
                       ['Invoice Date', invoiceDate],
                       ['Due Date',     fmtDate(inv.due_date)],
+                      ...(inv.date_paid ? [['Paid On', fmtDate(inv.date_paid)] as [string, string]] : []),
                     ] as [string, string][]).map(([label, value]) => (
                       <tr key={label} className="border-b border-gray-50 last:border-0">
                         <td className="py-2 pr-4 text-gray-500 font-medium whitespace-nowrap w-28">{label}</td>
-                        <td className={`py-2 font-semibold text-right ${label === 'Due Date' && inv.status === 'overdue' ? 'text-red-600' : 'text-gray-900'}`}>{value}</td>
+                        <td className={`py-2 font-semibold text-right ${label === 'Due Date' && inv.status === 'overdue' ? 'text-red-600' : label === 'Paid On' ? 'text-green-700' : 'text-gray-900'}`}>{value}</td>
                       </tr>
                     ))}
                   </tbody>
