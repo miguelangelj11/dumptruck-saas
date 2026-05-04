@@ -191,19 +191,20 @@ ALTER TABLE load_tickets
 --   status, due_date, date_from, date_to, notes
 -- ----------------------------------------------------------------
 ALTER TABLE invoices
-  ADD COLUMN IF NOT EXISTS invoice_number text,
-  ADD COLUMN IF NOT EXISTS invoice_type   text,
-  ADD COLUMN IF NOT EXISTS client_name    text,
-  ADD COLUMN IF NOT EXISTS client_address text,
-  ADD COLUMN IF NOT EXISTS client_phone   text,
-  ADD COLUMN IF NOT EXISTS client_email   text,
-  ADD COLUMN IF NOT EXISTS total          numeric     NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS status         text        NOT NULL DEFAULT 'draft',
-  ADD COLUMN IF NOT EXISTS due_date       date,
-  ADD COLUMN IF NOT EXISTS date_paid      date,
-  ADD COLUMN IF NOT EXISTS date_from      date,
-  ADD COLUMN IF NOT EXISTS date_to        date,
-  ADD COLUMN IF NOT EXISTS notes          text;
+  ADD COLUMN IF NOT EXISTS invoice_number  text,
+  ADD COLUMN IF NOT EXISTS invoice_type    text,
+  ADD COLUMN IF NOT EXISTS client_name     text,
+  ADD COLUMN IF NOT EXISTS client_address  text,
+  ADD COLUMN IF NOT EXISTS client_phone    text,
+  ADD COLUMN IF NOT EXISTS client_email    text,
+  ADD COLUMN IF NOT EXISTS total           numeric     NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS status          text        NOT NULL DEFAULT 'draft',
+  ADD COLUMN IF NOT EXISTS due_date        date,
+  ADD COLUMN IF NOT EXISTS date_paid       date,
+  ADD COLUMN IF NOT EXISTS date_from       date,
+  ADD COLUMN IF NOT EXISTS date_to         date,
+  ADD COLUMN IF NOT EXISTS payment_method  text        DEFAULT 'check',
+  ADD COLUMN IF NOT EXISTS notes           text;
 
 
 -- ----------------------------------------------------------------

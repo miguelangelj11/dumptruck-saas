@@ -17,6 +17,7 @@ type CompanyInfo = {
   name: string
   address: string | null
   phone: string | null
+  email: string | null
   logo_url: string | null
 }
 
@@ -199,7 +200,15 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
         {/* ── FOOTER ── */}
         <View style={s.divider} />
         <Text style={[s.small, s.gray, { textAlign: 'center' }]}>
-          Thank you for your business. Make checks payable to {company.name}.
+          {invoice.payment_method === 'ach'
+            ? 'Thank you for your business. Payment via ACH/Bank Transfer.'
+            : invoice.payment_method === 'cash'
+            ? 'Thank you for your business. Payment accepted in cash.'
+            : invoice.payment_method === 'zelle'
+            ? `Thank you for your business. Send Zelle payment to ${company.phone || company.email || company.name}.`
+            : invoice.payment_method === 'other'
+            ? 'Thank you for your business. Please contact us for payment details.'
+            : `Thank you for your business. Make checks payable to ${company.name}.`}
         </Text>
         {ticketPhotos.length > 0 && (
           <Text style={[s.small, s.gray, { textAlign: 'center', marginTop: 4 }]}>

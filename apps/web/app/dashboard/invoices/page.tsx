@@ -254,6 +254,7 @@ export default function InvoicesPage() {
     notes: '',
     due_date: localDatePlus(30),
     date_paid: '',
+    payment_method: 'check',
   })
   const [clientCompanies, setClientCompanies] = useState<{ id: string; name: string; address: string | null }[]>([])
   const [clientNameMode, setClientNameMode] = useState<'dropdown' | 'manual'>('dropdown')
@@ -632,6 +633,7 @@ export default function InvoicesPage() {
       date_paid: createForm.date_paid || null,
       date_from: createForm.date_from || null,
       date_to: createForm.date_to || null,
+      payment_method: createForm.payment_method || 'check',
       notes: createForm.notes || null,
     })
 
@@ -656,7 +658,7 @@ export default function InvoicesPage() {
 
   function resetCreateForm() {
     setInvoiceType('client')
-    setCreateForm({ client_name: '', client_address: '', client_phone: '', client_email: '', date_from: '', date_to: '', notes: '', due_date: localDatePlus(30), date_paid: '' })
+    setCreateForm({ client_name: '', client_address: '', client_phone: '', client_email: '', date_from: '', date_to: '', notes: '', due_date: localDatePlus(30), date_paid: '', payment_method: 'check' })
     setClientNameMode('dropdown')
     setDeductionPct('')
     setDriverPayType('percentage')
@@ -1302,6 +1304,20 @@ export default function InvoicesPage() {
                 />
               </div>
               <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Payment Method</label>
+                <select
+                  value={createForm.payment_method}
+                  onChange={e => setCreateForm(p => ({ ...p, payment_method: e.target.value }))}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white"
+                >
+                  <option value="check">Check</option>
+                  <option value="ach">ACH / Bank Transfer</option>
+                  <option value="cash">Cash</option>
+                  <option value="zelle">Zelle</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Due Date</label>
                 <input
                   type="date"
@@ -1569,7 +1585,7 @@ export default function InvoicesPage() {
             </button>
             <InvoicePDFButton
               invoice={inv}
-              company={{ name: companyName, address: companyAddress || null, phone: userPhone || null, logo_url: companyLogoUrl }}
+              company={{ name: companyName, address: companyAddress || null, phone: userPhone || null, email: userEmail || null, logo_url: companyLogoUrl }}
               ticketPhotos={detailTicketPhotos}
             />
             <button
@@ -1671,10 +1687,14 @@ export default function InvoicesPage() {
                 <table className="w-full text-sm">
                   <tbody>
                     {([
-                      ['Invoice No',   inv.invoice_number],
-                      ['Invoice Date', invoiceDate],
-                      ['Due Date',     fmtDate(inv.due_date)],
+                      ['Invoice No',      inv.invoice_number],
+                      ['Invoice Date',    invoiceDate],
+                      ['Due Date',        fmtDate(inv.due_date)],
                       ...(inv.date_paid ? [['Paid On', fmtDate(inv.date_paid)] as [string, string]] : []),
+                      ...(inv.payment_method ? [[
+                        'Payment Method',
+                        ({ check: 'Check', ach: 'ACH / Bank Transfer', cash: 'Cash', zelle: 'Zelle', other: 'Other' } as Record<string, string>)[inv.payment_method] ?? inv.payment_method,
+                      ] as [string, string]] : []),
                     ] as [string, string][]).map(([label, value]) => (
                       <tr key={label} className="border-b border-gray-50 last:border-0">
                         <td className="py-2 pr-4 text-gray-500 font-medium whitespace-nowrap w-28">{label}</td>
@@ -1762,7 +1782,15 @@ export default function InvoicesPage() {
             <div className="px-6 md:px-8 py-7 bg-gray-50 border-t border-gray-100 text-center">
               <p className="text-sm font-semibold text-gray-700 mb-1">Thank you for your business!</p>
               <p className="text-xs text-gray-400">
-                Please make payment by the due date. For questions, contact us at {userEmail || 'your company email'}.
+                {inv.payment_method === 'ach'
+                  ? 'Payment via ACH/Bank Transfer.'
+                  : inv.payment_method === 'cash'
+                  ? 'Payment accepted in cash.'
+                  : inv.payment_method === 'zelle'
+                  ? `Send Zelle payment to ${userPhone || userEmail || 'your company contact'}.`
+                  : inv.payment_method === 'other'
+                  ? 'Please contact us for payment details.'
+                  : `Make checks payable to ${companyName}.`}
               </p>
             </div>
 

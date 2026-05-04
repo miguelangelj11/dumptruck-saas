@@ -16,6 +16,7 @@ type CompanyInfo = {
   name: string
   address: string | null
   phone: string | null
+  email: string | null
   logo_url: string | null
 }
 

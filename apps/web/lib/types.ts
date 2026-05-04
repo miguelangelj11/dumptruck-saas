@@ -80,6 +80,7 @@ export type Invoice = {
   date_paid: string | null
   date_from: string | null
   date_to: string | null
+  payment_method: string | null
   payment_terms: string | null
   notes: string | null
   created_at: string
