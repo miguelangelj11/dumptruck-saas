@@ -27,24 +27,41 @@ export async function POST(request: Request) {
 
   const admin = getAdmin()
 
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('organization_id')
-    .eq('id', user.id)
+  // Look up company by owner first, then by team membership
+  const { data: ownedCompany } = await admin
+    .from('companies')
+    .select('id, plan, is_internal')
+    .eq('owner_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
     .maybeSingle()
 
-  const companyId = profile?.organization_id
+  let companyId: string | null = ownedCompany?.id ?? null
+  let companyPlan: string | null = ownedCompany?.plan ?? null
+  let companyIsInternal: boolean = ownedCompany?.is_internal ?? false
+
+  if (!companyId) {
+    const { data: membership } = await admin
+      .from('team_members')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    companyId = membership?.company_id ?? null
+    if (companyId) {
+      const { data: memberCompany } = await admin
+        .from('companies')
+        .select('plan, is_internal')
+        .eq('id', companyId)
+        .maybeSingle()
+      companyPlan = memberCompany?.plan ?? null
+      companyIsInternal = memberCompany?.is_internal ?? false
+    }
+  }
+
   if (!companyId) return NextResponse.json({ error: 'Company not found' }, { status: 404 })
 
-  const { data: company } = await admin
-    .from('companies')
-    .select('plan, is_internal')
-    .eq('id', companyId)
-    .maybeSingle()
-
-  const co = company as Record<string, unknown> | null
-  if (!co?.is_internal) {
-    const limit = getLimit(co?.plan as string | null)
+  if (!companyIsInternal) {
+    const limit = getLimit(companyPlan)
 
     if (limit !== Infinity) {
       const { count } = await admin

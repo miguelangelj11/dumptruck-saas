@@ -77,6 +77,12 @@ export default function SignupPage() {
         subscription_status: 'trial',
       })
 
+      // Step 3: create profile row with organization_id so all API routes can find the company
+      await supabase.from('profiles').upsert({
+        id:              user.id,
+        organization_id: user.id,
+      }, { onConflict: 'id' })
+
       // Save plan to localStorage so Settings page can read it later
       localStorage.setItem('dtb_selected_plan', selectedPlan)
 

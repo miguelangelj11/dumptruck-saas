@@ -132,9 +132,13 @@ ALTER TABLE drivers
 -- ----------------------------------------------------------------
 -- profiles
 -- settings/page.tsx upserts: id, full_name
+-- signup/page.tsx upserts: id, organization_id
+-- auth/callback sets: organization_id (team invite path)
 -- ----------------------------------------------------------------
 ALTER TABLE profiles
-  ADD COLUMN IF NOT EXISTS full_name text;
+  ADD COLUMN IF NOT EXISTS full_name       text,
+  ADD COLUMN IF NOT EXISTS organization_id uuid REFERENCES companies(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS role            text;
 
 
 -- ----------------------------------------------------------------
