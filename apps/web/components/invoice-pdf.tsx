@@ -107,7 +107,7 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={s.invoiceTitle}>
-              {invoice.invoice_type === 'paystub' ? 'DRIVER PAY' : invoice.invoice_type === 'contractor' ? 'SUBCONTRACTOR' : 'INVOICE'}
+              {invoice.invoice_type === 'paystub' ? 'DRIVER PAYMENT' : invoice.invoice_type === 'contractor' ? 'PAYMENT VOUCHER' : 'INVOICE'}
             </Text>
             <Text style={s.mb4}># {invoice.invoice_number}</Text>
             <Text style={[s.small, s.gray]}>Date: {invoice.created_at?.split('T')[0]}</Text>
@@ -200,15 +200,25 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
         {/* ── FOOTER ── */}
         <View style={s.divider} />
         <Text style={[s.small, s.gray, { textAlign: 'center' }]}>
-          {invoice.payment_method === 'ach'
-            ? 'Thank you for your business. Payment via ACH/Bank Transfer.'
-            : invoice.payment_method === 'cash'
-            ? 'Thank you for your business. Payment accepted in cash.'
-            : invoice.payment_method === 'zelle'
-            ? `Thank you for your business. Send Zelle payment to ${company.phone || company.email || company.name}.`
-            : invoice.payment_method === 'other'
-            ? 'Thank you for your business. Please contact us for payment details.'
-            : `Thank you for your business. Make checks payable to ${company.name}.`}
+          {invoice.invoice_type === 'contractor'
+            ? (invoice.payment_method === 'ach'
+                ? `Payment issued to ${invoice.client_name} via ACH/Bank Transfer.`
+                : invoice.payment_method === 'cash'
+                ? `Cash payment issued to ${invoice.client_name}.`
+                : invoice.payment_method === 'zelle'
+                ? `Zelle payment sent to ${invoice.client_name}.`
+                : invoice.payment_method === 'other'
+                ? `Payment issued to ${invoice.client_name}.`
+                : `Payment by check issued to ${invoice.client_name}.`)
+            : (invoice.payment_method === 'ach'
+                ? 'Thank you for your business. Payment via ACH/Bank Transfer.'
+                : invoice.payment_method === 'cash'
+                ? 'Thank you for your business. Payment accepted in cash.'
+                : invoice.payment_method === 'zelle'
+                ? `Thank you for your business. Send Zelle payment to ${company.phone || company.email || company.name}.`
+                : invoice.payment_method === 'other'
+                ? 'Thank you for your business. Please contact us for payment details.'
+                : `Thank you for your business. Make checks payable to ${company.name}.`)}
         </Text>
         {ticketPhotos.length > 0 && (
           <Text style={[s.small, s.gray, { textAlign: 'center', marginTop: 4 }]}>

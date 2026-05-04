@@ -1640,7 +1640,7 @@ export default function InvoicesPage() {
                 {/* Left: INVOICE label + number */}
                 <div>
                   <p className="text-xs font-bold text-[#2d7a4f] uppercase tracking-[0.18em] mb-2">
-                    {inv.invoice_type === 'paystub' ? 'Driver Pay Invoice' : inv.invoice_type === 'contractor' ? 'Subcontractor Invoice' : 'Invoice'}
+                    {inv.invoice_type === 'paystub' ? 'Driver Payment' : inv.invoice_type === 'contractor' ? 'Payment Voucher' : 'Invoice'}
                   </p>
                   <p className="text-4xl font-extrabold text-gray-900 tracking-tight leading-none">
                     {inv.invoice_number}
@@ -1780,18 +1780,34 @@ export default function InvoicesPage() {
 
             {/* ── FOOTER ── */}
             <div className="px-6 md:px-8 py-7 bg-gray-50 border-t border-gray-100 text-center">
-              <p className="text-sm font-semibold text-gray-700 mb-1">Thank you for your business!</p>
-              <p className="text-xs text-gray-400">
-                {inv.payment_method === 'ach'
-                  ? 'Payment via ACH/Bank Transfer.'
-                  : inv.payment_method === 'cash'
-                  ? 'Payment accepted in cash.'
-                  : inv.payment_method === 'zelle'
-                  ? `Send Zelle payment to ${userPhone || userEmail || 'your company contact'}.`
-                  : inv.payment_method === 'other'
-                  ? 'Please contact us for payment details.'
-                  : `Make checks payable to ${companyName}.`}
-              </p>
+              {inv.invoice_type === 'contractor' ? (
+                <p className="text-xs text-gray-400">
+                  {inv.payment_method === 'ach'
+                    ? `Payment issued to ${inv.client_name} via ACH/Bank Transfer.`
+                    : inv.payment_method === 'cash'
+                    ? `Cash payment issued to ${inv.client_name}.`
+                    : inv.payment_method === 'zelle'
+                    ? `Zelle payment sent to ${inv.client_name}.`
+                    : inv.payment_method === 'other'
+                    ? `Payment issued to ${inv.client_name}.`
+                    : `Payment by check issued to ${inv.client_name}.`}
+                </p>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold text-gray-700 mb-1">Thank you for your business!</p>
+                  <p className="text-xs text-gray-400">
+                    {inv.payment_method === 'ach'
+                      ? 'Payment via ACH/Bank Transfer.'
+                      : inv.payment_method === 'cash'
+                      ? 'Payment accepted in cash.'
+                      : inv.payment_method === 'zelle'
+                      ? `Send Zelle payment to ${userPhone || userEmail || 'your company contact'}.`
+                      : inv.payment_method === 'other'
+                      ? 'Please contact us for payment details.'
+                      : `Make checks payable to ${companyName}.`}
+                  </p>
+                </>
+              )}
             </div>
 
           </div>
