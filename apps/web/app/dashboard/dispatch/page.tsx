@@ -17,6 +17,7 @@ import { logDispatchActivity } from '@/lib/workflows'
 type DriverBasic = { id: string; name: string }
 type JobWithLoads = Job & { loads?: Load[] }
 type ContractorBasic = { id: string; name: string; phone: string | null; email: string | null }
+type ClientCompanyBasic = { id: string; name: string; address: string | null }
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -69,11 +70,12 @@ export default function DispatchPage() {
   const supabase = createClient()
   const today = new Date().toISOString().split('T')[0]!
 
-  const [jobs,        setJobs]        = useState<JobWithLoads[]>([])
-  const [dispatches,  setDispatches]  = useState<Dispatch[]>([])
-  const [drivers,     setDrivers]     = useState<DriverBasic[]>([])
-  const [contractors, setContractors] = useState<ContractorBasic[]>([])
-  const [loading,     setLoading]     = useState(true)
+  const [jobs,           setJobs]           = useState<JobWithLoads[]>([])
+  const [dispatches,     setDispatches]     = useState<Dispatch[]>([])
+  const [drivers,        setDrivers]        = useState<DriverBasic[]>([])
+  const [contractors,    setContractors]    = useState<ContractorBasic[]>([])
+  const [clientCompanies, setClientCompanies] = useState<ClientCompanyBasic[]>([])
+  const [loading,        setLoading]        = useState(true)
   const [userId,      setUserId]      = useState('')
   const [orgId,       setOrgId]       = useState('')
   const [companyPlan, setCompanyPlan] = useState<string | null>(null)
@@ -121,12 +123,13 @@ export default function DispatchPage() {
     if (!companyId) { setLoading(false); return }
     setOrgId(companyId)
 
-    const [loadsRes, driversRes, jobsRes, dispRes, contractorsRes, coRes] = await Promise.all([
+    const [loadsRes, driversRes, jobsRes, dispRes, contractorsRes, clientCoRes, coRes] = await Promise.all([
       supabase.from('loads').select('id,job_name,driver_name,truck_number,date,status,rate,rate_type').eq('company_id', companyId).gte('date', cutoff),
       supabase.from('drivers').select('id,name').eq('company_id', companyId).order('name'),
       supabase.from('jobs').select('*').eq('company_id', companyId).order('created_at', { ascending: false }),
       supabase.from('dispatches').select('*').eq('company_id', companyId).eq('dispatch_date', today).order('created_at', { ascending: false }),
       supabase.from('contractors').select('id,name,phone,email').eq('company_id', companyId).eq('status', 'active').order('name'),
+      supabase.from('client_companies').select('id,name,address').eq('company_id', companyId).order('name'),
       supabase.from('companies').select('plan').eq('id', companyId).maybeSingle(),
     ])
 
@@ -141,6 +144,7 @@ export default function DispatchPage() {
     setJobs((jobsRes.data ?? []).map((j: Job) => ({ ...j, loads: loads.filter(l => l.job_name === j.job_name) })))
     setDrivers(driversRes.data ?? [])
     setContractors(contractorsRes.data ?? [])
+    setClientCompanies((clientCoRes.data ?? []) as ClientCompanyBasic[])
     setCompanyPlan((coRes.data as Record<string, unknown> | null)?.plan as string | null ?? null)
     if (!dispRes.error || dispRes.error.message.includes('schema cache'))
       setDispatches((dispRes.data ?? []) as Dispatch[])
@@ -206,7 +210,7 @@ export default function DispatchPage() {
   function openAddJob() {
     setEditingJob(null)
     setJobForm(EMPTY_JOB)
-    setContractorMode(contractors.length > 0 ? 'dropdown' : 'manual')
+    setContractorMode(clientCompanies.length > 0 ? 'dropdown' : 'manual')
     setShowJobForm(true)
   }
 
@@ -228,8 +232,8 @@ export default function DispatchPage() {
       end_date: j.end_date ?? '',
       notes: j.notes ?? '',
     })
-    // If editing and contractor matches a saved one, use dropdown; else manual
-    const matched = contractors.some(c => c.name === existingContractor)
+    // If editing and contractor matches a saved client company, use dropdown; else manual
+    const matched = clientCompanies.some(c => c.name === existingContractor)
     setContractorMode(matched || !existingContractor ? 'dropdown' : 'manual')
     setShowJobForm(true)
   }
@@ -1201,11 +1205,11 @@ export default function DispatchPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Job Name *</label>
                 <input required value={jobForm.job_name} onChange={e => setJobForm(f => ({ ...f, job_name: e.target.value }))} placeholder="e.g. Downtown Grading Phase 1" className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]" />
               </div>
-              {/* Contractor */}
+              {/* Working Under (Company) */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-sm font-medium text-gray-700">Contractor</label>
-                  {contractors.length > 0 && (
+                  <label className="block text-sm font-medium text-gray-700">Working Under (Company)</label>
+                  {clientCompanies.length > 0 && (
                     <button
                       type="button"
                       onClick={() => setContractorMode(m => m === 'dropdown' ? 'manual' : 'dropdown')}
@@ -1215,20 +1219,20 @@ export default function DispatchPage() {
                     </button>
                   )}
                 </div>
-                {contractorMode === 'dropdown' && contractors.length > 0 ? (
+                {contractorMode === 'dropdown' && clientCompanies.length > 0 ? (
                   <select
                     value={jobForm.contractor}
                     onChange={e => setJobForm(f => ({ ...f, contractor: e.target.value }))}
                     className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]"
                   >
-                    <option value="">— Select a contractor —</option>
-                    {contractors.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                    <option value="">— Select a company —</option>
+                    {clientCompanies.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                   </select>
                 ) : (
                   <input
                     value={jobForm.contractor}
                     onChange={e => setJobForm(f => ({ ...f, contractor: e.target.value }))}
-                    placeholder="Contractor name"
+                    placeholder="Company name"
                     className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]"
                   />
                 )}
