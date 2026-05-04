@@ -90,10 +90,11 @@ ALTER TABLE dispatches
 --   start_date, end_date, notes
 -- ----------------------------------------------------------------
 ALTER TABLE jobs
-  ADD COLUMN IF NOT EXISTS job_name      text,
-  ADD COLUMN IF NOT EXISTS contractor    text,
-  ADD COLUMN IF NOT EXISTS location      text,
-  ADD COLUMN IF NOT EXISTS drop_location text,
+  ADD COLUMN IF NOT EXISTS job_name         text,
+  ADD COLUMN IF NOT EXISTS contractor       text,
+  ADD COLUMN IF NOT EXISTS location         text,
+  ADD COLUMN IF NOT EXISTS pick_up_location text,
+  ADD COLUMN IF NOT EXISTS drop_location    text,
   ADD COLUMN IF NOT EXISTS material      text,
   ADD COLUMN IF NOT EXISTS rate          numeric,
   ADD COLUMN IF NOT EXISTS rate_type     text,
