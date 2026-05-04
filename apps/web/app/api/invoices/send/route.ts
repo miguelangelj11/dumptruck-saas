@@ -14,9 +14,11 @@ function fmt(n: number) {
   return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-function fmtDate(d: string | null) {
+function fmtDate(d: string | null | undefined) {
   if (!d) return '—'
-  return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  const [y, m, day] = d.slice(0, 10).split('-')
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  return `${months[parseInt(m!) - 1]} ${parseInt(day!)}, ${y}`
 }
 
 export async function POST(request: Request) {

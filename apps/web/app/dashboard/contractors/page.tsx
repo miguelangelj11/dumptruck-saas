@@ -23,6 +23,15 @@ function localToday(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+// Pure string split — no Date object, no timezone shift possible.
+// Works whether the DB column returns "2026-04-06", "2026-04-06T00:00:00", or "2026-04-06T00:00:00+00:00".
+function fmtDate(s: string | null | undefined): string {
+  if (!s) return '—'
+  const ymd = s.slice(0, 10) // always "YYYY-MM-DD"
+  const [y, m, d] = ymd.split('-')
+  return `${parseInt(m!)}/${parseInt(d!)}/${y}`
+}
+
 const EMPTY_TICKET = {
   job_name: '', client_company: '', date: '',
   hours_worked: '', truck_number: '', material: '', rate: '', rate_type: 'load', status: 'pending', notes: '',
@@ -365,7 +374,7 @@ export default function ContractorsPage() {
                           ) : <span className="text-gray-300">—</span>}
                         </td>
                         <td className="px-4 py-3 text-gray-500 text-xs">{t.hours_worked || <span className="text-gray-300">—</span>}</td>
-                        <td className="px-4 py-3 text-gray-500">{new Date(t.date + 'T00:00:00').toLocaleDateString()}</td>
+                        <td className="px-4 py-3 text-gray-500">{fmtDate(t.date)}</td>
                         <td className="px-4 py-3">
                           <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${statusColor[t.status as keyof typeof statusColor] ?? 'bg-gray-100 text-gray-600'}`}>{t.status}</span>
                         </td>
