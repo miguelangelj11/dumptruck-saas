@@ -190,7 +190,7 @@ function buildContractorLineItems(tickets: CTWithSlips[], deductionPct: number):
       const amount = deductionPct > 0 ? base * (1 - deductionPct / 100) : base
       items.push({
         id: crypto.randomUUID(), invoice_id: '',
-        line_date: ticket.date, truck_number: null,
+        line_date: ticket.date, truck_number: ticket.truck_number ?? null,
         driver_name: ticket.job_name, material: ticket.material,
         ticket_number: null, time_worked: ticket.hours_worked,
         quantity: 1, rate: ticket.rate, rate_type: ticket.rate_type,
@@ -204,7 +204,7 @@ function buildContractorLineItems(tickets: CTWithSlips[], deductionPct: number):
         const amount = deductionPct > 0 ? base * (1 - deductionPct / 100) : base
         items.push({
           id: crypto.randomUUID(), invoice_id: '',
-          line_date: ticket.date, truck_number: null,
+          line_date: ticket.date, truck_number: ticket.truck_number ?? null,
           driver_name: ticket.job_name, material: ticket.material,
           ticket_number: null, time_worked: ticket.hours_worked,
           quantity: ticket.rate_type === 'hr' ? null : qty,

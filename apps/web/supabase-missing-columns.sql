@@ -154,6 +154,7 @@ ALTER TABLE contractor_tickets
   ADD COLUMN IF NOT EXISTS client_company text,
   ADD COLUMN IF NOT EXISTS date           date,
   ADD COLUMN IF NOT EXISTS hours_worked   text,
+  ADD COLUMN IF NOT EXISTS truck_number   text,
   ADD COLUMN IF NOT EXISTS material       text,
   ADD COLUMN IF NOT EXISTS rate           numeric,
   ADD COLUMN IF NOT EXISTS rate_type      text,

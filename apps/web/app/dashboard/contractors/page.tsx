@@ -20,7 +20,7 @@ type SlipRow = { id: string; tonnage: string; imageFile: File | null; imagePrevi
 
 const EMPTY_TICKET = {
   job_name: '', client_company: '', date: new Date().toISOString().split('T')[0],
-  hours_worked: '', material: '', rate: '', rate_type: 'load', status: 'pending', notes: '',
+  hours_worked: '', truck_number: '', material: '', rate: '', rate_type: 'load', status: 'pending', notes: '',
 }
 
 function makeEmptySlip(): SlipRow {
@@ -48,6 +48,8 @@ export default function ContractorsPage() {
   const [editingTicket, setEditingTicket] = useState<ContractorTicket | null>(null)
   const [ticketForm, setTicketForm] = useState(EMPTY_TICKET)
   const [savingTicket, setSavingTicket] = useState(false)
+  const [trucks, setTrucks] = useState<{ id: string; truck_number: string }[]>([])
+  const [truckMode, setTruckMode] = useState<'dropdown' | 'manual'>('dropdown')
   const [uploadingImage, setUploadingImage] = useState(false)
   const [slipRows, setSlipRows] = useState<SlipRow[]>([makeEmptySlip()])
   const fileInputRefs = useRef<Map<string, HTMLInputElement>>(new Map())
@@ -72,14 +74,16 @@ export default function ContractorsPage() {
     setUserId(user.id)
     const orgId = await getCompanyId()
     if (!orgId) { setLoading(false); return }
-    const [contractorsRes, companiesRes, planRes] = await Promise.all([
+    const [contractorsRes, companiesRes, trucksRes, planRes] = await Promise.all([
       supabase.from('contractors').select('*').eq('company_id', orgId).order('name'),
       supabase.from('client_companies').select('*').eq('company_id', orgId).order('name'),
+      supabase.from('trucks').select('id,truck_number').eq('company_id', orgId).order('truck_number'),
       supabase.from('companies').select('plan').eq('id', orgId).maybeSingle(),
     ])
     if (contractorsRes.error) toast.error('Failed to load subcontractors: ' + contractorsRes.error.message)
     setContractors(contractorsRes.data ?? [])
     setClientCompanies(companiesRes.data ?? [])
+    setTrucks((trucksRes.data ?? []) as { id: string; truck_number: string }[])
     setCompanyPlan((planRes.data as { plan?: string | null } | null)?.plan ?? null)
     setLoading(false)
   }
@@ -158,17 +162,22 @@ export default function ContractorsPage() {
   function openAddTicket() {
     setEditingTicket(null)
     setTicketForm(EMPTY_TICKET)
+    setTruckMode(trucks.length > 0 ? 'dropdown' : 'manual')
     setSlipRows([makeEmptySlip()])
     setShowTicketForm(true)
   }
 
   function openEditTicket(t: ContractorTicket) {
     setEditingTicket(t)
+    const existingTruck = t.truck_number ?? ''
     setTicketForm({
       job_name: t.job_name, client_company: t.client_company ?? '',
-      date: t.date, hours_worked: t.hours_worked ?? '', material: t.material ?? '',
+      date: t.date, hours_worked: t.hours_worked ?? '',
+      truck_number: existingTruck,
+      material: t.material ?? '',
       rate: String(t.rate), rate_type: t.rate_type ?? 'load', status: t.status, notes: t.notes ?? '',
     })
+    setTruckMode(trucks.some(tr => tr.truck_number === existingTruck) || !existingTruck ? 'dropdown' : 'manual')
     setSlipRows([makeEmptySlip()])
     setShowTicketForm(true)
   }
@@ -207,6 +216,7 @@ export default function ContractorsPage() {
       client_company: ticketForm.client_company || null,
       date: ticketForm.date,
       hours_worked: ticketForm.hours_worked || null,
+      truck_number: ticketForm.truck_number || null,
       material: ticketForm.material || null,
       rate: parseFloat(ticketForm.rate) || 0,
       rate_type: ticketForm.rate_type,
@@ -217,8 +227,8 @@ export default function ContractorsPage() {
     }
 
     if (editingTicket) {
-      const { job_name, client_company, date, hours_worked, material, rate, rate_type, status, notes } = basePayload
-      const { error } = await supabase.from('contractor_tickets').update({ job_name, client_company, date, hours_worked, material, rate, rate_type, status, notes }).eq('id', editingTicket.id)
+      const { job_name, client_company, date, hours_worked, truck_number, material, rate, rate_type, status, notes } = basePayload
+      const { error } = await supabase.from('contractor_tickets').update({ job_name, client_company, date, hours_worked, truck_number, material, rate, rate_type, status, notes }).eq('id', editingTicket.id)
       if (error) { toast.error(error.message); setSavingTicket(false); return }
       const newSlips = slipRows.filter(r => r.tonnage || r.imageFile)
       if (newSlips.length > 0) {
@@ -308,7 +318,7 @@ export default function ContractorsPage() {
               <table className="w-full min-w-[700px] text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
-                    {['Photos', 'Job', 'Company', 'Material', 'Rate', 'Tickets', 'Hours', 'Date', 'Status', ''].map(h => (
+                    {['Photos', 'Job', 'Company', 'Truck #', 'Material', 'Rate', 'Tickets', 'Hours', 'Date', 'Status', ''].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                     ))}
                   </tr>
@@ -338,6 +348,7 @@ export default function ContractorsPage() {
                         </td>
                         <td className="px-4 py-3 font-medium text-gray-900">{t.job_name}</td>
                         <td className="px-4 py-3 text-gray-600">{t.client_company || <span className="text-gray-300">—</span>}</td>
+                        <td className="px-4 py-3 text-gray-600">{t.truck_number ? `#${t.truck_number}` : <span className="text-gray-300">—</span>}</td>
                         <td className="px-4 py-3 text-gray-500">{t.material || '—'}</td>
                         <td className="px-4 py-3 font-medium text-gray-900">${t.rate?.toLocaleString()}<span className="text-xs text-gray-400 font-normal">/{t.rate_type ?? 'load'}</span></td>
                         <td className="px-4 py-3">
@@ -406,6 +417,45 @@ export default function ContractorsPage() {
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Hours Worked</label>
                     <input value={ticketForm.hours_worked} onChange={e => setTicketForm(p => ({ ...p, hours_worked: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="7:30am – 5:30pm" />
+                  </div>
+                  <div className="col-span-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-medium text-gray-700">Truck #</label>
+                      {trucks.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setTruckMode(m => m === 'dropdown' ? 'manual' : 'dropdown')}
+                          className="text-xs text-[#2d7a4f] hover:underline"
+                        >
+                          {truckMode === 'dropdown' ? '✏️ Enter manually' : '← Back to list'}
+                        </button>
+                      )}
+                    </div>
+                    {truckMode === 'dropdown' && trucks.length > 0 ? (
+                      <select
+                        value={ticketForm.truck_number}
+                        onChange={e => setTicketForm(p => ({ ...p, truck_number: e.target.value }))}
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white"
+                      >
+                        <option value="">— Select a truck —</option>
+                        {trucks.map(tr => <option key={tr.id} value={tr.truck_number}>#{tr.truck_number}</option>)}
+                      </select>
+                    ) : (
+                      <div>
+                        <input
+                          value={ticketForm.truck_number}
+                          onChange={e => setTicketForm(p => ({ ...p, truck_number: e.target.value }))}
+                          className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                          placeholder="e.g. 12"
+                        />
+                        {trucks.length === 0 && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            No trucks added yet.{' '}
+                            <a href="/dashboard/settings" target="_blank" className="text-[#2d7a4f] hover:underline">Add trucks in Settings →</a>
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="col-span-2">
                     <label className="block text-xs font-medium text-gray-700 mb-1">Material</label>
