@@ -325,7 +325,7 @@ export default async function DashboardPage() {
         {[
           { label: 'Dispatch Driver', icon: Send,      href: '/dashboard/dispatch',       bg: 'bg-[#1e3a2a] text-white hover:bg-[#2d4a3a]' },
           { label: 'Add Ticket',      icon: Plus,      href: '/dashboard/tickets',        bg: 'bg-white text-gray-800 border border-gray-200 hover:border-[#2d7a4f] hover:bg-[#f0fdf4]' },
-          { label: 'New Invoice',     icon: FileText,  href: '/dashboard/invoices/new',   bg: 'bg-white text-gray-800 border border-gray-200 hover:border-[#2d7a4f] hover:bg-[#f0fdf4]' },
+          { label: 'New Invoice',     icon: FileText,  href: '/dashboard/invoices?new=1', bg: 'bg-white text-gray-800 border border-gray-200 hover:border-[#2d7a4f] hover:bg-[#f0fdf4]' },
           { label: 'Add Driver',      icon: Users,     href: '/dashboard/drivers',        bg: 'bg-white text-gray-800 border border-gray-200 hover:border-[#2d7a4f] hover:bg-[#f0fdf4]' },
         ].map(({ label, icon: Icon, href, bg }) => (
           <Link

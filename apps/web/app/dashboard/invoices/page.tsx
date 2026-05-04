@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, Loader2, Receipt, ArrowLeft, Printer, Check, CreditCard, X, ChevronDown, FileText, Upload, Trash2, Mail, Lock } from 'lucide-react'
 import InvoicePDFButton from '@/components/invoice-pdf-button'
@@ -218,7 +219,8 @@ function buildContractorLineItems(tickets: CTWithSlips[], deductionPct: number):
 }
 
 export default function InvoicesPage() {
-  const [view, setView] = useState<View>('list')
+  const searchParams = useSearchParams()
+  const [view, setView] = useState<View>(searchParams.get('new') === '1' ? 'create' : 'list')
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
   const [invoicePage, setInvoicePage] = useState(0)
