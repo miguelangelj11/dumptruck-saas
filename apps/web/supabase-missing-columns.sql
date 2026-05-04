@@ -85,20 +85,22 @@ ALTER TABLE dispatches
 
 -- ----------------------------------------------------------------
 -- jobs
--- dispatch/page.tsx sends: job_name, contractor, location, material,
---   rate, rate_type, status, start_date, end_date, notes
+-- dispatch/page.tsx sends: job_name, contractor, location,
+--   drop_location, material, rate, rate_type, status,
+--   start_date, end_date, notes
 -- ----------------------------------------------------------------
 ALTER TABLE jobs
-  ADD COLUMN IF NOT EXISTS job_name   text,
-  ADD COLUMN IF NOT EXISTS contractor text,
-  ADD COLUMN IF NOT EXISTS location   text,
-  ADD COLUMN IF NOT EXISTS material   text,
-  ADD COLUMN IF NOT EXISTS rate       numeric,
-  ADD COLUMN IF NOT EXISTS rate_type  text,
-  ADD COLUMN IF NOT EXISTS status     text NOT NULL DEFAULT 'active',
-  ADD COLUMN IF NOT EXISTS start_date date,
-  ADD COLUMN IF NOT EXISTS end_date   date,
-  ADD COLUMN IF NOT EXISTS notes      text;
+  ADD COLUMN IF NOT EXISTS job_name      text,
+  ADD COLUMN IF NOT EXISTS contractor    text,
+  ADD COLUMN IF NOT EXISTS location      text,
+  ADD COLUMN IF NOT EXISTS drop_location text,
+  ADD COLUMN IF NOT EXISTS material      text,
+  ADD COLUMN IF NOT EXISTS rate          numeric,
+  ADD COLUMN IF NOT EXISTS rate_type     text,
+  ADD COLUMN IF NOT EXISTS status        text NOT NULL DEFAULT 'active',
+  ADD COLUMN IF NOT EXISTS start_date    date,
+  ADD COLUMN IF NOT EXISTS end_date      date,
+  ADD COLUMN IF NOT EXISTS notes         text;
 
 
 -- ----------------------------------------------------------------

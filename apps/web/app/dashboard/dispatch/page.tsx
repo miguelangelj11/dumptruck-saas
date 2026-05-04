@@ -50,7 +50,7 @@ const jobStatusCfg = {
 const RATE_TYPES = ['load', 'ton', 'hour']
 
 const EMPTY_JOB = {
-  job_name: '', contractor: '', location: '', material: '',
+  job_name: '', contractor: '', location: '', drop_location: '', material: '',
   rate: '', rate_type: 'load', status: 'active' as Job['status'],
   start_date: new Date().toISOString().split('T')[0]!, end_date: '', notes: '',
 }
@@ -209,6 +209,7 @@ export default function DispatchPage() {
     setEditingJob(j)
     setJobForm({
       job_name: j.job_name, contractor: j.contractor ?? '', location: j.location ?? '',
+      drop_location: (j as Record<string, unknown>).drop_location as string ?? '',
       material: j.material ?? '', rate: j.rate != null ? String(j.rate) : '',
       rate_type: j.rate_type ?? 'load', status: j.status,
       start_date: j.start_date ?? '', end_date: j.end_date ?? '', notes: j.notes ?? '',
@@ -223,7 +224,8 @@ export default function DispatchPage() {
     setSavingJob(true)
     const payload = {
       job_name: jobForm.job_name.trim(), contractor: jobForm.contractor || null,
-      location: jobForm.location || null, material: jobForm.material || null,
+      location: jobForm.location || null, drop_location: jobForm.drop_location || null,
+      material: jobForm.material || null,
       rate: jobForm.rate ? parseFloat(jobForm.rate) : null, rate_type: jobForm.rate_type || null,
       status: jobForm.status, start_date: jobForm.start_date || null,
       end_date: jobForm.end_date || null, notes: jobForm.notes || null,
@@ -626,7 +628,8 @@ export default function DispatchPage() {
                               </div>
                               <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5">
                                 {job.contractor && <span className="flex items-center gap-1 text-xs text-gray-500"><Users className="h-3 w-3" />{job.contractor}</span>}
-                                {job.location   && <span className="flex items-center gap-1 text-xs text-gray-500"><MapPin className="h-3 w-3" />{job.location}</span>}
+                                {job.location   && <span className="flex items-center gap-1 text-xs text-gray-500"><MapPin className="h-3 w-3" />Start: {job.location}</span>}
+                                {(job as Record<string, unknown>).drop_location && <span className="flex items-center gap-1 text-xs text-gray-500"><MapPin className="h-3 w-3" />Drop: {(job as Record<string, unknown>).drop_location as string}</span>}
                                 {job.material   && <span className="flex items-center gap-1 text-xs text-gray-500"><PackageOpen className="h-3 w-3" />{job.material}</span>}
                                 {job.rate != null && <span className="flex items-center gap-1 text-xs text-gray-500"><DollarSign className="h-3 w-3" />${job.rate}/{job.rate_type}</span>}
                               </div>
@@ -1181,14 +1184,53 @@ export default function DispatchPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Job Name *</label>
                 <input required value={jobForm.job_name} onChange={e => setJobForm(f => ({ ...f, job_name: e.target.value }))} placeholder="e.g. Downtown Grading Phase 1" className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]" />
               </div>
+              {/* Contractor — dropdown of saved contractors + manual entry */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Contractor</label>
+                {contractors.length > 0 ? (
+                  <div className="space-y-2">
+                    <select
+                      value={contractors.some(c => c.name === jobForm.contractor) ? jobForm.contractor : '__manual__'}
+                      onChange={e => {
+                        if (e.target.value === '__manual__') setJobForm(f => ({ ...f, contractor: '' }))
+                        else setJobForm(f => ({ ...f, contractor: e.target.value }))
+                      }}
+                      className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]"
+                    >
+                      <option value="">— Select a contractor —</option>
+                      {contractors.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                      <option value="__manual__">✏️ Enter manually…</option>
+                    </select>
+                    {(!contractors.some(c => c.name === jobForm.contractor) && jobForm.contractor !== '') || !contractors.some(c => c.name === jobForm.contractor) ? (
+                      !contractors.some(c => c.name === jobForm.contractor) && (
+                        <input
+                          value={jobForm.contractor}
+                          onChange={e => setJobForm(f => ({ ...f, contractor: e.target.value }))}
+                          placeholder="Enter contractor name"
+                          className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]"
+                        />
+                      )
+                    ) : null}
+                  </div>
+                ) : (
+                  <input
+                    value={jobForm.contractor}
+                    onChange={e => setJobForm(f => ({ ...f, contractor: e.target.value }))}
+                    placeholder="Contractor name"
+                    className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]"
+                  />
+                )}
+              </div>
+
+              {/* Start Location + Drop Location */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Contractor</label>
-                  <input value={jobForm.contractor} onChange={e => setJobForm(f => ({ ...f, contractor: e.target.value }))} placeholder="Contractor name" className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Location</label>
+                  <input value={jobForm.location} onChange={e => setJobForm(f => ({ ...f, location: e.target.value }))} placeholder="Pick-up / pit address" className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                  <input value={jobForm.location} onChange={e => setJobForm(f => ({ ...f, location: e.target.value }))} placeholder="Job site address" className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Drop Location</label>
+                  <input value={jobForm.drop_location} onChange={e => setJobForm(f => ({ ...f, drop_location: e.target.value }))} placeholder="Job site / delivery address" className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
