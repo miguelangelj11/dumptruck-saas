@@ -52,16 +52,16 @@ const s = StyleSheet.create({
   tableRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#f3f4f6', paddingVertical: 5, paddingHorizontal: 6 },
   tableRowAlt: { backgroundColor: '#f9fafb' },
   // Column widths — 10 columns totalling 100%
-  colPhoto:  { width: '5%' },
-  colDate:   { width: '9%' },
-  colDriver: { width: '12%' },
-  colTruck:  { width: '8%' },
-  colDesc:   { width: '17%' },
-  colTicket: { width: '8%' },
-  colTime:   { width: '13%' },
-  colQty:    { width: '6%', textAlign: 'right' },
-  colRate:   { width: '11%', textAlign: 'right' },
-  colAmt:    { width: '11%', textAlign: 'right' },
+  colPhoto:    { width: '5%' },
+  colDate:     { width: '9%' },
+  colTruck:    { width: '8%' },
+  colDesc:     { width: '17%' },
+  colLocation: { width: '12%' },
+  colTicket:   { width: '8%' },
+  colTime:     { width: '13%' },
+  colQty:      { width: '6%', textAlign: 'right' },
+  colRate:     { width: '11%', textAlign: 'right' },
+  colAmt:      { width: '11%', textAlign: 'right' },
   // Totals
   totalRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 4 },
   totalLabel: { width: 100, textAlign: 'right', color: '#6b7280' },
@@ -134,9 +134,9 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
           <View style={s.tableHeader}>
             <Text style={s.colPhoto}></Text>
             <Text style={s.colDate}>Date</Text>
-            <Text style={s.colDriver}>Driver</Text>
-            <Text style={s.colTruck}>Truck</Text>
-            <Text style={s.colDesc}>Material / Location</Text>
+            <Text style={s.colTruck}>Truck #</Text>
+            <Text style={s.colDesc}>Material</Text>
+            <Text style={s.colLocation}>Location</Text>
             <Text style={s.colTicket}>Ticket #</Text>
             <Text style={s.colTime}>Time In / Out</Text>
             <Text style={s.colQty}>Qty</Text>
@@ -153,9 +153,9 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
                   : <View style={{ width: 24, height: 24, backgroundColor: '#f3f4f6', borderRadius: 2 }} />}
               </View>
               <Text style={s.colDate}>{item.line_date ?? ''}</Text>
-              <Text style={s.colDriver}>{item.driver_name ?? ''}</Text>
               <Text style={s.colTruck}>{item.truck_number ?? ''}</Text>
               <Text style={s.colDesc}>{item.material || '—'}</Text>
+              <Text style={s.colLocation}>{item.driver_name ?? ''}</Text>
               <Text style={s.colTicket}>{item.ticket_number ?? '—'}</Text>
               <Text style={s.colTime}>{item.time_worked || '—'}</Text>
               <Text style={s.colQty}>{item.quantity ?? ''}</Text>

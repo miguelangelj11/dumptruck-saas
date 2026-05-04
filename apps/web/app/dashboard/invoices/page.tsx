@@ -1694,8 +1694,8 @@ export default function InvoicesPage() {
                     <th style={{paddingLeft:8,paddingRight:4,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200"></th>
                     <th style={{paddingLeft:16,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Date</th>
                     <th style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Truck #</th>
-                    <th style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Driver</th>
-                    <th style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Material / Location</th>
+                    <th style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Material</th>
+                    <th style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Location</th>
                     <th style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Ticket #</th>
                     <th style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Time</th>
                     <th style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-right text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Qty</th>
@@ -1715,8 +1715,8 @@ export default function InvoicesPage() {
                       </td>
                       <td style={{paddingLeft:16,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-gray-600 whitespace-nowrap text-xs">{fmtDate(item.line_date)}</td>
                       <td style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="font-semibold text-gray-800">{item.truck_number || <span className="text-gray-300 font-normal">—</span>}</td>
-                      <td style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-gray-700 whitespace-nowrap">{item.driver_name}</td>
                       <td style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-gray-600">{item.material || <span className="text-gray-300">—</span>}</td>
+                      <td style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-gray-700 whitespace-nowrap">{item.driver_name || <span className="text-gray-300">—</span>}</td>
                       <td style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="font-mono text-gray-600 text-xs">{item.ticket_number || <span className="text-gray-300 font-sans">—</span>}</td>
                       <td style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-gray-500 text-xs whitespace-nowrap">{item.time_worked || <span className="text-gray-300">—</span>}</td>
                       <td style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-gray-700 text-right tabular-nums">{item.quantity != null ? item.quantity : <span className="text-gray-300">—</span>}</td>
