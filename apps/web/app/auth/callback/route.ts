@@ -42,15 +42,33 @@ export async function GET(request: Request) {
 
   const admin = getAdmin()
 
+  // ── 0. Check if this auth user is linked to a driver record ──────────────
+  const { data: driverRecord } = await admin
+    .from('drivers')
+    .select('id, company_id')
+    .eq('auth_user_id', user.id)
+    .maybeSingle()
+
+  if (driverRecord) {
+    await admin.from('profiles').upsert({
+      id:              user.id,
+      email:           user.email,
+      organization_id: driverRecord.company_id,
+      role:            'driver',
+    }, { onConflict: 'id', ignoreDuplicates: true })
+    return NextResponse.redirect(`${origin}/driver`)
+  }
+
   // ── 1. Profile already exists → go to dashboard ──────────────────────────
   const { data: existingProfile } = await admin
     .from('profiles')
-    .select('id')
+    .select('id, role')
     .eq('id', user.id)
     .maybeSingle()
 
   if (existingProfile) {
-    return NextResponse.redirect(`${origin}/dashboard`)
+    const dest = (existingProfile as Record<string, unknown>).role === 'driver' ? '/driver' : '/dashboard'
+    return NextResponse.redirect(`${origin}${dest}`)
   }
 
   // ── 2. No profile — check for an invitation ───────────────────────────────

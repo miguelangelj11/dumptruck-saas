@@ -34,6 +34,8 @@ export default function DriverSubmitPage() {
 
   const [photo, setPhoto] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [ocrLoading, setOcrLoading] = useState(false)
+  const [ocrFilled, setOcrFilled] = useState(false)
   const [jobs, setJobs] = useState<{ id: string; dispatchId: string; job_name: string }[]>([])
   const [selectedJob, setSelectedJob] = useState('')
   const [date, setDate] = useState(today)
@@ -92,7 +94,7 @@ export default function DriverSubmitPage() {
     if (calc) setHours(calc)
   }, [startTime, endTime])
 
-  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     const fileCheck = validate(fileUploadSchema, { size: file.size, type: file.type })
@@ -102,6 +104,31 @@ export default function DriverSubmitPage() {
     }
     setPhoto(file)
     setPhotoPreview(URL.createObjectURL(file))
+    setOcrFilled(false)
+
+    // Run OCR
+    setOcrLoading(true)
+    try {
+      const fd = new FormData()
+      fd.append('image', file)
+      const res = await fetch('/api/ocr', { method: 'POST', body: fd })
+      const data = await res.json() as {
+        ok: boolean; mock?: boolean; confidence?: number;
+        fields?: { ticket_number?: string | null; tonnage?: string | number | null; date?: string | null; material?: string | null; truck_number?: string | null }
+      }
+      if (data.ok && data.fields && (data.confidence ?? 0) >= 30) {
+        if (data.fields.ticket_number)  setTicketNum(data.fields.ticket_number)
+        if (data.fields.date)           setDate(data.fields.date)
+        if (data.fields.material)       setMaterial(data.fields.material)
+        if (data.fields.truck_number)   setTruckNumber(data.fields.truck_number)
+        setOcrFilled(true)
+        toast.success('Fields auto-filled from ticket photo ✓')
+      }
+    } catch {
+      // Non-fatal — just skip auto-fill
+    } finally {
+      setOcrLoading(false)
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -196,11 +223,11 @@ export default function DriverSubmitPage() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Camera */}
-        <div className="flex flex-col items-center">
+        <div className="flex flex-col items-center gap-2">
           <button
             type="button"
             onClick={() => photoRef.current?.click()}
-            className="w-full h-36 rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center gap-2 active:bg-gray-100 transition-colors"
+            className="w-full h-36 rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center gap-2 active:bg-gray-100 transition-colors relative overflow-hidden"
           >
             {photoPreview ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -211,7 +238,18 @@ export default function DriverSubmitPage() {
                 <span className="text-sm text-gray-500 font-medium">Tap to take photo or upload</span>
               </>
             )}
+            {ocrLoading && (
+              <div className="absolute inset-0 bg-white/80 flex flex-col items-center justify-center gap-2">
+                <Loader2 className="h-6 w-6 animate-spin text-[#1e3a2a]" />
+                <span className="text-xs font-semibold text-[#1e3a2a]">Reading ticket…</span>
+              </div>
+            )}
           </button>
+          {ocrFilled && (
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-1.5">
+              <span>✓</span> Fields auto-filled from ticket — tap to edit
+            </div>
+          )}
           <input
             ref={photoRef}
             type="file"

@@ -55,7 +55,7 @@ export default async function DriverHomePage() {
     .from('dispatches')
     .select('id, job_id, status, start_time, instructions, loads_completed, accepted_at, created_at')
     .eq('company_id', driver.companyId)
-    .eq('driver_name', driver.driverName)
+    .eq('driver_id', driver.driverId)
     .eq('dispatch_date', todayStr)
     .not('status', 'eq', 'completed')
     .order('created_at', { ascending: false })

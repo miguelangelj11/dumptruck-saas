@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   Plus, Pencil, Trash2, Loader2, X, MapPin, Users, Truck,
@@ -62,6 +62,70 @@ const EMPTY_DISPATCH = { job_id: '', driver_id: '', truck_number: '', start_time
 
 function fmtMoney(n: number) {
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : n.toLocaleString()
+}
+
+// ─── Job Profit Panel ─────────────────────────────────────────────────────────
+
+function JobProfitPanel({ job, revenue, supabase }: {
+  job: JobWithLoads
+  revenue: number
+  supabase: ReturnType<typeof createClient>
+}) {
+  const r = job as Record<string, unknown>
+  const [driverCost, setDriverCost] = useState(Number(r.driver_cost ?? 0))
+  const [fuelCost,   setFuelCost]   = useState(Number(r.fuel_cost   ?? 0))
+  const [otherCosts, setOtherCosts] = useState(Number(r.other_costs ?? 0))
+  const [saving,     setSaving]     = useState(false)
+
+  const totalCost  = driverCost + fuelCost + otherCosts
+  const profit     = revenue - totalCost
+  const profitPos  = profit >= 0
+
+  async function saveCost(field: string, value: number) {
+    setSaving(true)
+    await supabase.from('jobs').update({ [field]: value }).eq('id', job.id)
+    setSaving(false)
+  }
+
+  return (
+    <div>
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+        <TrendingUp className="h-3.5 w-3.5" /> Job Profit
+        {saving && <Loader2 className="h-3 w-3 animate-spin ml-1 text-gray-400" />}
+      </p>
+      <div className="grid grid-cols-2 gap-2 mb-2">
+        {([
+          ['Driver Costs',  'driver_cost', driverCost, setDriverCost],
+          ['Fuel Costs',    'fuel_cost',   fuelCost,   setFuelCost],
+          ['Other Costs',   'other_costs', otherCosts, setOtherCosts],
+        ] as [string, string, number, React.Dispatch<React.SetStateAction<number>>][]).map(([label, field, val, set]) => (
+          <div key={field}>
+            <label className="text-[10px] text-gray-400 font-medium">{label}</label>
+            <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white mt-0.5">
+              <span className="px-2 text-gray-400 text-xs">$</span>
+              <input
+                type="number" min={0} step={0.01}
+                value={val}
+                onChange={e => set(Number(e.target.value))}
+                onBlur={() => saveCost(field, val)}
+                className="flex-1 py-1.5 pr-2 text-sm text-gray-900 focus:outline-none bg-white"
+              />
+            </div>
+          </div>
+        ))}
+        <div className={`rounded-lg p-2 flex flex-col justify-center ${profitPos ? 'bg-green-50' : 'bg-red-50'}`}>
+          <p className="text-[10px] text-gray-400 font-medium">Net Profit</p>
+          <p className={`text-base font-bold mt-0.5 ${profitPos ? 'text-green-700' : 'text-red-600'}`}>
+            {profitPos ? '+' : '-'}${Math.abs(profit).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          </p>
+        </div>
+      </div>
+      <div className="flex justify-between text-xs text-gray-400">
+        <span>Revenue: <span className="text-gray-700 font-medium">${revenue.toLocaleString()}</span></span>
+        <span>Costs: <span className="text-gray-700 font-medium">${totalCost.toLocaleString()}</span></span>
+      </div>
+    </div>
+  )
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -204,6 +268,17 @@ export default function DispatchPage() {
   })
 
   const availableDrivers = drivers.filter(d => !driverDispMap.has(d.id))
+
+  // Load counts per driver name → "suggested" driver in dispatch form
+  const driverLoadCountMap = new Map<string, number>()
+  todayLoads.forEach(l => {
+    if (l.driver_name) driverLoadCountMap.set(l.driver_name, (driverLoadCountMap.get(l.driver_name) ?? 0) + 1)
+  })
+  const suggestedDriverId = availableDrivers.length > 0
+    ? [...availableDrivers].sort((a, b) =>
+        (driverLoadCountMap.get(a.name) ?? 0) - (driverLoadCountMap.get(b.name) ?? 0)
+      )[0]?.id
+    : null
 
   // ── Job CRUD ────────────────────────────────────────────────────────────────
 
@@ -726,6 +801,10 @@ export default function DispatchPage() {
                                 ))}
                               </div>
                             </div>
+
+                            {/* Profit tracker */}
+                            <JobProfitPanel job={job} revenue={jobRevenue} supabase={supabase} />
+
                             {(job.start_date || job.end_date) && (
                               <div>
                                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Schedule</p>
@@ -1101,7 +1180,12 @@ export default function DispatchPage() {
                     <option value="">— Select a driver —</option>
                     {availableDrivers.length > 0 && (
                       <optgroup label="Available">
-                        {availableDrivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                        {availableDrivers.map(d => (
+                          <option key={d.id} value={d.id}>
+                            {d.id === suggestedDriverId ? '⭐ ' : ''}{d.name}
+                            {driverLoadCountMap.get(d.name) ? ` · ${driverLoadCountMap.get(d.name)} loads today` : ''}
+                          </option>
+                        ))}
                       </optgroup>
                     )}
                     {drivers.filter(d => driverDispMap.has(d.id)).length > 0 && (
@@ -1114,6 +1198,11 @@ export default function DispatchPage() {
                   </select>
                   {availableDrivers.length === 0 && !editingDispatch && (
                     <p className="text-xs text-amber-600 mt-1">No available drivers.</p>
+                  )}
+                  {suggestedDriverId && !dispForm.driver_id && (
+                    <p className="text-xs text-[#2d7a4f] mt-1">
+                      ⭐ {availableDrivers.find(d => d.id === suggestedDriverId)?.name} has the fewest loads today
+                    </p>
                   )}
                 </div>
               ) : (

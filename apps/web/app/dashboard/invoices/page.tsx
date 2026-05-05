@@ -306,6 +306,9 @@ export default function InvoicesPage() {
   const [sending, setSending] = useState(false)
   const [detailTicketPhotos, setDetailTicketPhotos] = useState<{ ticketNumber: string | null; imageUrl: string; date: string; driverName: string | null; jobName: string }[]>([])
 
+  const [uninvoicedCount, setUninvoicedCount] = useState(0)
+  const [generatingInvoice, setGeneratingInvoice] = useState(false)
+
   const supabase = createClient()
 
   async function getUid(): Promise<string | null> {
@@ -446,7 +449,7 @@ export default function InvoicesPage() {
     setSelectedCTIds(new Set())
   }
 
-  useEffect(() => { fetchInvoices() }, [])
+  useEffect(() => { fetchInvoices(); fetchUninvoicedCount() }, [])
 
   useEffect(() => {
     if (view === 'create') {
@@ -656,6 +659,48 @@ export default function InvoicesPage() {
     fetchInvoices()
   }
 
+  async function fetchUninvoicedCount() {
+    const companyId = await getCompanyId()
+    if (!companyId) return
+    const { count } = await supabase
+      .from('loads')
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', companyId)
+      .in('status', ['pending', 'approved'])
+    setUninvoicedCount(count ?? 0)
+  }
+
+  async function handleGenerateFromTickets() {
+    setGeneratingInvoice(true)
+    resetCreateForm()
+    setInvoiceType('client')
+    await Promise.all([fetchLoadsForCreate(), fetchClientCompaniesForCreate(), fetchDriversForCreate()])
+
+    const companyId = await getCompanyId()
+    if (companyId) {
+      const { data: uninvoiced } = await supabase
+        .from('loads')
+        .select('id, client_company')
+        .eq('company_id', companyId)
+        .in('status', ['pending', 'approved'])
+
+      if (uninvoiced && uninvoiced.length > 0) {
+        // Find the most common client_company
+        const freq = new Map<string, number>()
+        uninvoiced.forEach((l: { id: string; client_company: string | null }) => { if (l.client_company) freq.set(l.client_company, (freq.get(l.client_company) ?? 0) + 1) })
+        const topClient = [...freq.entries()].sort((a, b) => b[1] - a[1])[0]?.[0]
+        const toSelect = topClient
+          ? uninvoiced.filter((l: { id: string; client_company: string | null }) => l.client_company === topClient)
+          : uninvoiced
+        setSelectedLoadIds(new Set(toSelect.map((l: { id: string; client_company: string | null }) => l.id)))
+        if (topClient) setCreateForm(f => ({ ...f, client_name: topClient }))
+      }
+    }
+
+    setGeneratingInvoice(false)
+    setView('create')
+  }
+
   function resetCreateForm() {
     setInvoiceType('client')
     setCreateForm({ client_name: '', client_address: '', client_phone: '', client_email: '', date_from: '', date_to: '', notes: '', due_date: localDatePlus(30), date_paid: '', payment_method: 'check' })
@@ -791,6 +836,26 @@ export default function InvoicesPage() {
             </button>
           )}
         </div>
+
+        {/* Uninvoiced tickets banner */}
+        {uninvoicedCount > 0 && invoiceTab === 'sent' && (
+          <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-amber-600" />
+              <span className="text-sm font-medium text-amber-800">
+                {uninvoicedCount} ticket{uninvoicedCount !== 1 ? 's' : ''} ready to invoice
+              </span>
+            </div>
+            <button
+              onClick={handleGenerateFromTickets}
+              disabled={generatingInvoice}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60"
+            >
+              {generatingInvoice ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+              Generate Invoice
+            </button>
+          </div>
+        )}
 
         {/* Tab bar */}
         <div className="flex gap-1 mb-5 bg-gray-100 rounded-lg p-1 w-fit">

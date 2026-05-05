@@ -137,6 +137,7 @@ export type ClientCompany = {
   company_id: string
   name: string
   address: string | null
+  portal_token: string | null
   created_at: string
 }
 

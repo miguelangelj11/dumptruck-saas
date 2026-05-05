@@ -65,9 +65,24 @@ export async function POST(request: Request) {
   try {
     switch (event.type) {
 
-      // ── Checkout completed → activate subscription ─────────────────────────
+      // ── Checkout completed → activate subscription OR mark invoice paid ──────
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
+
+        // Invoice payment (one-time, from client portal)
+        if (session.mode === 'payment' && session.metadata?.invoice_id) {
+          const invoiceId = session.metadata.invoice_id
+          const companyId = session.metadata.company_id
+          const { error } = await admin
+            .from('invoices')
+            .update({ status: 'paid', updated_at: new Date().toISOString() })
+            .eq('id', invoiceId)
+            .eq('company_id', companyId)
+          if (error) console.error('[stripe-webhook] invoice paid update error:', error)
+          else console.log(`[stripe-webhook] Invoice ${invoiceId} marked paid`)
+          break
+        }
+
         if (session.mode !== 'subscription') break
 
         const customerId     = session.customer as string

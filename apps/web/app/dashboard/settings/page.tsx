@@ -10,7 +10,7 @@ import {
   Loader2, Plus, Trash2, Building2, Upload, X, Palette, Globe,
   FileText, Users, Bell, CreditCard, Shield, Download,
   Check, AlertTriangle, Mail, Lock, Eye, EyeOff, Truck, Clock,
-  Hash, Package,
+  Hash, Package, Link2,
 } from 'lucide-react'
 import type { ClientCompany } from '@/lib/types'
 import LanguageSelector from '@/components/language-selector'
@@ -968,16 +968,31 @@ export default function SettingsPage() {
                       {c.address && <p className="text-xs text-gray-400 mt-0.5">{c.address}</p>}
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleDeleteCompany(c.id, c.name)}
-                    disabled={deletingId === c.id}
-                    className="p-1.5 text-gray-300 hover:text-red-500 transition-colors disabled:opacity-50"
-                    aria-label={`Remove ${c.name}`}
-                  >
-                    {deletingId === c.id
-                      ? <Loader2 className="h-4 w-4 animate-spin" />
-                      : <Trash2 className="h-4 w-4" />}
-                  </button>
+                  <div className="flex items-center gap-1">
+                    {c.portal_token && (
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/client-portal/${c.portal_token}`)
+                          toast.success(`Portal link copied for ${c.name}`)
+                        }}
+                        title="Copy client portal link"
+                        className="p-1.5 text-gray-400 hover:text-[#2d7a4f] transition-colors"
+                        aria-label={`Copy portal link for ${c.name}`}
+                      >
+                        <Link2 className="h-4 w-4" />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDeleteCompany(c.id, c.name)}
+                      disabled={deletingId === c.id}
+                      className="p-1.5 text-gray-300 hover:text-red-500 transition-colors disabled:opacity-50"
+                      aria-label={`Remove ${c.name}`}
+                    >
+                      {deletingId === c.id
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : <Trash2 className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
