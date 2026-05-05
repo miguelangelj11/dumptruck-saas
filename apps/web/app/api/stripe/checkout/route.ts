@@ -104,8 +104,7 @@ export async function POST(request: Request) {
   if (stripeCustomerId) {
     sessionParams.customer = stripeCustomerId
   } else {
-    sessionParams.customer_email   = user.email
-    sessionParams.customer_creation = 'always'
+    sessionParams.customer_email = user.email
   }
 
   try {
