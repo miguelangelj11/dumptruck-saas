@@ -23,11 +23,15 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [agreedToTerms, setAgreedToTerms]     = useState(false)
   const [loading, setLoading]                 = useState(false)
+  const [buyLoading, setBuyLoading]           = useState(false)
+  const [subscribeMode, setSubscribeMode]     = useState(false)
 
   useEffect(() => {
-    const p = new URLSearchParams(window.location.search).get('plan')
+    const params = new URLSearchParams(window.location.search)
+    const p = params.get('plan')
     if (p === 'fleet') setSelectedPlan('fleet')
     else if (p === 'owner_operator' || p === 'owner') setSelectedPlan('owner_operator')
+    if (params.get('subscribe') === 'true') setSubscribeMode(true)
   }, [])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -98,6 +102,67 @@ export default function SignupPage() {
     }
   }
 
+  async function handleBuyNow() {
+    if (!selectedPlan)                { toast.error('Please select a plan'); return }
+    if (!companyName.trim())          { toast.error('Company name is required'); return }
+    if (!email.trim())                { toast.error('Email is required'); return }
+    if (password.length < 6)          { toast.error('Password must be at least 6 characters'); return }
+    if (password !== confirmPassword) { toast.error('Passwords do not match'); return }
+    if (!agreedToTerms)               { toast.error('You must agree to the Terms of Service'); return }
+
+    setBuyLoading(true)
+    const timer = setTimeout(() => {
+      toast.error('Something went wrong. Please try again.')
+      setBuyLoading(false)
+    }, 20_000)
+
+    try {
+      const supabase = createClient()
+
+      const { data: authData, error: authError } = await supabase.auth.signUp({ email, password })
+      if (authError) { clearTimeout(timer); toast.error(authError.message); setBuyLoading(false); return }
+      const user = authData.user
+      if (!user) { clearTimeout(timer); toast.error('Failed to create account. Please try again.'); setBuyLoading(false); return }
+
+      // Create company with onboarding_completed: true so they skip the onboarding redirect
+      await supabase.from('companies').insert({
+        id:                   user.id,
+        name:                 companyName,
+        owner_id:             user.id,
+        plan:                 selectedPlan,
+        subscription_status:  'pending_checkout',
+        onboarding_completed: true,
+      })
+
+      await supabase.from('profiles').upsert({
+        id:              user.id,
+        organization_id: user.id,
+      }, { onConflict: 'id' })
+
+      localStorage.setItem('dtb_selected_plan', selectedPlan)
+
+      const planKey = selectedPlan === 'owner_operator' ? 'owner' : 'fleet'
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: planKey, skip_trial: true }),
+      })
+      const checkoutData = await res.json() as { url?: string }
+      clearTimeout(timer)
+      if (checkoutData.url) {
+        window.location.href = checkoutData.url
+      } else {
+        toast.error('Failed to start checkout. Please try again.')
+        setBuyLoading(false)
+      }
+    } catch (err) {
+      clearTimeout(timer)
+      console.error('[signup buy-now] unexpected error', err)
+      toast.error('Something went wrong. Please try again.')
+      setBuyLoading(false)
+    }
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#0f1923', backgroundImage: 'radial-gradient(#ffffff06 1px, transparent 1px)', backgroundSize: '24px 24px', padding: '40px 24px' }}>
       <div style={{ width: '100%', maxWidth: '520px', margin: '0 auto' }}>
@@ -108,8 +173,12 @@ export default function SignupPage() {
             <Image src="/dtb-logo.png" alt="DumpTruckBoss" width={48} height={48} className="rounded-full object-contain" style={{ width: '48px', height: '48px' }} />
             <span style={{ fontSize: '20px', fontWeight: 700, color: '#fff' }}>DumpTruckBoss</span>
           </Link>
-          <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#fff', marginBottom: '6px' }}>Start your free 14-day trial</h1>
-          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.45)' }}>No credit card required. Full access from day one.</p>
+          <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#fff', marginBottom: '6px' }}>
+            {subscribeMode ? 'Subscribe to DumpTruckBoss' : 'Start your free 14-day trial'}
+          </h1>
+          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.45)' }}>
+            {subscribeMode ? 'Enter your info below and you\'ll be taken to checkout.' : 'No credit card required. Full access from day one.'}
+          </p>
         </div>
 
         {/* Plan selector */}
@@ -168,25 +237,52 @@ export default function SignupPage() {
               </span>
             </label>
 
-            <button type="submit" disabled={loading || !selectedPlan} style={{
-              width: '100%', padding: '14px', borderRadius: '10px',
-              background: !selectedPlan ? '#d1d5db' : '#2d7a4f',
-              color: '#fff', fontSize: '15px', fontWeight: 700, border: 'none',
-              cursor: !selectedPlan ? 'not-allowed' : 'pointer', transition: 'background 0.15s', opacity: loading ? 0.7 : 1,
-            }}>
-              {loading ? 'Creating account…' : 'Start My Free 14-Day Trial'}
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button type="submit" disabled={loading || buyLoading || !selectedPlan} style={{
+                width: '100%', padding: '14px', borderRadius: '10px',
+                background: !selectedPlan ? '#d1d5db' : subscribeMode ? 'rgba(45,122,79,0.08)' : '#2d7a4f',
+                color: !selectedPlan ? '#9ca3af' : subscribeMode ? '#374151' : '#fff',
+                fontSize: '15px', fontWeight: 700,
+                border: subscribeMode ? '1px solid #e5e7eb' : 'none',
+                cursor: !selectedPlan ? 'not-allowed' : 'pointer', transition: 'all 0.15s',
+                opacity: (loading || buyLoading) ? 0.7 : 1,
+              }}>
+                {loading ? 'Creating account…' : 'Start My Free 14-Day Trial'}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleBuyNow}
+                disabled={loading || buyLoading || !selectedPlan}
+                style={{
+                  width: '100%', padding: '14px', borderRadius: '10px',
+                  background: !selectedPlan ? '#f3f4f6' : '#1e3a2a',
+                  color: !selectedPlan ? '#9ca3af' : '#fff',
+                  fontSize: '15px', fontWeight: 700, border: 'none',
+                  cursor: (!selectedPlan || loading || buyLoading) ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.15s', opacity: (loading || buyLoading) ? 0.7 : 1,
+                }}
+              >
+                {buyLoading
+                  ? 'Redirecting to checkout…'
+                  : selectedPlan
+                  ? `Subscribe Now — ${PLANS.find(p => p.id === selectedPlan)?.price} →`
+                  : 'Subscribe Now →'}
+              </button>
+            </div>
           </form>
 
-          <div style={{ marginTop: '20px', padding: '14px 16px', background: '#f9fafb', borderRadius: '10px', border: '1px solid #e5e7eb' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-              <span>🔒</span>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>No credit card required</span>
+          {!subscribeMode && (
+            <div style={{ marginTop: '20px', padding: '14px 16px', background: '#f9fafb', borderRadius: '10px', border: '1px solid #e5e7eb' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                <span>🔒</span>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>No credit card required</span>
+              </div>
+              <p style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.5 }}>
+                Your 14-day free trial starts immediately. After 14 days you'll be asked to subscribe to continue using DumpTruckBoss.
+              </p>
             </div>
-            <p style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.5 }}>
-              Your 14-day free trial starts immediately. After 14 days you'll be asked to subscribe to continue using DumpTruckBoss.
-            </p>
-          </div>
+          )}
 
           <p style={{ textAlign: 'center', fontSize: '14px', color: '#6b7280', marginTop: '20px' }}>
             Already have an account?{' '}

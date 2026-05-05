@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
@@ -7,6 +8,7 @@ import Sidebar from '@/components/dashboard/sidebar'
 import ThemeInjector from '@/components/theme-injector'
 import ChatWidget from '@/components/chat-widget'
 import OnboardingChecklist from '@/components/onboarding-checklist'
+import CheckoutSuccessBanner from '@/components/checkout-success-banner'
 
 function getAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -180,6 +182,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
           plan={plan}
         />
         <main className="flex-1 overflow-y-auto pt-14 md:pt-0 flex flex-col">
+          <Suspense fallback={null}>
+            <CheckoutSuccessBanner />
+          </Suspense>
           {pastDueBanner}
           {trialBanner}
           <div className="flex-1">

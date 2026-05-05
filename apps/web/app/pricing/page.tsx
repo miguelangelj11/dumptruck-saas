@@ -382,30 +382,49 @@ export default function PricingPage() {
                     {plan.ctaLabel} →
                   </Link>
                 ) : (
-                  <button
-                    onClick={() => handleStartTrial(plan.key)}
-                    disabled={checkoutLoading === plan.key}
-                    style={{
-                      display: 'block',
-                      width: '100%',
-                      textAlign: 'center',
-                      padding: '12px 16px',
-                      borderRadius: '10px',
-                      fontSize: '14px',
-                      fontWeight: 700,
-                      cursor: checkoutLoading === plan.key ? 'default' : 'pointer',
-                      marginBottom: '28px',
-                      transition: 'opacity 0.15s',
-                      border: 'none',
-                      opacity: checkoutLoading === plan.key ? 0.7 : 1,
-                      ...(hl
-                        ? { background: GREEN, color: '#fff' }
-                        : { background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.12)' }
-                      ),
-                    }}
-                  >
-                    {checkoutLoading === plan.key ? 'Loading…' : `${plan.ctaLabel} →`}
-                  </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '28px' }}>
+                    <button
+                      onClick={() => handleStartTrial(plan.key)}
+                      disabled={checkoutLoading === plan.key}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        textAlign: 'center',
+                        padding: '12px 16px',
+                        borderRadius: '10px',
+                        fontSize: '14px',
+                        fontWeight: 700,
+                        cursor: checkoutLoading === plan.key ? 'default' : 'pointer',
+                        transition: 'opacity 0.15s',
+                        border: 'none',
+                        opacity: checkoutLoading === plan.key ? 0.7 : 1,
+                        ...(hl
+                          ? { background: GREEN, color: '#fff' }
+                          : { background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.12)' }
+                        ),
+                      }}
+                    >
+                      {checkoutLoading === plan.key ? 'Loading…' : `${plan.ctaLabel} →`}
+                    </button>
+                    <Link
+                      href={`/signup?plan=${plan.key === 'owner' ? 'owner_operator' : plan.key}&subscribe=true`}
+                      style={{
+                        display: 'block',
+                        textAlign: 'center',
+                        padding: '10px 16px',
+                        borderRadius: '10px',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        textDecoration: 'none',
+                        color: hl ? '#4ade80' : 'rgba(255,255,255,0.55)',
+                        border: `1px solid ${hl ? 'rgba(74,222,128,0.25)' : 'rgba(255,255,255,0.1)'}`,
+                        background: 'transparent',
+                        transition: 'opacity 0.15s',
+                      }}
+                    >
+                      Subscribe Now — {plan.monthlyPrice}/mo →
+                    </Link>
+                  </div>
                 )}
 
                 {/* Divider */}

@@ -27,6 +27,7 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => ({}))
   const plan: PlanKey = body.plan ?? 'fleet'
+  const skipTrial: boolean = body.skip_trial === true
 
   const priceId = PRICE_IDS[plan]
   if (!priceId) {
@@ -39,10 +40,12 @@ export async function POST(request: Request) {
   const stripe   = new Stripe(secretKey)
   const siteUrl  = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin
   const isEnterprise = plan === 'enterprise'
-  const trialParams = !isEnterprise ? {
+  const trialParams = (!isEnterprise && !skipTrial) ? {
     trial_period_days: 14,
     trial_settings: { end_behavior: { missing_payment_method: 'cancel' as const } },
   } : {}
+  const paymentCollection: Stripe.Checkout.SessionCreateParams['payment_method_collection'] =
+    (isEnterprise || skipTrial) ? 'always' : 'if_required'
 
   // ── Guest "pay first, create account after" flow ──────────────────────────
   if (!user) {
@@ -54,7 +57,7 @@ export async function POST(request: Request) {
       cancel_url:  `${siteUrl}/pricing`,
       metadata:    { plan },
       subscription_data: { metadata: { plan }, ...trialParams },
-      payment_method_collection: isEnterprise ? 'always' : 'if_required',
+      payment_method_collection: paymentCollection,
       allow_promotion_codes: true,
     })
     return NextResponse.json({ url: session.url })
@@ -87,7 +90,7 @@ export async function POST(request: Request) {
     cancel_url:  `${siteUrl}/pricing`,
     metadata:    { company_id: companyId, plan },
     subscription_data: { metadata: { company_id: companyId, plan }, ...trialParams },
-    payment_method_collection: isEnterprise ? 'always' : 'if_required',
+    payment_method_collection: paymentCollection,
     allow_promotion_codes: true,
   }
 
