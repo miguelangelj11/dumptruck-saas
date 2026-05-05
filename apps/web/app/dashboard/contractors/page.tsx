@@ -34,7 +34,7 @@ function fmtDate(s: string | null | undefined): string {
 
 const EMPTY_TICKET = {
   job_name: '', client_company: '', date: '',
-  hours_worked: '', truck_number: '', material: '', rate: '', rate_type: 'load', status: 'pending', notes: '',
+  hours_worked: '', truck_number: '', ticket_number: '', material: '', rate: '', rate_type: 'load', status: 'pending', notes: '',
 }
 
 function makeEmptySlip(): SlipRow {
@@ -188,6 +188,7 @@ export default function ContractorsPage() {
       job_name: t.job_name, client_company: t.client_company ?? '',
       date: t.date, hours_worked: t.hours_worked ?? '',
       truck_number: existingTruck,
+      ticket_number: t.ticket_number ?? '',
       material: t.material ?? '',
       rate: String(t.rate), rate_type: t.rate_type ?? 'load', status: t.status, notes: t.notes ?? '',
     })
@@ -231,6 +232,7 @@ export default function ContractorsPage() {
       date: ticketForm.date,
       hours_worked: ticketForm.hours_worked || null,
       truck_number: ticketForm.truck_number || null,
+      ticket_number: ticketForm.ticket_number || null,
       material: ticketForm.material || null,
       rate: parseFloat(ticketForm.rate) || 0,
       rate_type: ticketForm.rate_type,
@@ -241,8 +243,8 @@ export default function ContractorsPage() {
     }
 
     if (editingTicket) {
-      const { job_name, client_company, date, hours_worked, truck_number, material, rate, rate_type, status, notes } = basePayload
-      const { error } = await supabase.from('contractor_tickets').update({ job_name, client_company, date, hours_worked, truck_number, material, rate, rate_type, status, notes }).eq('id', editingTicket.id)
+      const { job_name, client_company, date, hours_worked, truck_number, ticket_number, material, rate, rate_type, status, notes } = basePayload
+      const { error } = await supabase.from('contractor_tickets').update({ job_name, client_company, date, hours_worked, truck_number, ticket_number, material, rate, rate_type, status, notes }).eq('id', editingTicket.id)
       if (error) { toast.error(error.message); setSavingTicket(false); return }
       const newSlips = slipRows.filter(r => r.tonnage || r.imageFile)
       if (newSlips.length > 0) {
@@ -332,7 +334,7 @@ export default function ContractorsPage() {
               <table className="w-full min-w-[700px] text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
-                    {['Photos', 'Job', 'Company', 'Truck #', 'Material', 'Rate', 'Tickets', 'Hours', 'Date', 'Status', ''].map(h => (
+                    {['Photos', 'Job', 'Ticket #', 'Company', 'Truck #', 'Material', 'Rate', 'Tickets', 'Hours', 'Date', 'Status', ''].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                     ))}
                   </tr>
@@ -361,6 +363,7 @@ export default function ContractorsPage() {
                           )}
                         </td>
                         <td className="px-4 py-3 font-medium text-gray-900">{t.job_name}</td>
+                        <td className="px-4 py-3 font-mono text-gray-600 text-xs">{t.ticket_number || <span className="text-gray-300 font-sans">—</span>}</td>
                         <td className="px-4 py-3 text-gray-600">{t.client_company || <span className="text-gray-300">—</span>}</td>
                         <td className="px-4 py-3 text-gray-600">{t.truck_number ? `#${t.truck_number}` : <span className="text-gray-300">—</span>}</td>
                         <td className="px-4 py-3 text-gray-500">{t.material || '—'}</td>
@@ -470,6 +473,15 @@ export default function ContractorsPage() {
                         )}
                       </div>
                     )}
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Ticket #</label>
+                    <input
+                      value={ticketForm.ticket_number}
+                      onChange={e => setTicketForm(p => ({ ...p, ticket_number: e.target.value }))}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                      placeholder="e.g. T-1001"
+                    />
                   </div>
                   <div className="col-span-2">
                     <label className="block text-xs font-medium text-gray-700 mb-1">Material</label>

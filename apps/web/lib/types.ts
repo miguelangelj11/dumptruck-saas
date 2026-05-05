@@ -170,6 +170,7 @@ export type ContractorTicket = {
   date: string
   hours_worked: string | null
   truck_number: string | null
+  ticket_number: string | null
   material: string | null
   rate: number
   rate_type: string | null

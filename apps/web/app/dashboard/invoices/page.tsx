@@ -200,7 +200,7 @@ function buildContractorLineItems(tickets: CTWithSlips[], deductionPct: number):
         id: crypto.randomUUID(), invoice_id: '',
         line_date: ticket.date, truck_number: ticket.truck_number ?? null,
         driver_name: ticket.job_name, material: ticket.material,
-        ticket_number: null, time_worked: ticket.hours_worked,
+        ticket_number: ticket.ticket_number ?? null, time_worked: ticket.hours_worked,
         quantity: 1, rate: ticket.rate, rate_type: ticket.rate_type,
         amount, deduction_pct: deductionPct > 0 ? deductionPct : null,
         sort_order: order++,
