@@ -49,18 +49,24 @@ export async function POST(request: Request) {
 
   // ── Guest "pay first, create account after" flow ──────────────────────────
   if (!user) {
-    const planLabel = plan === 'owner' ? 'owner_operator' : plan
-    const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${siteUrl}/signup?session_id={CHECKOUT_SESSION_ID}&plan=${planLabel}`,
-      cancel_url:  `${siteUrl}/pricing`,
-      metadata:    { plan },
-      subscription_data: { metadata: { plan }, ...trialParams },
-      payment_method_collection: paymentCollection,
-      allow_promotion_codes: true,
-    })
-    return NextResponse.json({ url: session.url })
+    try {
+      const planLabel = plan === 'owner' ? 'owner_operator' : plan
+      const session = await stripe.checkout.sessions.create({
+        mode: 'subscription',
+        line_items: [{ price: priceId, quantity: 1 }],
+        success_url: `${siteUrl}/signup?session_id={CHECKOUT_SESSION_ID}&plan=${planLabel}`,
+        cancel_url:  `${siteUrl}/pricing`,
+        metadata:    { plan },
+        subscription_data: { metadata: { plan }, ...trialParams },
+        payment_method_collection: paymentCollection,
+        allow_promotion_codes: true,
+      })
+      return NextResponse.json({ url: session.url })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Stripe error'
+      console.error('[checkout] Stripe guest session error:', msg)
+      return NextResponse.json({ error: msg }, { status: 500 })
+    }
   }
 
   // ── Authenticated upgrade flow ────────────────────────────────────────────
@@ -98,18 +104,24 @@ export async function POST(request: Request) {
   if (stripeCustomerId) {
     sessionParams.customer = stripeCustomerId
   } else {
-    sessionParams.customer_email  = user.email
+    sessionParams.customer_email   = user.email
     sessionParams.customer_creation = 'always'
   }
 
-  const session = await stripe.checkout.sessions.create(sessionParams)
+  try {
+    const session = await stripe.checkout.sessions.create(sessionParams)
 
-  if (!stripeCustomerId && session.customer) {
-    await admin
-      .from('companies')
-      .update({ stripe_customer_id: session.customer as string })
-      .eq('id', companyId)
+    if (!stripeCustomerId && session.customer) {
+      await admin
+        .from('companies')
+        .update({ stripe_customer_id: session.customer as string })
+        .eq('id', companyId)
+    }
+
+    return NextResponse.json({ url: session.url })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Stripe error'
+    console.error('[checkout] Stripe authenticated session error:', msg)
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
-
-  return NextResponse.json({ url: session.url })
 }

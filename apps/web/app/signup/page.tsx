@@ -142,17 +142,35 @@ export default function SignupPage() {
       localStorage.setItem('dtb_selected_plan', selectedPlan)
 
       const planKey = selectedPlan === 'owner_operator' ? 'owner' : 'fleet'
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: planKey, skip_trial: true }),
-      })
-      const checkoutData = await res.json() as { url?: string }
+      let res: Response
+      try {
+        res = await fetch('/api/stripe/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan: planKey, skip_trial: true }),
+        })
+      } catch {
+        clearTimeout(timer)
+        toast.error('Network error. Please check your connection and try again.')
+        setBuyLoading(false)
+        return
+      }
+
+      let checkoutData: { url?: string; error?: string; redirect?: string }
+      try {
+        checkoutData = await res.json()
+      } catch {
+        clearTimeout(timer)
+        toast.error('Checkout error. Please try again.')
+        setBuyLoading(false)
+        return
+      }
+
       clearTimeout(timer)
       if (checkoutData.url) {
         window.location.href = checkoutData.url
       } else {
-        toast.error('Failed to start checkout. Please try again.')
+        toast.error(checkoutData.error ?? 'Failed to start checkout. Please try again.')
         setBuyLoading(false)
       }
     } catch (err) {
