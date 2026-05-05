@@ -7,6 +7,8 @@ import {
   AlertTriangle, Clock, Activity,
 } from 'lucide-react'
 import LoadsChart from '@/components/dashboard/loads-chart'
+import { ProfitAlerts } from '@/components/dashboard/profit-alerts'
+import { DriverProfitTable } from '@/components/dashboard/driver-profit-table'
 import Link from 'next/link'
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -124,24 +126,45 @@ export default async function DashboardPage() {
   // ── Batch 2 (needs companyId) ─────────────────────────────────────────────
   const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString()
 
-  const [dispTodayRes, dispDetailRes, missingRes, noResponseRes] = companyId
+  const [dispTodayRes, dispDetailRes, missingRes, noResponseRes, missingRevenueRes, workingRes] = companyId
     ? await Promise.all([
         supabase.from('dispatches').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('dispatch_date', todayStr).neq('status', 'completed').neq('status', 'cancelled'),
         supabase.from('dispatches').select('id, driver_name, status, start_time, jobs(job_name)').eq('company_id', companyId).eq('dispatch_date', todayStr).neq('status', 'cancelled').order('created_at', { ascending: false }).limit(6),
         supabase.from('dispatches').select('id', { count: 'exact', head: true }).eq('company_id', companyId).lt('dispatch_date', todayStr).neq('status', 'completed').neq('status', 'cancelled'),
         supabase.from('dispatches').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('dispatch_date', todayStr).eq('status', 'dispatched').lt('created_at', oneHourAgo),
+        // Estimate missing revenue: past dispatches with loads_completed > 0 and a per_load rate
+        supabase.from('dispatches').select('loads_completed, jobs(rate, rate_type)').eq('company_id', companyId).lt('dispatch_date', todayStr).neq('status', 'completed').neq('status', 'cancelled').gt('loads_completed', 0).limit(100),
+        // Drivers currently in 'working' status today
+        supabase.from('dispatches').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('dispatch_date', todayStr).eq('status', 'working'),
       ])
     : [
         { count: 0, error: null },
         { data: [],  error: null },
         { count: 0, error: null },
         { count: 0, error: null },
+        { data: [],  error: null },
+        { count: 0, error: null },
       ] as const
 
-  const dispatchedToday = dispTodayRes.count  ?? 0
-  const todayDispatches = (dispDetailRes.data ?? []) as unknown as TodayDispatch[]
-  const missingTickets  = missingRes.count    ?? 0
-  const noResponseCount = noResponseRes.count ?? 0
+  const dispatchedToday   = dispTodayRes.count  ?? 0
+  const todayDispatches   = (dispDetailRes.data ?? []) as unknown as TodayDispatch[]
+  const missingTickets    = missingRes.count    ?? 0
+  const noResponseCount   = noResponseRes.count ?? 0
+  const workingDrivers    = workingRes.count    ?? 0
+
+  // Estimate missing revenue from dispatches with unclaimed loads
+  const missingRevenueEst: number = ((missingRevenueRes as { data: unknown[] | null }).data ?? []).reduce((sum: number, d: unknown) => {
+    const row = d as { loads_completed?: number; jobs?: { rate?: number | null; rate_type?: string | null } | null }
+    const rate = row.jobs?.rate ?? 0
+    const type = row.jobs?.rate_type ?? 'load'
+    return sum + (type === 'load' ? (row.loads_completed ?? 0) * rate : 0)
+  }, 0)
+
+  // ── Job costs for profit calculation ─────────────────────────────────────
+  const jobCostRes = effectiveCompanyId
+    ? await supabase.from('jobs').select('job_name, driver_cost, fuel_cost, other_costs').eq('company_id', effectiveCompanyId)
+    : { data: [] }
+  const jobsForCost = (jobCostRes.data ?? []) as { job_name: string; driver_cost: number | null; fuel_cost: number | null; other_costs: number | null }[]
 
   // ── Stat calculations ─────────────────────────────────────────────────────
   const thisWeekTickets = loads.filter(l => l.date >= thisWeekStartStr && l.date <= todayStr).length
@@ -160,6 +183,25 @@ export default async function DashboardPage() {
 
   // Pending driver-submitted tickets
   const pendingDriverTickets = loads.filter(l => l.submitted_by_driver && l.status === 'pending').length
+
+  // Panel stats
+  const overdueInvs     = invoices.filter(i => i.status === 'overdue')
+  const overdueTotal    = overdueInvs.reduce((s, i) => s + (i.total ?? 0), 0)
+  const loadsToday      = loads.filter(l => l.date === todayStr)
+  const weekRevCollected = loads
+    .filter(l => l.date >= thisWeekStartStr && l.date <= todayStr && l.status === 'paid')
+    .reduce((s, l) => s + (l.rate ?? 0), 0)
+  const weekRevProjected = loads
+    .filter(l => l.date >= thisWeekStartStr && l.date <= todayStr)
+    .reduce((s, l) => s + (l.rate ?? 0), 0)
+
+  // Week profit (costs attributed to jobs active this week)
+  const weekJobNames = new Set(loads.filter(l => l.date >= thisWeekStartStr && l.date <= todayStr).map(l => l.job_name))
+  const weekCosts    = jobsForCost
+    .filter(j => weekJobNames.has(j.job_name))
+    .reduce((s, j) => s + (j.driver_cost ?? 0) + (j.fuel_cost ?? 0) + (j.other_costs ?? 0), 0)
+  const weekProfit = weekRevProjected - weekCosts
+  const weekMargin = weekRevProjected > 0 ? Math.round((weekProfit / weekRevProjected) * 100) : null
 
   // Recent tickets
   const recentLoads = loads.slice(0, 6)
@@ -283,11 +325,13 @@ export default async function DashboardPage() {
       cta:     'Follow up →',
     },
     missingTickets > 0 && {
-      label:   `${missingTickets} past dispatch${missingTickets !== 1 ? 'es' : ''} missing tickets`,
+      label:   missingRevenueEst > 0
+        ? `⚠️ Missing ~${fmt(missingRevenueEst)} from ${missingTickets} dispatch${missingTickets !== 1 ? 'es' : ''} with unsubmitted tickets`
+        : `${missingTickets} past dispatch${missingTickets !== 1 ? 'es' : ''} missing tickets`,
       icon:    AlertTriangle,
-      color:   'text-red-700 bg-red-50 border-red-200',
-      iconCls: 'text-red-500',
-      href:    '/dashboard/tickets',
+      color:   'text-amber-700 bg-amber-50 border-amber-200',
+      iconCls: 'text-amber-500',
+      href:    '/dashboard/tickets?tab=missing',
       cta:     'Review →',
     },
   ].filter(Boolean) as { label: string; icon: React.ElementType; color: string; iconCls: string; href: string; cta: string }[]
@@ -301,6 +345,99 @@ export default async function DashboardPage() {
         <p className="text-gray-500 text-sm mt-1">
           {now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
         </p>
+      </div>
+
+      {/* ── Profit Alerts (client component — self-fetches) ──────────────────── */}
+      {companyId && <ProfitAlerts companyId={companyId} />}
+
+      {/* ── Action Panels ─────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
+        {/* Panel 1: Needs Attention */}
+        <div className={`rounded-xl border p-4 ${(missingTickets > 0 || overdueInvs.length > 0 || noResponseCount > 0) ? 'border-red-200 bg-red-50/30' : 'border-gray-100 bg-white'}`}>
+          <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">🚨 Needs Attention</p>
+          <div className="space-y-2.5">
+            {missingTickets > 0 ? (
+              <Link href="/dashboard/tickets?tab=missing" className="flex items-center justify-between gap-2 group">
+                <span className="text-sm text-red-700 font-medium group-hover:underline">{missingTickets} dispatch{missingTickets !== 1 ? 'es' : ''} missing tickets</span>
+                {missingRevenueEst > 0 && <span className="text-xs font-bold text-red-600 shrink-0">~{fmt(missingRevenueEst)}</span>}
+              </Link>
+            ) : (
+              <p className="text-sm text-gray-400">No missing tickets ✓</p>
+            )}
+            {overdueInvs.length > 0 ? (
+              <Link href="/dashboard/invoices?filter=overdue" className="flex items-center justify-between gap-2 group">
+                <span className="text-sm text-orange-700 font-medium group-hover:underline">{overdueInvs.length} overdue invoice{overdueInvs.length !== 1 ? 's' : ''}</span>
+                <span className="text-xs font-bold text-orange-600 shrink-0">{fmt(overdueTotal)}</span>
+              </Link>
+            ) : (
+              <p className="text-sm text-gray-400">No overdue invoices ✓</p>
+            )}
+            {noResponseCount > 0 ? (
+              <Link href="/dashboard/dispatch" className="flex items-center justify-between gap-2 group">
+                <span className="text-sm text-amber-700 font-medium group-hover:underline">{noResponseCount} dispatch{noResponseCount !== 1 ? 'es' : ''} no response &gt;2h</span>
+                <span className="text-xs text-amber-600 shrink-0">Follow up →</span>
+              </Link>
+            ) : (
+              <p className="text-sm text-gray-400">All drivers responded ✓</p>
+            )}
+          </div>
+        </div>
+
+        {/* Panel 2: Today's Operations */}
+        <div className="rounded-xl border border-gray-100 bg-white p-4">
+          <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">🚛 Today&apos;s Operations</p>
+          <div className="space-y-2.5">
+            <Link href="/dashboard/dispatch" className="flex items-center justify-between gap-2 group">
+              <span className="text-sm text-gray-700 group-hover:underline">Active dispatches</span>
+              <span className="text-sm font-bold text-purple-700">{dispatchedToday}</span>
+            </Link>
+            <Link href="/dashboard/dispatch" className="flex items-center justify-between gap-2 group">
+              <span className="text-sm text-gray-700 group-hover:underline">Drivers currently working</span>
+              <span className="text-sm font-bold text-green-700">{workingDrivers}</span>
+            </Link>
+            <Link href="/dashboard/tickets" className="flex items-center justify-between gap-2 group">
+              <span className="text-sm text-gray-700 group-hover:underline">Loads completed today</span>
+              <span className="text-sm font-bold text-[#2d7a4f]">{loadsToday.length}</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* Panel 3: Money This Week */}
+        <div className="rounded-xl border border-green-100 bg-green-50/30 p-4">
+          <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">💰 Money This Week</p>
+          <div className="space-y-2.5">
+            <Link href="/dashboard/revenue" className="flex items-center justify-between gap-2 group">
+              <span className="text-sm text-gray-700 group-hover:underline">Revenue</span>
+              <span className="text-sm font-bold text-green-700">{fmt(weekRevProjected)}</span>
+            </Link>
+            {weekCosts > 0 && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm text-gray-700">Job Costs (est.)</span>
+                <span className="text-sm font-bold text-red-600">-{fmt(weekCosts)}</span>
+              </div>
+            )}
+            {weekCosts > 0 && (
+              <div className="flex items-center justify-between gap-2 pt-1 border-t border-green-100">
+                <span className="text-sm font-semibold text-gray-900">Net Profit</span>
+                <span className={`text-sm font-bold ${weekProfit >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                  {weekProfit >= 0 ? '' : '-'}{fmt(Math.abs(weekProfit))}
+                  {weekMargin !== null && (
+                    <span className="text-xs font-medium text-gray-500 ml-1">({weekMargin}%)</span>
+                  )}
+                </span>
+              </div>
+            )}
+            <Link href="/dashboard/invoices" className="flex items-center justify-between gap-2 group">
+              <span className="text-sm text-gray-700 group-hover:underline">Outstanding invoices</span>
+              <span className={`text-sm font-bold ${outstandingTotal > 0 ? 'text-orange-600' : 'text-gray-500'}`}>{fmt(outstandingTotal)}</span>
+            </Link>
+            <Link href="/dashboard/revenue" className="flex items-center justify-between gap-2 group">
+              <span className="text-sm text-gray-700 group-hover:underline">Revenue collected</span>
+              <span className="text-sm font-bold text-[#2d7a4f]">{fmt(weekRevCollected)}</span>
+            </Link>
+          </div>
+        </div>
       </div>
 
       {/* Stat Cards */}
@@ -406,6 +543,9 @@ export default async function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Driver Profit Table (client component — self-fetches) */}
+      {companyId && <DriverProfitTable companyId={companyId} />}
 
       {/* Today's Dispatches */}
       {companyId && (

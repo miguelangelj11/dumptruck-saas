@@ -21,16 +21,18 @@ export async function GET(request: Request) {
 
   if (!client) return NextResponse.json({ error: 'Portal not found' }, { status: 404 })
 
-  const { data: company } = await admin
-    .from('companies')
-    .select('name')
-    .eq('id', client.company_id)
-    .maybeSingle()
-
-  const [invoicesRes, loadsRes] = await Promise.all([
+  const [companyRes, invoicesRes, loadsRes] = await Promise.all([
+    admin
+      .from('companies')
+      .select('name, logo_url')
+      .eq('id', client.company_id)
+      .maybeSingle(),
     admin
       .from('invoices')
-      .select('id, invoice_number, invoice_date, due_date, total_amount, status, notes')
+      .select(`
+        id, invoice_number, invoice_date, due_date, total_amount, status, notes,
+        invoice_line_items(id, line_date, truck_number, driver_name, material, ticket_number, quantity, rate, rate_type, amount, job_name, sort_order)
+      `)
       .eq('company_id', client.company_id)
       .eq('client_name', client.name)
       .order('invoice_date', { ascending: false })
@@ -44,10 +46,12 @@ export async function GET(request: Request) {
       .limit(100),
   ])
 
+  const company = companyRes.data
+
   return NextResponse.json({
-    client: { id: client.id, name: client.name, address: client.address },
-    company: { name: company?.name ?? '' },
+    client:   { id: client.id, name: client.name, address: client.address },
+    company:  { name: company?.name ?? '', logo_url: company?.logo_url ?? null },
     invoices: invoicesRes.data ?? [],
-    loads: loadsRes.data ?? [],
+    loads:    loadsRes.data ?? [],
   })
 }

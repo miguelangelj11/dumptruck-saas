@@ -191,8 +191,10 @@ export default function SettingsPage() {
   const [notifyPayment,   setNotifyPayment]   = useState(true)
   const [notifyOverdue,   setNotifyOverdue]   = useState(true)
   const [notifyExpiring,  setNotifyExpiring]  = useState(true)
-  const [notifyMissing,   setNotifyMissing]   = useState(false)
-  const [savingNotify,    setSavingNotify]    = useState(false)
+  const [notifyMissing,     setNotifyMissing]     = useState(false)
+  const [autoSendReminders,  setAutoSendReminders]  = useState(false)
+  const [weeklyReportEnabled, setWeeklyReportEnabled] = useState(true)
+  const [savingNotify,        setSavingNotify]        = useState(false)
 
   // ── Team state ───────────────────────────────────────────────────────────
   const [drivers,          setDrivers]          = useState<DriverRow[]>([])
@@ -330,6 +332,8 @@ export default function SettingsPage() {
             'notify_new_ticket', 'notify_ticket_approved', 'notify_invoice_sent',
             'notify_payment_received', 'notify_invoice_overdue',
             'notify_document_expiring', 'notify_missing_tickets',
+            'auto_send_reminders',
+            'weekly_report_enabled',
             'invoice_email_signature',
           ].join(','))
           .eq('id', c.id)
@@ -354,6 +358,8 @@ export default function SettingsPage() {
           if (x.notify_invoice_overdue      != null) setNotifyOverdue(x.notify_invoice_overdue)
           if (x.notify_document_expiring    != null) setNotifyExpiring(x.notify_document_expiring)
           if (x.notify_missing_tickets      != null) setNotifyMissing(x.notify_missing_tickets)
+          if ((x as Record<string, unknown>).auto_send_reminders  != null) setAutoSendReminders((x as Record<string, unknown>).auto_send_reminders as boolean)
+          if ((x as Record<string, unknown>).weekly_report_enabled != null) setWeeklyReportEnabled((x as Record<string, unknown>).weekly_report_enabled as boolean)
           if (x.invoice_email_signature             != null) setInvSignature(x.invoice_email_signature ?? '')
         }
 
@@ -655,6 +661,8 @@ export default function SettingsPage() {
       notify_invoice_overdue:   notifyOverdue,
       notify_document_expiring: notifyExpiring,
       notify_missing_tickets:   notifyMissing,
+      auto_send_reminders:      autoSendReminders,
+      weekly_report_enabled:    weeklyReportEnabled,
     }).eq('id', companyId)
     if (error) toast.error(error.message)
     else toast.success('Notification preferences saved')
@@ -1399,6 +1407,27 @@ export default function SettingsPage() {
                   <Toggle on={val} onChange={set} />
                 </label>
               ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold text-gray-800 mb-1">Automation</p>
+            <p className="text-xs text-gray-500 mb-3">DumpTruckBoss acts on your behalf to collect faster</p>
+            <div className="border border-gray-100 rounded-xl overflow-hidden divide-y divide-gray-50">
+              <label className="flex items-start justify-between px-4 py-3.5 hover:bg-gray-50 cursor-pointer transition-colors gap-3">
+                <div>
+                  <p className="text-sm text-gray-700 font-medium">Auto-send payment reminders</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Automatically email clients on day 1 and day 3 overdue (max 2 per invoice)</p>
+                </div>
+                <Toggle on={autoSendReminders} onChange={setAutoSendReminders} />
+              </label>
+              <label className="flex items-start justify-between px-4 py-3.5 hover:bg-gray-50 cursor-pointer transition-colors gap-3">
+                <div>
+                  <p className="text-sm text-gray-700 font-medium">Weekly performance report</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Receive a summary of your week every Monday morning</p>
+                </div>
+                <Toggle on={weeklyReportEnabled} onChange={setWeeklyReportEnabled} />
+              </label>
             </div>
           </div>
 

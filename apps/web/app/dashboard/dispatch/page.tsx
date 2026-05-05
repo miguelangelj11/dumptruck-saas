@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   Plus, Pencil, Trash2, Loader2, X, MapPin, Users, Truck,
@@ -8,9 +8,9 @@ import {
   AlertTriangle, Clock, PackageOpen, TrendingUp, RefreshCw, Radio, Link2,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import type { Job, Load, Dispatch, DispatchStatus } from '@/lib/types'
+import type { Job, Load, Dispatch, DispatchStatus, DriverRecommendation, RateInsight, DispatchOptimizationHint } from '@/lib/types'
 import { getCompanyId } from '@/lib/get-company-id'
-import { logDispatchActivity } from '@/lib/workflows'
+import { logDispatchActivity, getRecommendedDriver, getRateInsights, getDispatchOptimizationHints } from '@/lib/workflows'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -38,6 +38,33 @@ function getDispCfg(d: Dispatch): { label: string; color: string; dot: string } 
     return NO_RESPONSE_CFG
   }
   return DISPATCH_STATUSES.find(s => s.value === d.status) ?? DISPATCH_STATUSES[0]!
+}
+
+type DriverStatus = 'not_started' | 'working' | 'completed'
+
+function getDriverStatus(dispatch: Dispatch | undefined): DriverStatus {
+  if (!dispatch) return 'not_started'
+  if (dispatch.status === 'completed') return 'completed'
+  if (dispatch.status === 'working') return 'working'
+  if (dispatch.status === 'dispatched' && dispatch.loads_completed > 0) return 'working'
+  return 'not_started'
+}
+
+const DRIVER_STATUS_CFG: Record<DriverStatus, { color: string; label: string; pulse: boolean }> = {
+  not_started: { color: 'bg-gray-400',   label: 'Not started', pulse: false },
+  working:     { color: 'bg-yellow-400', label: 'Working',     pulse: true  },
+  completed:   { color: 'bg-green-500',  label: 'Completed',   pulse: false },
+}
+
+function DriverStatusDot({ dispatch }: { dispatch: Dispatch | undefined }) {
+  const status = getDriverStatus(dispatch)
+  const { color, label, pulse } = DRIVER_STATUS_CFG[status]
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${color} ${pulse ? 'animate-pulse' : ''}`} />
+      <span className="text-xs text-gray-500">{label}</span>
+    </div>
+  )
 }
 
 const JOB_STATUSES = ['active', 'completed', 'on_hold'] as const
@@ -144,6 +171,12 @@ export default function DispatchPage() {
   const [orgId,       setOrgId]       = useState('')
   const [companyPlan, setCompanyPlan] = useState<string | null>(null)
   const [dispatchBannerDismissed, setDispatchBannerDismissed] = useState(false)
+  const [flashingIds, setFlashingIds] = useState<Set<string>>(new Set())
+
+  // Ref mirrors dispatches for use inside realtime callbacks (avoids stale closure)
+  const dispatchesRef = useRef<Dispatch[]>([])
+  useEffect(() => { dispatchesRef.current = dispatches }, [dispatches])
+  const lastToastRef  = useRef(0)
 
   const [mainTab,     setMainTab]     = useState<'board' | 'today' | 'subs'>('board')
   const [jobFilter,   setJobFilter]   = useState<'active' | 'on_hold' | 'completed' | 'all'>('active')
@@ -163,6 +196,14 @@ export default function DispatchPage() {
   const [savingDispatch,   setSavingDispatch]   = useState(false)
   const [dispFormType,     setDispFormType]     = useState<'driver' | 'subcontractor'>('driver')
   const [subcontractorId,  setSubcontractorId]  = useState('')
+
+  // AI Dispatch Brain
+  const [recommendation,    setRecommendation]    = useState<DriverRecommendation | null>(null)
+  const [loadingRec,        setLoadingRec]        = useState(false)
+  const [rateInsight,       setRateInsight]       = useState<RateInsight | null>(null)
+  const [optimizationHints, setOptimizationHints] = useState<DispatchOptimizationHint[]>([])
+  const [hintsDismissed,    setHintsDismissed]    = useState(false)
+  const rateInsightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // ── Data ────────────────────────────────────────────────────────────────────
 
@@ -230,8 +271,49 @@ export default function DispatchPage() {
   useEffect(() => {
     fetchData()
 
+    function handleNewTicket(newLoad: Record<string, unknown>) {
+      const load = newLoad as Load & { dispatch_id?: string | null }
+
+      // Append load to matching job (updates todayLoads + stats panel reactively)
+      setJobs(prev => prev.map(j =>
+        j.job_name === load.job_name
+          ? { ...j, loads: [...(j.loads ?? []), load] }
+          : j
+      ))
+
+      // Flip 'dispatched' → 'working' if this is their first ticket
+      setDispatches(prev => prev.map(d => {
+        const matchesDispatch = d.id === load.dispatch_id
+        const matchesDriver   = d.driver_name === load.driver_name && d.dispatch_date === load.date
+        if ((matchesDispatch || matchesDriver) && d.status === 'dispatched') {
+          return { ...d, status: 'working' as DispatchStatus }
+        }
+        return d
+      }))
+
+      // Flash the dispatch card (find ID from ref to avoid stale closure)
+      const target = dispatchesRef.current.find(d =>
+        d.id === load.dispatch_id ||
+        (d.driver_name === load.driver_name && d.dispatch_date === load.date)
+      )
+      if (target) {
+        setFlashingIds(f => { const s = new Set(f); s.add(target.id); return s })
+        setTimeout(() => setFlashingIds(f => { const s = new Set(f); s.delete(target.id); return s }), 650)
+      }
+
+      // Debounced toast — max 1 per 2 seconds
+      const now = Date.now()
+      if (now - lastToastRef.current > 2000) {
+        lastToastRef.current = now
+        toast(`🎫 New ticket from ${load.driver_name ?? 'a driver'}`, {
+          duration: 3000,
+          position: 'bottom-right',
+        })
+      }
+    }
+
     const channel = supabase
-      .channel('dispatch-status-updates')
+      .channel('dispatch-realtime')
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'dispatches' },
@@ -240,10 +322,70 @@ export default function DispatchPage() {
           setDispatches(prev => prev.map(d => d.id === updated.id ? { ...d, ...updated } : d))
         }
       )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'loads' },
+        (payload: { new: Record<string, unknown> }) => {
+          handleNewTicket(payload.new)
+        }
+      )
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Fetch optimization hints on mount + every 10 minutes
+  useEffect(() => {
+    async function loadHints() {
+      const companyId = await getCompanyId()
+      if (!companyId) return
+      try {
+        const hints = await getDispatchOptimizationHints(supabase, companyId)
+        setOptimizationHints(hints)
+      } catch { /* non-critical */ }
+    }
+    loadHints()
+    const id = setInterval(loadHints, 10 * 60 * 1000)
+    return () => clearInterval(id)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Fetch driver recommendation when dispatch form opens
+  useEffect(() => {
+    if (!showDispForm || dispFormType !== 'driver') { setRecommendation(null); return }
+    let cancelled = false
+    async function loadRec() {
+      setLoadingRec(true)
+      const companyId = await getCompanyId()
+      if (!companyId || cancelled) { setLoadingRec(false); return }
+      try {
+        const rec = await getRecommendedDriver(supabase, { companyId })
+        if (!cancelled) setRecommendation(rec)
+      } catch { /* non-critical */ }
+      if (!cancelled) setLoadingRec(false)
+    }
+    loadRec()
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showDispForm, dispFormType])
+
+  // Debounced rate insight when job form material/rate changes
+  useEffect(() => {
+    if (rateInsightTimerRef.current) clearTimeout(rateInsightTimerRef.current)
+    const mat  = jobForm.material?.trim()
+    const rate = parseFloat(jobForm.rate)
+    if (!mat || !rate || rate <= 0) { setRateInsight(null); return }
+    rateInsightTimerRef.current = setTimeout(async () => {
+      const companyId = await getCompanyId()
+      if (!companyId) return
+      try {
+        const insight = await getRateInsights(supabase, { companyId, material: mat, rate })
+        setRateInsight(insight)
+      } catch { setRateInsight(null) }
+    }, 500)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobForm.material, jobForm.rate])
 
   // ── Derived ─────────────────────────────────────────────────────────────────
 
@@ -676,6 +818,32 @@ export default function DispatchPage() {
 
             {/* Left: job cards */}
             <div className="flex-1 min-w-0">
+              {/* Optimization hints banner */}
+              {!hintsDismissed && optimizationHints.length > 0 && (
+                <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2 min-w-0">
+                      <span className="text-base shrink-0">💡</span>
+                      <div className="space-y-1.5 min-w-0">
+                        {optimizationHints.map((hint, i) => (
+                          <div key={i}>
+                            <p className="text-xs font-semibold text-blue-900">{hint.message}</p>
+                            <p className="text-xs text-blue-700">{hint.suggestion}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setHintsDismissed(true)}
+                      className="shrink-0 text-blue-400 hover:text-blue-600 transition-colors"
+                      aria-label="Dismiss"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Job filter */}
               <div className="flex gap-1.5 mb-4 flex-wrap">
                 {(['active', 'on_hold', 'completed', 'all'] as const).map(tab => (
@@ -844,14 +1012,12 @@ export default function DispatchPage() {
                   {drivers.length === 0 ? (
                     <p className="p-6 text-center text-sm text-gray-400">No active drivers</p>
                   ) : drivers.map(driver => {
-                    const disp = driverDispMap.get(driver.id)
-                    const sc   = disp ? getDispCfg(disp) : null
-                    const job  = disp?.job_id ? jobs.find(j => j.id === disp.job_id) : null
+                    const disp    = driverDispMap.get(driver.id)
+                    const job     = disp?.job_id ? jobs.find(j => j.id === disp.job_id) : null
                     const minsAgo = disp ? Math.floor((Date.now() - new Date(disp.updated_at).getTime()) / 60000) : null
                     return (
-                      <div key={driver.id} className="px-4 py-3 hover:bg-gray-50 transition-colors">
+                      <div key={driver.id} className={`px-4 py-3 hover:bg-gray-50 transition-colors ${disp && flashingIds.has(disp.id) ? 'ticket-flash' : ''}`}>
                         <div className="flex items-start gap-2.5">
-                          <span className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${sc ? sc.dot : 'bg-green-400'}`} />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-1">
                               <p className="text-sm font-medium text-gray-900 truncate">{driver.name}</p>
@@ -859,11 +1025,11 @@ export default function DispatchPage() {
                                 <span className="text-[10px] text-gray-400 shrink-0">#{disp.truck_number}</span>
                               )}
                             </div>
+                            <DriverStatusDot dispatch={disp} />
                             {disp ? (
                               <>
                                 <p className="text-xs text-gray-500 truncate mt-0.5">{job?.job_name ?? 'No job assigned'}</p>
                                 <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${sc!.color}`}>{sc!.label}</span>
                                   {disp.status === 'working' && (
                                     <span className="text-[10px] font-bold text-green-700 bg-green-50 px-1.5 py-0.5 rounded-full">
                                       {disp.loads_completed} loads
@@ -931,14 +1097,29 @@ export default function DispatchPage() {
                   const lastTicketLabel = d.status === 'working'
                     ? (minsAgo < 1 ? 'just now' : minsAgo < 60 ? `${minsAgo}m ago` : `${Math.floor(minsAgo / 60)}h ago`)
                     : null
+                  const ticketsForDispatch = todayLoads.filter(l => l.driver_name === d.driver_name).length
+                  const missingCount       = Math.max(0, d.loads_completed - ticketsForDispatch)
+                  const isFlashing         = flashingIds.has(d.id)
                   return (
-                    <div key={d.id} className="bg-white rounded-2xl border border-gray-200 p-4 space-y-3">
+                    <div key={d.id} className={`bg-white rounded-2xl border p-4 space-y-3 ${missingCount > 0 ? 'border-red-200' : 'border-gray-200'} ${isFlashing ? 'ticket-flash' : ''}`}>
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <p className="font-semibold text-gray-900">{d.driver_name}</p>
+                          <DriverStatusDot dispatch={d} />
                           {d.truck_number && <p className="text-xs text-gray-500 mt-0.5">Truck #{d.truck_number}</p>}
                           {job && <p className="text-xs text-gray-500 mt-0.5">{job.job_name}</p>}
                           {d.start_time && <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5"><Clock className="h-3 w-3" />{d.start_time}</p>}
+                          {missingCount > 0 && (
+                            <p className="text-xs font-bold text-red-500 mt-1">⚠️ {missingCount} missing ticket{missingCount !== 1 ? 's' : ''}</p>
+                          )}
+                          {(d.followup_count ?? 0) >= 2 && (
+                            <p className="text-xs text-gray-400 mt-0.5">📧 2 reminders sent — no response</p>
+                          )}
+                          {(d.followup_count ?? 0) === 1 && d.last_followup_sent_at && (
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              📧 Follow-up sent {Math.round((Date.now() - new Date(d.last_followup_sent_at).getTime()) / 3_600_000)}h ago
+                            </p>
+                          )}
                         </div>
                         <div className="flex flex-col items-end gap-1.5 shrink-0">
                           <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${sc.color}`}>
@@ -984,12 +1165,16 @@ export default function DispatchPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {driverDispatches.map(d => {
-                      const sc      = getDispCfg(d)
-                      const job     = d.job_id ? jobs.find(j => j.id === d.job_id) : null
-                      const minsAgo = Math.floor((Date.now() - new Date(d.updated_at).getTime()) / 60000)
+                      const sc        = getDispCfg(d)
+                      const job       = d.job_id ? jobs.find(j => j.id === d.job_id) : null
+                      const minsAgo   = Math.floor((Date.now() - new Date(d.updated_at).getTime()) / 60000)
+                      const isFlashTr = flashingIds.has(d.id)
                       return (
-                        <tr key={d.id} className="hover:bg-gray-50/50 transition-colors">
-                          <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">{d.driver_name}</td>
+                        <tr key={d.id} className={`hover:bg-gray-50/50 transition-colors ${isFlashTr ? 'ticket-flash' : ''}`}>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <p className="font-medium text-gray-900">{d.driver_name}</p>
+                            <DriverStatusDot dispatch={d} />
+                          </td>
                           <td className="px-4 py-3 text-gray-600">{d.truck_number ? `#${d.truck_number}` : <span className="text-gray-300">—</span>}</td>
                           <td className="px-4 py-3 text-gray-700 max-w-[180px] truncate">{job?.job_name ?? <span className="text-gray-300">—</span>}</td>
                           <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
@@ -998,9 +1183,18 @@ export default function DispatchPage() {
                               : <span className="text-gray-300">—</span>}
                           </td>
                           <td className="px-4 py-3">
-                            <span className={`text-sm font-bold ${d.status === 'working' ? 'text-green-700' : 'text-gray-900'}`}>
-                              {d.loads_completed}
-                            </span>
+                            <div className="flex flex-col gap-0.5">
+                              <span className={`text-sm font-bold ${d.status === 'working' ? 'text-green-700' : 'text-gray-900'}`}>
+                                {d.loads_completed}
+                              </span>
+                              {(() => {
+                                const tix     = todayLoads.filter(l => l.driver_name === d.driver_name).length
+                                const missing = Math.max(0, d.loads_completed - tix)
+                                return missing > 0 ? (
+                                  <span className="text-[10px] font-bold text-red-500">⚠️ {missing} missing</span>
+                                ) : null
+                              })()}
+                            </div>
                           </td>
                           <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs">
                             {d.status === 'working'
@@ -1167,42 +1361,66 @@ export default function DispatchPage() {
               {dispFormType === 'driver' ? (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Driver *</label>
-                  <select
-                    required
-                    value={dispForm.driver_id}
-                    onChange={e => {
-                      const dId = e.target.value
-                      const d   = drivers.find(d => d.id === dId)
-                      setDispForm(f => ({ ...f, driver_id: dId }))
-                    }}
-                    className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]"
-                  >
-                    <option value="">— Select a driver —</option>
-                    {availableDrivers.length > 0 && (
-                      <optgroup label="Available">
-                        {availableDrivers.map(d => (
-                          <option key={d.id} value={d.id}>
-                            {d.id === suggestedDriverId ? '⭐ ' : ''}{d.name}
-                            {driverLoadCountMap.get(d.name) ? ` · ${driverLoadCountMap.get(d.name)} loads today` : ''}
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
-                    {drivers.filter(d => driverDispMap.has(d.id)).length > 0 && (
-                      <optgroup label="Already dispatched today">
-                        {drivers.filter(d => driverDispMap.has(d.id)).map(d => (
-                          <option key={d.id} value={d.id}>{d.name} ↩ dispatched</option>
-                        ))}
-                      </optgroup>
-                    )}
-                  </select>
-                  {availableDrivers.length === 0 && !editingDispatch && (
-                    <p className="text-xs text-amber-600 mt-1">No available drivers.</p>
+                  {loadingRec ? (
+                    <div className="flex items-center gap-2 py-3 text-sm text-gray-400">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Scoring drivers…
+                    </div>
+                  ) : recommendation && recommendation.rankedDrivers.length > 0 ? (
+                    <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                      {recommendation.rankedDrivers.map((ds, i) => (
+                        <button
+                          key={ds.driverId}
+                          type="button"
+                          onClick={() => setDispForm(f => ({ ...f, driver_id: ds.driverId }))}
+                          className={`w-full text-left p-2.5 rounded-xl border-2 transition-all ${
+                            dispForm.driver_id === ds.driverId
+                              ? 'border-[#2d7a4f] bg-[#2d7a4f]/5'
+                              : i === 0 && !recommendation.noDriversAvailable
+                                ? 'border-green-300 bg-green-50/40 hover:border-green-400'
+                                : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={`h-2 w-2 rounded-full shrink-0 ${
+                                ds.isWorking ? 'bg-yellow-400' : ds.isAvailable ? 'bg-green-500' : 'bg-gray-400'
+                              }`} />
+                              <span className="text-sm font-medium text-gray-900 truncate">{ds.driverName}</span>
+                              {i === 0 && !recommendation.noDriversAvailable && (
+                                <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium shrink-0">
+                                  Best
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[11px] text-gray-400 shrink-0">{Math.round(ds.score)}pts</span>
+                          </div>
+                          {ds.explanations.length > 0 && (
+                            <p className="text-[11px] text-gray-500 mt-0.5 ml-4 truncate">
+                              {ds.explanations.join(' · ')}
+                            </p>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <select
+                      required
+                      value={dispForm.driver_id}
+                      onChange={e => setDispForm(f => ({ ...f, driver_id: e.target.value }))}
+                      className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]"
+                    >
+                      <option value="">— Select a driver —</option>
+                      {availableDrivers.map(d => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
                   )}
-                  {suggestedDriverId && !dispForm.driver_id && (
-                    <p className="text-xs text-[#2d7a4f] mt-1">
-                      ⭐ {availableDrivers.find(d => d.id === suggestedDriverId)?.name} has the fewest loads today
-                    </p>
+                  {recommendation?.fallbackReason && (
+                    <p className="text-xs text-amber-600 mt-1">{recommendation.fallbackReason}</p>
+                  )}
+                  {availableDrivers.length === 0 && !editingDispatch && !recommendation && (
+                    <p className="text-xs text-amber-600 mt-1">No available drivers.</p>
                   )}
                 </div>
               ) : (
@@ -1364,6 +1582,16 @@ export default function DispatchPage() {
                   </select>
                 </div>
               </div>
+              {rateInsight && showJobForm && (
+                <div className={`flex items-start gap-2 p-3 rounded-xl text-xs ${
+                  rateInsight.isBelowAverage ? 'bg-yellow-50 border border-yellow-200' : 'bg-green-50 border border-green-200'
+                }`}>
+                  <span className="shrink-0 text-base">{rateInsight.isBelowAverage ? '⚠️' : '✅'}</span>
+                  <p className={rateInsight.isBelowAverage ? 'text-yellow-800' : 'text-green-800'}>
+                    {rateInsight.recommendation}
+                  </p>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>

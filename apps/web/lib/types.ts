@@ -83,6 +83,8 @@ export type Invoice = {
   payment_method: string | null
   payment_terms: string | null
   notes: string | null
+  last_reminder_sent_at: string | null
+  reminder_count: number
   created_at: string
 }
 
@@ -110,7 +112,55 @@ export type Job = {
   start_date: string | null
   end_date: string | null
   notes: string | null
+  driver_cost: number | null
+  fuel_cost: number | null
+  other_costs: number | null
   created_at: string
+}
+
+export interface JobProfitMetrics {
+  jobId: string
+  jobName: string
+  totalRevenue: number
+  totalCosts: number
+  profit: number
+  profitMargin: number
+  loadsCount: number
+  profitPerLoad: number
+}
+
+export interface DriverProfitability {
+  driverId: string
+  driverName: string
+  totalRevenue: number
+  estimatedCost: number
+  profit: number
+  profitMargin: number
+  loadsCount: number
+  profitPerLoad: number
+  isTopPerformer: boolean
+  isBelowAverage: boolean
+}
+
+export interface ProfitAlert {
+  id: string
+  type: 'losing_money' | 'low_margin' | 'driver_underperforming' | 'cost_spike'
+  title: string
+  description: string
+  dollarImpact: number
+  entityId: string
+  entityType: 'job' | 'driver'
+  severity: 'warning' | 'critical'
+}
+
+export interface CompanyProfitSummary {
+  totalRevenue: number
+  totalCosts: number
+  netProfit: number
+  profitMargin: number
+  weekRevenue: number
+  weekCosts: number
+  weekProfit: number
 }
 
 export type InvoiceLineItem = {
@@ -201,6 +251,8 @@ export type Dispatch = {
   completed_at: string | null
   subcontractor_id: string | null
   dispatch_type: 'driver' | 'subcontractor' | null
+  last_followup_sent_at: string | null
+  followup_count: number
   created_at: string
   updated_at: string
 }
@@ -244,4 +296,37 @@ export type DriverPayment = {
   period_end: string | null
   notes: string | null
   created_at: string
+}
+
+export interface DriverScore {
+  driverId: string
+  driverName: string
+  score: number
+  loadsToday: number
+  profitPerLoad: number
+  isWorking: boolean
+  isAvailable: boolean
+  explanations: string[]
+}
+
+export interface DriverRecommendation {
+  bestDriver: DriverScore | null
+  rankedDrivers: DriverScore[]
+  noDriversAvailable: boolean
+  fallbackReason?: string
+}
+
+export interface RateInsight {
+  avgRate: number
+  percentDiff: number
+  recommendation: string
+  isBelowAverage: boolean
+  sampleSize: number
+}
+
+export interface DispatchOptimizationHint {
+  type: 'uneven_load_distribution' | 'idle_driver' | 'overloaded_driver'
+  message: string
+  affectedDrivers: string[]
+  suggestion: string
 }
