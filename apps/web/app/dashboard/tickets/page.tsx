@@ -769,17 +769,23 @@ export default function TicketsPage() {
                 {/* Row 5: Time in + Time out */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Time In</label>
-                  <select value={form.time_in} onChange={e => setForm(p => ({ ...p, time_in: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white">
-                    <option value="">— Select time —</option>
-                    {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
+                  <input
+                    type="text"
+                    value={form.time_in}
+                    onChange={e => setForm(p => ({ ...p, time_in: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                    placeholder="e.g. 7:00AM"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Time Out</label>
-                  <select value={form.time_out} onChange={e => setForm(p => ({ ...p, time_out: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white">
-                    <option value="">— Select time —</option>
-                    {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
+                  <input
+                    type="text"
+                    value={form.time_out}
+                    onChange={e => setForm(p => ({ ...p, time_out: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                    placeholder="e.g. 5:00PM"
+                  />
                 </div>
 
                 {/* Row 6: Rate + Status */}
