@@ -32,16 +32,17 @@ ALTER TABLE client_companies
 -- Onboarding sets: onboarding_completed
 -- ----------------------------------------------------------------
 ALTER TABLE companies
-  ADD COLUMN IF NOT EXISTS address              text,
-  ADD COLUMN IF NOT EXISTS phone               text,
-  ADD COLUMN IF NOT EXISTS logo_url            text,
-  ADD COLUMN IF NOT EXISTS plan                text,
-  ADD COLUMN IF NOT EXISTS subscription_status text,
-  ADD COLUMN IF NOT EXISTS trial_started_at    timestamptz,
-  ADD COLUMN IF NOT EXISTS trial_ends_at       timestamptz,
-  ADD COLUMN IF NOT EXISTS onboarding_completed boolean NOT NULL DEFAULT false,
-  ADD COLUMN IF NOT EXISTS stripe_customer_id  text,
-  ADD COLUMN IF NOT EXISTS stripe_subscription_id text;
+  ADD COLUMN IF NOT EXISTS address                  text,
+  ADD COLUMN IF NOT EXISTS phone                    text,
+  ADD COLUMN IF NOT EXISTS logo_url                 text,
+  ADD COLUMN IF NOT EXISTS plan                     text,
+  ADD COLUMN IF NOT EXISTS subscription_status      text,
+  ADD COLUMN IF NOT EXISTS trial_started_at         timestamptz,
+  ADD COLUMN IF NOT EXISTS trial_ends_at            timestamptz,
+  ADD COLUMN IF NOT EXISTS onboarding_completed     boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS onboarding_dismissed_at  timestamptz,
+  ADD COLUMN IF NOT EXISTS stripe_customer_id       text,
+  ADD COLUMN IF NOT EXISTS stripe_subscription_id   text;
 
 
 -- ----------------------------------------------------------------

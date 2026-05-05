@@ -6,6 +6,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 import Sidebar from '@/components/dashboard/sidebar'
 import ThemeInjector from '@/components/theme-injector'
 import ChatWidget from '@/components/chat-widget'
+import OnboardingChecklist from '@/components/onboarding-checklist'
 
 function getAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -187,6 +188,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </main>
       </div>
       <ChatWidget plan={plan} />
+      <OnboardingChecklist />
     </>
   )
 }
