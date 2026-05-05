@@ -119,24 +119,35 @@ export default function SignupPage() {
     try {
       const supabase = createClient()
 
-      const { data: authData, error: authError } = await supabase.auth.signUp({ email, password })
-      if (authError) { clearTimeout(timer); toast.error(authError.message); setBuyLoading(false); return }
-      const user = authData.user
-      if (!user) { clearTimeout(timer); toast.error('Failed to create account. Please try again.'); setBuyLoading(false); return }
+      let userId: string
 
-      // Create company with onboarding_completed: true so they skip the onboarding redirect
-      await supabase.from('companies').insert({
-        id:                   user.id,
-        name:                 companyName,
-        owner_id:             user.id,
-        plan:                 selectedPlan,
-        subscription_status:  'pending_checkout',
-        onboarding_completed: true,
-      })
+      const { data: authData, error: authError } = await supabase.auth.signUp({ email, password })
+
+      if (authError?.message?.toLowerCase().includes('already registered') || authError?.message?.toLowerCase().includes('already exists')) {
+        // Email already registered — sign them in and proceed to checkout
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+        if (signInError) { clearTimeout(timer); toast.error('Wrong password for existing account. Please sign in first.'); setBuyLoading(false); return }
+        if (!signInData.user) { clearTimeout(timer); toast.error('Could not sign in. Please try again.'); setBuyLoading(false); return }
+        userId = signInData.user.id
+      } else {
+        if (authError) { clearTimeout(timer); toast.error(authError.message); setBuyLoading(false); return }
+        if (!authData.user) { clearTimeout(timer); toast.error('Failed to create account. Please try again.'); setBuyLoading(false); return }
+        userId = authData.user.id
+
+        // New account — create company with onboarding_completed: true so they skip the onboarding redirect
+        await supabase.from('companies').insert({
+          id:                   userId,
+          name:                 companyName,
+          owner_id:             userId,
+          plan:                 selectedPlan,
+          subscription_status:  'pending_checkout',
+          onboarding_completed: true,
+        })
+      }
 
       await supabase.from('profiles').upsert({
-        id:              user.id,
-        organization_id: user.id,
+        id:              userId,
+        organization_id: userId,
       }, { onConflict: 'id' })
 
       localStorage.setItem('dtb_selected_plan', selectedPlan)
