@@ -68,8 +68,8 @@ export default function Sidebar({ user, logoUrl, companyName: companyNameProp, p
         <Image
           src="/dtb-logo.png"
           alt="DumpTruckBoss"
-          width={100}
-          height={34}
+          width={150}
+          height={50}
           className="object-contain"
         />
       </div>
