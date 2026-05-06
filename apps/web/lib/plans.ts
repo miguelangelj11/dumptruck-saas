@@ -111,6 +111,8 @@ export type FeatureKey =
   | 'quote_builder'
   | 'advanced_profitability'
   | 'customer_insights'
+  | 'mobile_ticket'
+  | 'customer_invoicing'
 
 export const FEATURE_GATES: Record<FeatureKey, PlanId[]> = {
   // Owner Operator + above
@@ -132,6 +134,8 @@ export const FEATURE_GATES: Record<FeatureKey, PlanId[]> = {
   quote_builder:          ['growth'],
   advanced_profitability: ['growth'],
   customer_insights:      ['growth'],
+  mobile_ticket:          ['growth'],
+  customer_invoicing:     ['growth'],
 }
 
 export function canAccess(planId: string, feature: FeatureKey): boolean {

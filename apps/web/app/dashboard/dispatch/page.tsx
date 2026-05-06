@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import {
   Plus, Pencil, Trash2, Loader2, X, MapPin, Users, Truck,
   DollarSign, Calendar, ChevronDown, ChevronUp, Send,
-  AlertTriangle, Clock, PackageOpen, TrendingUp, RefreshCw, Radio, Link2,
+  AlertTriangle, Clock, PackageOpen, TrendingUp, RefreshCw, Radio, Link2, Smartphone,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Job, Load, Dispatch, DispatchStatus, DriverRecommendation, RateInsight, DispatchOptimizationHint } from '@/lib/types'
@@ -89,6 +89,18 @@ const EMPTY_DISPATCH = { job_id: '', driver_id: '', truck_number: '', start_time
 
 function fmtMoney(n: number) {
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : n.toLocaleString()
+}
+
+async function copyMobileTicketLink(dispatchId: string) {
+  const res = await fetch(`/api/ticket/link?id=${encodeURIComponent(dispatchId)}`)
+  if (res.status === 403) {
+    toast.error('Mobile Ticket requires the Growth plan. Upgrade in Settings → Billing.')
+    return
+  }
+  if (!res.ok) { toast.error('Could not generate link.'); return }
+  const { url } = await res.json() as { url: string }
+  await navigator.clipboard.writeText(url)
+  toast.success('📱 Mobile ticket link copied!')
 }
 
 // ─── Job Profit Panel ─────────────────────────────────────────────────────────
@@ -1145,6 +1157,13 @@ export default function DispatchPage() {
                         >
                           {DISPATCH_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                         </select>
+                        <button
+                          onClick={() => copyMobileTicketLink(d.id)}
+                          title="Copy mobile ticket link"
+                          className="h-8 w-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:text-[var(--brand-primary)]"
+                        >
+                          <Smartphone className="h-3.5 w-3.5" />
+                        </button>
                         <button onClick={() => openEditDispatch(d)} className="h-8 w-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:text-[var(--brand-primary)]"><Pencil className="h-3.5 w-3.5" /></button>
                         <button onClick={() => deleteDispatch(d.id)} className="h-8 w-8 rounded-lg border border-red-100 flex items-center justify-center text-red-400 hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /></button>
                       </div>
@@ -1212,6 +1231,7 @@ export default function DispatchPage() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1.5">
+                              <button onClick={() => copyMobileTicketLink(d.id)} title="Copy mobile ticket link" className="p-1.5 text-gray-400 hover:text-[var(--brand-primary)] transition-colors"><Smartphone className="h-3.5 w-3.5" /></button>
                               <button onClick={() => openEditDispatch(d)} className="p-1.5 text-gray-400 hover:text-[var(--brand-primary)] transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
                               <button onClick={() => deleteDispatch(d.id)} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
                             </div>
