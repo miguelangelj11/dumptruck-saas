@@ -628,24 +628,22 @@ export default function ContractorsPage() {
   // Fleet plan gate — owner_operator cannot access subcontractors
   if (!loading && companyPlan === 'owner_operator') {
     return (
-      <div className="p-6 md:p-8 max-w-2xl">
-        <div className="rounded-xl border-2 border-[#2d7a4f]/20 bg-[#f0f9f4] p-8 text-center space-y-4">
-          <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#2d7a4f]/10 mx-auto">
-            <Truck className="h-7 w-7 text-[#2d7a4f]" />
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">Subcontractor management is a Fleet Plan feature</h2>
-            <p className="text-sm text-gray-500 mt-1.5 max-w-sm mx-auto">
-              Manage independent operators, log contractor tickets, and track what you owe — all in one place. Available on the Fleet Plan ($150/mo).
-            </p>
-          </div>
-          <a
-            href="/dashboard/settings#subscription"
-            className="inline-flex items-center gap-2 rounded-lg bg-[#2d7a4f] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#245f3e] transition-colors"
-          >
-            Upgrade to Fleet Plan →
-          </a>
-        </div>
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-8">
+        <span className="text-6xl mb-4">🔒</span>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Subcontractor Management</h2>
+        <p className="text-gray-600 mb-2">
+          Manage subcontractors, track their tickets, and pay them with one click.
+        </p>
+        <p className="text-sm text-gray-500 mb-6">
+          This feature requires the Fleet plan ($150/mo)
+        </p>
+        <a
+          href="/dashboard/settings?tab=billing"
+          className="px-6 py-3 font-bold rounded-xl transition-colors"
+          style={{ background: '#F5B731', color: '#1a1a1a' }}
+        >
+          Upgrade to Fleet →
+        </a>
       </div>
     )
   }

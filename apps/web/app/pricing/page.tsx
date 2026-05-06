@@ -12,80 +12,85 @@ const plans = [
   {
     key: 'owner',
     name: 'Owner Operator',
-    tagline: '1–3 trucks, solo operator',
+    tagline: 'Perfect for solo operators with up to 5 trucks',
     monthlyPrice: '$80',
     annualPrice: '$64',
     annualSavings: 'Save $192/year',
     popular: false,
-    ctaLabel: 'Start Free Trial',
+    ctaLabel: 'Start Free 7-Day Trial',
     ctaHref: '/signup?plan=owner_operator',
     features: [
-      'Up to 3 drivers',
-      'Up to 200 tickets/month',
-      'Basic ticket management (create, edit, delete)',
-      'Ticket photo upload',
-      'Basic loads tracking',
-      'Simple client invoices',
-      'Download invoice as PDF',
-      'Basic revenue dashboard',
-      'Single user login (owner only)',
-      'Company logo on invoices',
+      'Up to 5 trucks',
+      'Dispatching & job management',
+      'Ticket tracking',
+      'Basic invoicing',
+      'Basic dashboard',
+      'Driver management',
+      'Client companies',
+    ],
+    locked: [
+      'Subcontractor management',
+      'Missing ticket detection',
+      'Follow-up automation',
+      'Auto invoice intelligence',
+      'Profit tracking',
+      'AI dispatch recommendations',
     ],
   },
   {
     key: 'fleet',
     name: 'Fleet',
-    tagline: '4–15 trucks, growing fleet',
+    tagline: 'For growing companies that need full control',
     monthlyPrice: '$150',
     annualPrice: '$120',
     annualSavings: 'Save $360/year',
     popular: true,
-    ctaLabel: 'Start Free Trial',
+    ctaLabel: 'Start Free 7-Day Trial',
     ctaHref: '/signup?plan=fleet',
     features: [
-      'Up to 15 drivers',
-      'Unlimited tickets',
-      'Ticket photo upload (snap paper tickets)',
-      'Full dispatch board (assign drivers to jobs)',
-      'All 3 invoice types (Client, Driver Pay, Subcontractor)',
-      'Send invoices via email',
-      'Weekly auto-invoice builder',
-      'Payment tracking (mark invoices paid/unpaid)',
-      'Outstanding balance tracker',
-      'Missing tickets alerts',
-      'Driver payment history',
+      'Unlimited trucks & drivers',
+      'Everything in Owner Operator',
       'Subcontractor management',
-      'Basic reporting (revenue by driver, by job)',
-      'Up to 3 team logins (owner + 2 staff)',
-      'Priority email support',
+      'Missing ticket detection',
+      'Follow-up automation engine',
+      'Auto invoice intelligence',
+      'Real-time dispatch board',
+      'Driver zero-friction portal',
+      'Basic profit tracking',
+      'AI dispatch recommendations',
+      'Overdue invoice automation',
+      'Weekly performance reports',
+    ],
+    locked: [
+      'Lead & job pipeline (CRM)',
+      'Quote builder',
+      'Advanced job profitability',
+      'Customer insights',
     ],
   },
   {
     key: 'enterprise',
-    name: 'Enterprise',
-    tagline: '15+ trucks or multiple locations',
-    monthlyPrice: '$300+',
+    name: 'Growth',
+    tagline: 'For operators ready to grow their business',
+    monthlyPrice: '$300',
     annualPrice: null,
     annualSavings: null,
     popular: false,
-    ctaLabel: 'Schedule a Demo',
-    ctaHref: '/schedule-demo',
+    ctaLabel: 'Contact Us',
+    ctaHref: 'mailto:hello@dumptruckboss.com',
     features: [
-      'Unlimited drivers and trucks',
-      'Unlimited team logins with role-based access',
-      'Driver mobile app (submit tickets from phone)',
-      'AI ticket photo reader (auto-fills ticket data)',
-      'Advanced reporting (aging reports, 30/60/90 day)',
-      'Revenue by contractor, truck, job with charts',
-      'Send invoices via text/SMS',
-      'Auto-follow up on overdue invoices',
-      'QuickBooks export (CSV)',
-      'Dedicated account manager',
-      'Custom onboarding included',
-      'Priority phone support',
-      'Custom contract available',
-      'Pilot program available',
+      'Everything in Fleet',
+      'Lead & job pipeline (CRM)',
+      'Quote builder',
+      'Convert quotes → jobs → invoices',
+      'Advanced job profitability',
+      'Revenue per driver & truck',
+      'Customer insights dashboard',
+      'Top clients & slow payer tracking',
+      'Revenue per customer reporting',
+      'Priority support',
     ],
+    locked: [],
   },
 ] as const
 
@@ -209,10 +214,10 @@ export default function PricingPage() {
   const BG = '#0f1923'
   const CARD_BG = 'rgba(255,255,255,0.04)'
   const CARD_BORDER = '1px solid rgba(255,255,255,0.09)'
-  const HIGHLIGHT_BG = '#152a1e'
-  const HIGHLIGHT_BORDER = '2px solid #2d7a4f'
-  const GREEN = '#2d7a4f'
-  const GREEN_LIGHT = '#4ade80'
+  const HIGHLIGHT_BG = '#1a1500'
+  const HIGHLIGHT_BORDER = '2px solid #F5B731'
+  const GREEN = '#F5B731'
+  const GREEN_LIGHT = '#F5B731'
 
   return (
     <div style={{ background: BG, minHeight: '100vh', color: '#fff' }}>
@@ -230,7 +235,8 @@ export default function PricingPage() {
           Pricing
         </p>
         <h1 style={{ fontSize: 'clamp(30px, 5vw, 52px)', fontWeight: 800, color: '#fff', marginBottom: '14px', lineHeight: 1.15, letterSpacing: '-0.02em' }}>
-          Choose a plan built for<br className="hidden-xs" /> your hauling business.
+          Stop losing money on every load.<br />
+          <span style={{ color: '#F5B731' }}>Run your dump truck business the right way.</span>
         </h1>
         <p style={{ fontSize: '17px', color: 'rgba(255,255,255,0.45)', marginBottom: '36px', lineHeight: 1.6 }}>
           Owner Operator and Fleet plans include a free 7-day trial. No credit card required.
@@ -319,8 +325,8 @@ export default function PricingPage() {
                     top: '-13px',
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    background: GREEN,
-                    color: '#fff',
+                    background: '#F5B731',
+                    color: '#1a1a1a',
                     fontSize: '10px',
                     fontWeight: 800,
                     letterSpacing: '0.08em',
@@ -329,7 +335,7 @@ export default function PricingPage() {
                     borderRadius: '100px',
                     whiteSpace: 'nowrap',
                   }}>
-                    Most Popular
+                    ⭐ Most Popular
                   </div>
                 )}
 
@@ -399,8 +405,8 @@ export default function PricingPage() {
                         border: 'none',
                         opacity: checkoutLoading === plan.key ? 0.7 : 1,
                         ...(hl
-                          ? { background: GREEN, color: '#fff' }
-                          : { background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.12)' }
+                          ? { background: '#F5B731', color: '#1a1a1a' }
+                          : { background: '#1a1a1a', color: '#fff', border: '1px solid rgba(255,255,255,0.12)' }
                         ),
                       }}
                     >
@@ -434,8 +440,14 @@ export default function PricingPage() {
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: '11px' }}>
                   {plan.features.map((f) => (
                     <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                      <span style={{ color: hl ? GREEN_LIGHT : GREEN, fontSize: '14px', fontWeight: 700, flexShrink: 0, marginTop: '1px', lineHeight: 1.4 }}>✓</span>
+                      <span style={{ color: hl ? '#F5B731' : '#4ade80', fontSize: '14px', fontWeight: 700, flexShrink: 0, marginTop: '1px', lineHeight: 1.4 }}>✓</span>
                       <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>{f}</span>
+                    </li>
+                  ))}
+                  {'locked' in plan && plan.locked.map((f) => (
+                    <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                      <span style={{ fontSize: '13px', flexShrink: 0, marginTop: '1px', lineHeight: 1.4 }}>🔒</span>
+                      <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.28)', lineHeight: 1.5 }}>{f}</span>
                     </li>
                   ))}
                 </ul>
@@ -460,6 +472,18 @@ export default function PricingPage() {
               </div>
             )
           })}
+        </div>
+      </div>
+
+      {/* ── Comparison callout ────────────────────────────────────────────────── */}
+      <div style={{ maxWidth: '800px', margin: '48px auto 0', padding: '0 20px' }}>
+        <div style={{ background: 'rgba(245,183,49,0.08)', border: '1px solid rgba(245,183,49,0.25)', borderRadius: '16px', padding: '28px 32px', textAlign: 'center' }}>
+          <p style={{ fontSize: '17px', fontWeight: 700, color: '#fff', marginBottom: '8px', lineHeight: 1.4 }}>
+            🚛 Most operators on Owner Operator are losing $500–$2,000/month in untracked tickets.
+          </p>
+          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', margin: 0 }}>
+            Fleet plan pays for itself the first week.
+          </p>
         </div>
       </div>
 

@@ -10,7 +10,7 @@ function priceToPlan(priceId: string | null | undefined): string | null {
   const map: Record<string, string> = {
     [process.env.STRIPE_OWNER_PRICE_ID      ?? '__none__']: 'owner_operator',
     [process.env.STRIPE_FLEET_PRICE_ID      ?? '__none__']: 'fleet',
-    [process.env.STRIPE_ENTERPRISE_PRICE_ID ?? '__none__']: 'enterprise',
+    [process.env.STRIPE_ENTERPRISE_PRICE_ID ?? '__none__']: 'growth',
   }
   return map[priceId] ?? null
 }

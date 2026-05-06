@@ -3,6 +3,7 @@ import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { resolveCompanyId } from '@/lib/resolve-company'
 import { sendMissingTicketEmail } from '@/lib/follow-up/send-missing-ticket-email'
+import { canAccess } from '@/lib/plans'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://dumptruckboss.com'
 const SIX_HOURS_MS = 6 * 60 * 60 * 1000
@@ -27,6 +28,17 @@ export async function POST(
   const admin = getAdmin()
   const companyId = await resolveCompanyId(user.id, admin)
   if (!companyId) return NextResponse.json({ error: 'Company not found' }, { status: 404 })
+
+  // Fleet plan required for follow-up automation
+  const { data: co } = await admin.from('companies').select('plan').eq('id', companyId).maybeSingle()
+  if (!canAccess(co?.plan ?? 'owner_operator', 'follow_up_automation')) {
+    return NextResponse.json({
+      error: 'upgrade_required',
+      feature: 'follow_up_automation',
+      message: 'Follow-up automation requires the Fleet plan.',
+      required_plan: 'fleet',
+    }, { status: 403 })
+  }
 
   const { id: dispatchId } = await params
 

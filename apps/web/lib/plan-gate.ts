@@ -8,8 +8,8 @@ export function planTier(plan: string | null | undefined): number {
 }
 
 export function normalizePlan(plan: string | null | undefined): Plan {
-  if (plan === 'fleet')      return 'fleet'
-  if (plan === 'enterprise') return 'enterprise'
+  if (plan === 'fleet')                           return 'fleet'
+  if (plan === 'enterprise' || plan === 'growth') return 'enterprise'
   return 'owner_operator'
 }
 
@@ -42,7 +42,7 @@ export const FEATURE_PLAN: Record<Feature, Plan> = {
 }
 
 export const PLAN_LIMITS: Record<Plan, { maxDrivers: number; maxTrucks: number; maxTicketsPerMonth: number }> = {
-  owner_operator: { maxDrivers: 3, maxTrucks: 3, maxTicketsPerMonth: 200 },
+  owner_operator: { maxDrivers: 10, maxTrucks: 5, maxTicketsPerMonth: 200 },
   fleet:          { maxDrivers: Infinity, maxTrucks: Infinity, maxTicketsPerMonth: Infinity },
   enterprise:     { maxDrivers: Infinity, maxTrucks: Infinity, maxTicketsPerMonth: Infinity },
 }

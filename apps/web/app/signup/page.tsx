@@ -9,9 +9,9 @@ import { toast } from 'sonner'
 
 type Plan = 'owner_operator' | 'fleet'
 
-const PLANS: { id: Plan; name: string; price: string; desc: string; color: string }[] = [
-  { id: 'owner_operator', name: 'Owner Operator Plan', price: '$80/mo', desc: '1–3 trucks, solo operator', color: '#f59e0b' },
-  { id: 'fleet',          name: 'Fleet Plan',          price: '$150/mo', desc: '4–15 trucks, growing fleet', color: '#2d7a4f' },
+const PLANS: { id: Plan; name: string; price: string; desc: string; color: string; badge?: string; subtext?: string }[] = [
+  { id: 'owner_operator', name: 'Owner Operator', price: '$80/mo', desc: 'Up to 5 trucks, solo operator', color: '#1a1a1a' },
+  { id: 'fleet',          name: 'Fleet',          price: '$150/mo', desc: 'Unlimited trucks & drivers', color: '#F5B731', badge: 'Most Popular', subtext: 'Includes missing ticket detection + auto follow-ups' },
 ]
 
 export default function SignupPage() {
@@ -217,13 +217,20 @@ export default function SignupPage() {
               const sel = selectedPlan === plan.id
               return (
                 <button key={plan.id} type="button" onClick={() => setSelectedPlan(plan.id)} style={{
+                  position: 'relative',
                   background: sel ? `${plan.color}18` : 'rgba(255,255,255,0.04)',
                   border: `2px solid ${sel ? plan.color : 'rgba(255,255,255,0.1)'}`,
                   borderRadius: '12px', padding: '16px', textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s', outline: 'none',
                 }}>
+                  {plan.badge && (
+                    <span style={{ position: 'absolute', top: '-10px', left: '12px', background: '#F5B731', color: '#1a1a1a', fontSize: '10px', fontWeight: 800, padding: '2px 8px', borderRadius: '100px' }}>
+                      {plan.badge}
+                    </span>
+                  )}
                   <div style={{ fontSize: '14px', fontWeight: 700, color: sel ? plan.color : '#fff', marginBottom: '4px' }}>{plan.name}</div>
                   <div style={{ fontSize: '16px', fontWeight: 800, color: sel ? plan.color : 'rgba(255,255,255,0.7)', marginBottom: '4px' }}>{plan.price}</div>
                   <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>{plan.desc}</div>
+                  {plan.subtext && <div style={{ fontSize: '11px', color: sel ? plan.color : 'rgba(255,255,255,0.35)', marginTop: '4px' }}>{plan.subtext}</div>}
                 </button>
               )
             })}

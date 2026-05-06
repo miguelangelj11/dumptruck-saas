@@ -49,8 +49,9 @@ export async function GET(request: Request) {
 
   const { data: companies, error: coErr } = await admin
     .from('companies')
-    .select('id, name, owner_id, notification_email, weekly_report_enabled')
+    .select('id, name, owner_id, notification_email, weekly_report_enabled, plan')
     .eq('weekly_report_enabled', true)
+    .in('plan', ['fleet', 'enterprise', 'growth'])
 
   if (coErr) {
     console.error('[cron/weekly-report] failed to fetch companies:', coErr.message)
