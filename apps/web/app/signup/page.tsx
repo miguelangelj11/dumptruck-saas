@@ -16,15 +16,17 @@ const PLANS: { id: Plan; name: string; price: string; desc: string; color: strin
 
 export default function SignupPage() {
   const router = useRouter()
-  const [selectedPlan, setSelectedPlan]       = useState<Plan | null>(null)
-  const [companyName, setCompanyName]         = useState('')
-  const [email, setEmail]                     = useState('')
-  const [password, setPassword]               = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [agreedToTerms, setAgreedToTerms]     = useState(false)
-  const [loading, setLoading]                 = useState(false)
-  const [buyLoading, setBuyLoading]           = useState(false)
-  const [subscribeMode, setSubscribeMode]     = useState(false)
+  const [selectedPlan, setSelectedPlan]         = useState<Plan | null>(null)
+  const [companyName, setCompanyName]           = useState('')
+  const [email, setEmail]                       = useState('')
+  const [password, setPassword]                 = useState('')
+  const [confirmPassword, setConfirmPassword]   = useState('')
+  const [agreedToTerms, setAgreedToTerms]       = useState(false)
+  const [loading, setLoading]                   = useState(false)
+  const [buyLoading, setBuyLoading]             = useState(false)
+  const [subscribeMode, setSubscribeMode]       = useState(false)
+  const [alreadyExistsError, setAlreadyExists]  = useState(false)
+  const [paymentComplete, setPaymentComplete]   = useState(false)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -32,17 +34,20 @@ export default function SignupPage() {
     if (p === 'fleet') setSelectedPlan('fleet')
     else if (p === 'owner_operator' || p === 'owner') setSelectedPlan('owner_operator')
     if (params.get('subscribe') === 'true') setSubscribeMode(true)
+    if (params.get('paid') === 'true') setPaymentComplete(true)
   }, [])
+
+  // ── Free trial flow ──────────────────────────────────────────────────────────
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!selectedPlan)             { toast.error('Please select a plan'); return }
+    if (!selectedPlan)               { toast.error('Please select a plan'); return }
     if (password !== confirmPassword) { toast.error('Passwords do not match'); return }
-    if (!agreedToTerms)            { toast.error('You must agree to the Terms of Service'); return }
+    if (!agreedToTerms)              { toast.error('You must agree to the Terms of Service'); return }
 
     setLoading(true)
+    setAlreadyExists(false)
 
-    // 15-second hard timeout
     const timer = setTimeout(() => {
       toast.error('Something went wrong. Please try again.')
       setLoading(false)
@@ -51,11 +56,14 @@ export default function SignupPage() {
     try {
       const supabase = createClient()
 
-      // Step 1: create auth user
       const { data, error } = await supabase.auth.signUp({ email, password })
       if (error) {
         clearTimeout(timer)
-        toast.error(error.message)
+        if (/already registered|already exists/i.test(error.message)) {
+          setAlreadyExists(true)
+        } else {
+          toast.error(error.message)
+        }
         setLoading(false)
         return
       }
@@ -68,8 +76,6 @@ export default function SignupPage() {
         return
       }
 
-      // Step 2: create company row
-      // id is set explicitly to user.id so companies.id === auth.uid() everywhere
       const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
       await supabase.from('companies').insert({
         id:                  user.id,
@@ -81,18 +87,13 @@ export default function SignupPage() {
         subscription_status: 'trial',
       })
 
-      // Step 3: create profile row with organization_id so all API routes can find the company
       await supabase.from('profiles').upsert({
         id:              user.id,
         organization_id: user.id,
       }, { onConflict: 'id' })
 
-      // Save plan to localStorage so Settings page can read it later
       localStorage.setItem('dtb_selected_plan', selectedPlan)
-
       clearTimeout(timer)
-
-      // Step 3: go to dashboard
       router.push('/dashboard')
     } catch (err) {
       clearTimeout(timer)
@@ -102,13 +103,13 @@ export default function SignupPage() {
     }
   }
 
+  // ── Subscribe Now flow — account created by webhook after payment ────────────
+
   async function handleBuyNow() {
-    if (!selectedPlan)                { toast.error('Please select a plan'); return }
-    if (!companyName.trim())          { toast.error('Company name is required'); return }
-    if (!email.trim())                { toast.error('Email is required'); return }
-    if (password.length < 6)          { toast.error('Password must be at least 6 characters'); return }
-    if (password !== confirmPassword) { toast.error('Passwords do not match'); return }
-    if (!agreedToTerms)               { toast.error('You must agree to the Terms of Service'); return }
+    if (!selectedPlan)       { toast.error('Please select a plan'); return }
+    if (!companyName.trim()) { toast.error('Company name is required'); return }
+    if (!email.trim())       { toast.error('Email is required'); return }
+    if (!agreedToTerms)      { toast.error('You must agree to the Terms of Service'); return }
 
     setBuyLoading(true)
     const timer = setTimeout(() => {
@@ -117,48 +118,18 @@ export default function SignupPage() {
     }, 20_000)
 
     try {
-      const supabase = createClient()
-
-      let userId: string
-
-      const { data: authData, error: authError } = await supabase.auth.signUp({ email, password })
-
-      if (authError?.message?.toLowerCase().includes('already registered') || authError?.message?.toLowerCase().includes('already exists')) {
-        // Email already registered — sign them in and proceed to checkout
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-        if (signInError) { clearTimeout(timer); toast.error('Wrong password for existing account. Please sign in first.'); setBuyLoading(false); return }
-        if (!signInData.user) { clearTimeout(timer); toast.error('Could not sign in. Please try again.'); setBuyLoading(false); return }
-        userId = signInData.user.id
-      } else {
-        if (authError) { clearTimeout(timer); toast.error(authError.message); setBuyLoading(false); return }
-        if (!authData.user) { clearTimeout(timer); toast.error('Failed to create account. Please try again.'); setBuyLoading(false); return }
-        userId = authData.user.id
-
-        // New account — create company with onboarding_completed: true so they skip the onboarding redirect
-        await supabase.from('companies').insert({
-          id:                   userId,
-          name:                 companyName,
-          owner_id:             userId,
-          plan:                 selectedPlan,
-          subscription_status:  'pending_checkout',
-          onboarding_completed: true,
-        })
-      }
-
-      await supabase.from('profiles').upsert({
-        id:              userId,
-        organization_id: userId,
-      }, { onConflict: 'id' })
-
-      localStorage.setItem('dtb_selected_plan', selectedPlan)
-
       const planKey = selectedPlan === 'owner_operator' ? 'owner' : 'fleet'
       let res: Response
       try {
         res = await fetch('/api/stripe/checkout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ plan: planKey, skip_trial: true }),
+          body: JSON.stringify({
+            plan:               planKey,
+            skip_trial:         true,
+            guest_email:        email.trim(),
+            guest_company_name: companyName.trim(),
+          }),
         })
       } catch {
         clearTimeout(timer)
@@ -167,7 +138,7 @@ export default function SignupPage() {
         return
       }
 
-      let checkoutData: { url?: string; error?: string; redirect?: string }
+      let checkoutData: { url?: string; error?: string }
       try {
         checkoutData = await res.json()
       } catch {
@@ -191,6 +162,33 @@ export default function SignupPage() {
       setBuyLoading(false)
     }
   }
+
+  // ── Payment-complete screen (redirected back from Stripe) ────────────────────
+
+  if (paymentComplete) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#0f1923', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+        <div style={{ width: '100%', maxWidth: '480px', textAlign: 'center' }}>
+          <div style={{ fontSize: '56px', marginBottom: '20px' }}>🎉</div>
+          <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#fff', marginBottom: '12px' }}>Payment confirmed!</h1>
+          <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6, marginBottom: '28px' }}>
+            We&apos;re setting up your account now. Check your email — we&apos;ve sent you a link to set your password and access your dashboard.
+          </p>
+          <div style={{ background: 'rgba(45,122,79,0.15)', border: '1px solid rgba(45,122,79,0.4)', borderRadius: '12px', padding: '18px 24px', marginBottom: '28px' }}>
+            <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.6 }}>
+              Didn&apos;t get an email? Check your spam folder, or{' '}
+              <a href="mailto:miguelangel.j11@gmail.com" style={{ color: '#2d7a4f', textDecoration: 'none', fontWeight: 600 }}>contact support</a>.
+            </p>
+          </div>
+          <Link href="/login" style={{ display: 'inline-block', padding: '12px 28px', background: '#2d7a4f', color: '#fff', borderRadius: '10px', textDecoration: 'none', fontSize: '14px', fontWeight: 700 }}>
+            Go to Login →
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Signup form ──────────────────────────────────────────────────────────────
 
   return (
     <div style={{ minHeight: '100vh', background: '#0f1923', backgroundImage: 'radial-gradient(#ffffff06 1px, transparent 1px)', backgroundSize: '24px 24px', padding: '40px 24px' }}>
@@ -241,8 +239,14 @@ export default function SignupPage() {
             </Field>
 
             <Field label="Email address">
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+              <input type="email" value={email} onChange={e => { setEmail(e.target.value); setAlreadyExists(false) }}
                 required autoComplete="email" placeholder="you@company.com" style={inputStyle} />
+              {alreadyExistsError && (
+                <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#dc2626' }}>
+                  An account with this email already exists.{' '}
+                  <Link href="/login" style={{ color: '#2d7a4f', fontWeight: 600, textDecoration: 'underline' }}>Sign in instead</Link>
+                </p>
+              )}
             </Field>
 
             <Field label="Password">

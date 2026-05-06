@@ -28,6 +28,8 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}))
   const plan: PlanKey = body.plan ?? 'fleet'
   const skipTrial: boolean = body.skip_trial === true
+  const guestEmail: string | undefined = body.guest_email || undefined
+  const guestCompanyName: string | undefined = body.guest_company_name || undefined
 
   const priceId = PRICE_IDS[plan]
   if (!priceId) {
@@ -50,14 +52,18 @@ export async function POST(request: Request) {
   // ── Guest "pay first, create account after" flow ──────────────────────────
   if (!user) {
     try {
-      const planLabel = plan === 'owner' ? 'owner_operator' : plan
+      const metadata: Record<string, string> = { plan }
+      if (guestEmail)       metadata.email        = guestEmail
+      if (guestCompanyName) metadata.company_name = guestCompanyName
+
       const session = await stripe.checkout.sessions.create({
         mode: 'subscription',
         line_items: [{ price: priceId, quantity: 1 }],
-        success_url: `${siteUrl}/signup?session_id={CHECKOUT_SESSION_ID}&plan=${planLabel}`,
+        success_url: `${siteUrl}/signup?paid=true`,
         cancel_url:  `${siteUrl}/pricing`,
-        metadata:    { plan },
-        subscription_data: { metadata: { plan }, ...trialParams },
+        customer_email: guestEmail,
+        metadata,
+        subscription_data: { metadata, ...trialParams },
         payment_method_collection: paymentCollection,
         allow_promotion_codes: true,
       })
