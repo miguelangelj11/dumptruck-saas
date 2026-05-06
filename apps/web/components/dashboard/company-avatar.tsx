@@ -16,7 +16,7 @@ export default function CompanyAvatar({
   name,
   size = 32,
   rounded = 'full',
-  bg = '#2d7a4f',
+  bg = 'var(--brand-primary)',
   className = '',
 }: Props) {
   // Build initials from first letter of each significant word, max 2 chars

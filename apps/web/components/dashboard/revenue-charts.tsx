@@ -12,7 +12,7 @@ const fmtFull = (v: number) => `$${Number(v).toLocaleString()}`
 function useAccentColor() {
   const [color, setColor] = useState('#2d7a4f')
   useEffect(() => {
-    const c = getComputedStyle(document.documentElement).getPropertyValue('--hf-sidebar-accent').trim()
+    const c = getComputedStyle(document.documentElement).getPropertyValue('--brand-primary').trim()
     if (c) setColor(c)
   }, [])
   return color

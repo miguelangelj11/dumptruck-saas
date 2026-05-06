@@ -359,7 +359,7 @@ export default function RevenuePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full py-40">
-        <Loader2 className="h-6 w-6 animate-spin text-[#2d7a4f]" />
+        <Loader2 className="h-6 w-6 animate-spin text-[var(--brand-primary)]" />
       </div>
     )
   }
@@ -437,7 +437,7 @@ export default function RevenuePage() {
                 <div key={block.contractor} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
                   <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50">
                     <h3 className="font-semibold text-sm text-gray-900">{block.contractor}</h3>
-                    <span className="text-sm font-bold text-[#2d7a4f]">${block.total.toLocaleString()}</span>
+                    <span className="text-sm font-bold text-[var(--brand-primary)]">${block.total.toLocaleString()}</span>
                   </div>
                   <table className="w-full text-sm">
                     <thead>
@@ -459,13 +459,13 @@ export default function RevenuePage() {
                     <tfoot>
                       <tr className="border-t border-gray-100 bg-gray-50/50">
                         <td className="px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase" colSpan={2}>Subtotal — {block.contractor}</td>
-                        <td className="px-5 py-2.5 font-bold text-[#2d7a4f]">${block.total.toLocaleString()}</td>
+                        <td className="px-5 py-2.5 font-bold text-[var(--brand-primary)]">${block.total.toLocaleString()}</td>
                       </tr>
                     </tfoot>
                   </table>
                 </div>
               ))}
-              <div className="bg-[#1e3a2a] rounded-xl px-5 py-4 flex items-center justify-between">
+              <div className="bg-[var(--brand-dark)] rounded-xl px-5 py-4 flex items-center justify-between">
                 <span className="text-white font-semibold">Grand Total — All Drivers</span>
                 <span className="text-2xl font-extrabold text-[#4ade80]">${grandTotalOwed.toLocaleString()}</span>
               </div>
@@ -501,7 +501,7 @@ export default function RevenuePage() {
       {/* Summary cards */}
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
         <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <div className="inline-flex rounded-lg p-2 mb-3 text-[#2d7a4f] bg-[#2d7a4f]/10">
+          <div className="inline-flex rounded-lg p-2 mb-3 text-[var(--brand-primary)] bg-[var(--brand-primary)]/10">
             <CreditCard className="h-4 w-4" />
           </div>
           <p className="text-xl font-bold text-gray-900">${cashCollected.toLocaleString()}</p>
@@ -519,7 +519,7 @@ export default function RevenuePage() {
         </div>
 
         <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <div className={`inline-flex rounded-lg p-2 mb-3 ${profit >= 0 ? 'text-[#2d7a4f] bg-[#2d7a4f]/10' : 'text-red-500 bg-red-50'}`}>
+          <div className={`inline-flex rounded-lg p-2 mb-3 ${profit >= 0 ? 'text-[var(--brand-primary)] bg-[var(--brand-primary)]/10' : 'text-red-500 bg-red-50'}`}>
             <TrendingUp className="h-4 w-4" />
           </div>
           <p className={`text-xl font-bold ${profit >= 0 ? 'text-gray-900' : 'text-red-600'}`}>${profit.toLocaleString()}</p>
@@ -528,7 +528,7 @@ export default function RevenuePage() {
         </div>
 
         <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <div className={`inline-flex rounded-lg p-2 mb-3 ${profitMarginPct >= 0 ? 'text-[#2d7a4f] bg-[#2d7a4f]/10' : 'text-red-500 bg-red-50'}`}>
+          <div className={`inline-flex rounded-lg p-2 mb-3 ${profitMarginPct >= 0 ? 'text-[var(--brand-primary)] bg-[var(--brand-primary)]/10' : 'text-red-500 bg-red-50'}`}>
             <Percent className="h-4 w-4" />
           </div>
           <p className={`text-xl font-bold ${profitMarginPct >= 0 ? 'text-gray-900' : 'text-red-600'}`}>{profitMarginPct}%</p>
@@ -546,7 +546,7 @@ export default function RevenuePage() {
         </div>
 
         <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <div className="inline-flex rounded-lg p-2 mb-3 text-[#2d7a4f] bg-[#2d7a4f]/10">
+          <div className="inline-flex rounded-lg p-2 mb-3 text-[var(--brand-primary)] bg-[var(--brand-primary)]/10">
             <DollarSign className="h-4 w-4" />
           </div>
           <p className="text-xl font-bold text-gray-900">${driverCosts.toLocaleString()}</p>
@@ -600,7 +600,7 @@ export default function RevenuePage() {
                     </div>
                     <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-[#2d7a4f] rounded-full"
+                        className="h-full bg-[var(--brand-primary)] rounded-full"
                         style={{ width: `${contractorData[0] ? (c.revenue / contractorData[0].revenue) * 100 : 100}%` }}
                       />
                     </div>
@@ -713,7 +713,7 @@ export default function RevenuePage() {
                   required
                   value={expForm.description}
                   onChange={e => setExpForm(p => ({ ...p, description: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                   placeholder="Fuel for truck #3"
                 />
               </div>
@@ -724,7 +724,7 @@ export default function RevenuePage() {
                     required type="number" min="0" step="0.01"
                     value={expForm.amount}
                     onChange={e => setExpForm(p => ({ ...p, amount: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                     placeholder="350.00"
                   />
                 </div>
@@ -733,7 +733,7 @@ export default function RevenuePage() {
                   <select
                     value={expForm.category}
                     onChange={e => setExpForm(p => ({ ...p, category: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white"
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white"
                   >
                     {categories.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
@@ -745,7 +745,7 @@ export default function RevenuePage() {
                   required type="date"
                   value={expForm.date}
                   onChange={e => setExpForm(p => ({ ...p, date: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                 />
               </div>
               <div className="flex gap-3 pt-2">
@@ -759,7 +759,7 @@ export default function RevenuePage() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 rounded-lg bg-[#2d7a4f] py-2.5 text-sm font-semibold text-white hover:bg-[#245f3e] disabled:opacity-50"
+                  className="flex-1 rounded-lg bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] disabled:opacity-50"
                 >
                   {saving ? 'Adding…' : 'Add Expense'}
                 </button>

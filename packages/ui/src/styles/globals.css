@@ -54,6 +54,9 @@
     --hf-sidebar-bg: #1a1a1a;
     --hf-sidebar-accent: #F5B731;
     --hf-sidebar-highlight: #F5B731;
+    --brand-primary: #2d7a4f;
+    --brand-primary-hover: #1d5a3a;
+    --brand-dark: #1e3a2a;
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
     --card: oklch(1 0 0);

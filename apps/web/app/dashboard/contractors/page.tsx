@@ -297,7 +297,7 @@ export default function ContractorsPage() {
 
   // --- Render ---
   if (loading) {
-    return <div className="flex items-center justify-center py-40"><Loader2 className="h-6 w-6 animate-spin text-[#2d7a4f]" /></div>
+    return <div className="flex items-center justify-center py-40"><Loader2 className="h-6 w-6 animate-spin text-[var(--brand-primary)]" /></div>
   }
 
   // Detail view — selected contractor's tickets
@@ -317,7 +317,7 @@ export default function ContractorsPage() {
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${selected.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{selected.status}</span>
             </div>
           </div>
-          <button onClick={openAddTicket} className="inline-flex items-center gap-2 rounded-lg bg-[#2d7a4f] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors">
+          <button onClick={openAddTicket} className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors">
             <Plus className="h-4 w-4" /> Add Ticket
           </button>
         </div>
@@ -341,7 +341,7 @@ export default function ContractorsPage() {
 
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
           {loadingTickets ? (
-            <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-[#2d7a4f]" /></div>
+            <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-[var(--brand-primary)]" /></div>
           ) : (() => {
             const visibleTickets = ticketTab === 'all' ? tickets : tickets.filter(t => t.status === ticketTab)
             return visibleTickets.length === 0 ? (
@@ -350,7 +350,7 @@ export default function ContractorsPage() {
                 <p className="text-sm font-medium text-gray-400">
                   {tickets.length === 0 ? `No tickets yet for ${selected.name}` : `No ${ticketTab} tickets`}
                 </p>
-                {tickets.length === 0 && <button onClick={openAddTicket} className="mt-3 text-sm text-[#2d7a4f]">Add first ticket →</button>}
+                {tickets.length === 0 && <button onClick={openAddTicket} className="mt-3 text-sm text-[var(--brand-primary)]">Add first ticket →</button>}
               </div>
             ) : (
             <div className="overflow-x-auto">
@@ -373,7 +373,7 @@ export default function ContractorsPage() {
                           {photos.length > 0 ? (
                             <div className="flex gap-1">
                               {photos.slice(0, 3).map((url, i) => (
-                                <button key={i} onClick={() => { setViewingImages(photos); setViewingIndex(i) }} className="relative h-10 w-10 overflow-hidden rounded-lg border border-gray-200 hover:border-[#2d7a4f] transition-colors shrink-0">
+                                <button key={i} onClick={() => { setViewingImages(photos); setViewingIndex(i) }} className="relative h-10 w-10 overflow-hidden rounded-lg border border-gray-200 hover:border-[var(--brand-primary)] transition-colors shrink-0">
                                   <Image src={url} alt="Ticket" fill className="object-cover" sizes="40px" />
                                   {i === 2 && photos.length > 3 && <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white text-xs font-bold">+{photos.length - 3}</div>}
                                 </button>
@@ -406,7 +406,7 @@ export default function ContractorsPage() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <button onClick={() => openEditTicket(t)} className="p-1 text-gray-400 hover:text-[#2d7a4f] transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
+                            <button onClick={() => openEditTicket(t)} className="p-1 text-gray-400 hover:text-[var(--brand-primary)] transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
                             <button onClick={() => handleDeleteTicket(t.id)} className="p-1 text-gray-400 hover:text-red-500 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
                           </div>
                         </td>
@@ -433,15 +433,15 @@ export default function ContractorsPage() {
                   <div className="col-span-2">
                     <div className="flex items-center justify-between mb-1">
                       <label className="block text-xs font-medium text-gray-700">Working Under (Company)</label>
-                      <a href="/dashboard/settings" target="_blank" className="text-xs text-[#2d7a4f]">+ Manage companies</a>
+                      <a href="/dashboard/settings" target="_blank" className="text-xs text-[var(--brand-primary)]">+ Manage companies</a>
                     </div>
                     {clientCompanies.length === 0 ? (
                       <div className="w-full rounded-lg border border-dashed border-gray-200 px-3 py-2.5 text-sm text-gray-400 flex items-center justify-between">
                         <span>No companies added yet</span>
-                        <a href="/dashboard/settings" target="_blank" className="text-xs text-[#2d7a4f] shrink-0">Add in Settings →</a>
+                        <a href="/dashboard/settings" target="_blank" className="text-xs text-[var(--brand-primary)] shrink-0">Add in Settings →</a>
                       </div>
                     ) : (
-                      <select value={ticketForm.client_company} onChange={e => setTicketForm(p => ({ ...p, client_company: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white">
+                      <select value={ticketForm.client_company} onChange={e => setTicketForm(p => ({ ...p, client_company: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white">
                         <option value="">— Select a company —</option>
                         {clientCompanies.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                       </select>
@@ -449,15 +449,15 @@ export default function ContractorsPage() {
                   </div>
                   <div className="col-span-2">
                     <label className="block text-xs font-medium text-gray-700 mb-1">Job Name *</label>
-                    <input required value={ticketForm.job_name} onChange={e => setTicketForm(p => ({ ...p, job_name: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="Ironclad Grade Site" />
+                    <input required value={ticketForm.job_name} onChange={e => setTicketForm(p => ({ ...p, job_name: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="Ironclad Grade Site" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Date *</label>
-                    <input required type="date" value={ticketForm.date} onChange={e => setTicketForm(p => ({ ...p, date: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" />
+                    <input required type="date" value={ticketForm.date} onChange={e => setTicketForm(p => ({ ...p, date: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Hours Worked</label>
-                    <input value={ticketForm.hours_worked} onChange={e => setTicketForm(p => ({ ...p, hours_worked: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="7:30am – 5:30pm" />
+                    <input value={ticketForm.hours_worked} onChange={e => setTicketForm(p => ({ ...p, hours_worked: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="7:30am – 5:30pm" />
                   </div>
                   <div className="col-span-2">
                     <div className="flex items-center justify-between mb-1">
@@ -466,7 +466,7 @@ export default function ContractorsPage() {
                         <button
                           type="button"
                           onClick={() => setTruckMode(m => m === 'dropdown' ? 'manual' : 'dropdown')}
-                          className="text-xs text-[#2d7a4f] hover:underline"
+                          className="text-xs text-[var(--brand-primary)] hover:underline"
                         >
                           {truckMode === 'dropdown' ? '✏️ Enter manually' : '← Back to list'}
                         </button>
@@ -476,7 +476,7 @@ export default function ContractorsPage() {
                       <select
                         value={ticketForm.truck_number}
                         onChange={e => setTicketForm(p => ({ ...p, truck_number: e.target.value }))}
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white"
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white"
                       >
                         <option value="">— Select a truck —</option>
                         {trucks.map(tr => <option key={tr.id} value={tr.truck_number}>#{tr.truck_number}</option>)}
@@ -486,13 +486,13 @@ export default function ContractorsPage() {
                         <input
                           value={ticketForm.truck_number}
                           onChange={e => setTicketForm(p => ({ ...p, truck_number: e.target.value }))}
-                          className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                          className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                           placeholder="e.g. 12"
                         />
                         {trucks.length === 0 && (
                           <p className="text-xs text-gray-400 mt-1">
                             No trucks added yet.{' '}
-                            <a href="/dashboard/settings" target="_blank" className="text-[#2d7a4f] hover:underline">Add trucks in Settings →</a>
+                            <a href="/dashboard/settings" target="_blank" className="text-[var(--brand-primary)] hover:underline">Add trucks in Settings →</a>
                           </p>
                         )}
                       </div>
@@ -503,20 +503,20 @@ export default function ContractorsPage() {
                     <input
                       value={ticketForm.ticket_number}
                       onChange={e => setTicketForm(p => ({ ...p, ticket_number: e.target.value }))}
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                       placeholder="e.g. T-1001"
                     />
                   </div>
                   <div className="col-span-2">
                     <label className="block text-xs font-medium text-gray-700 mb-1">Material</label>
-                    <select value={ticketForm.material} onChange={e => setTicketForm(p => ({ ...p, material: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white">
+                    <select value={ticketForm.material} onChange={e => setTicketForm(p => ({ ...p, material: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white">
                       <option value="">Select material</option>
                       {materials.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                   </div>
                   <div className="col-span-2">
                     <label className="block text-xs font-medium text-gray-700 mb-1">Total Pay ($) *</label>
-                    <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[#2d7a4f]/20 focus-within:border-[#2d7a4f]">
+                    <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/20 focus-within:border-[var(--brand-primary)]">
                       <span className="flex items-center px-3 bg-gray-50 text-sm text-gray-500 border-r border-gray-200">$</span>
                       <input required type="number" min="0" step="0.01" value={ticketForm.rate} onChange={e => setTicketForm(p => ({ ...p, rate: e.target.value }))} className="flex-1 px-3 py-2.5 text-sm focus:outline-none bg-white" placeholder="450.00" />
                       <select value={ticketForm.rate_type} onChange={e => setTicketForm(p => ({ ...p, rate_type: e.target.value }))} className="px-2 py-2.5 text-xs font-medium text-gray-600 bg-gray-50 border-l border-gray-200 focus:outline-none">
@@ -528,7 +528,7 @@ export default function ContractorsPage() {
                   </div>
                   <div className="col-span-2">
                     <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
-                    <select value={ticketForm.status} onChange={e => setTicketForm(p => ({ ...p, status: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white">
+                    <select value={ticketForm.status} onChange={e => setTicketForm(p => ({ ...p, status: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white">
                       <option value="pending">Pending</option>
                       <option value="invoiced">Invoiced</option>
                       <option value="paid">Paid</option>
@@ -536,7 +536,7 @@ export default function ContractorsPage() {
                   </div>
                   <div className="col-span-2">
                     <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
-                    <textarea value={ticketForm.notes} onChange={e => setTicketForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] resize-none" placeholder="Optional notes..." />
+                    <textarea value={ticketForm.notes} onChange={e => setTicketForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] resize-none" placeholder="Optional notes..." />
                   </div>
                 </div>
 
@@ -548,7 +548,7 @@ export default function ContractorsPage() {
                     const main = slipRows[0]!
                     return (
                       <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
-                        <span className="text-xs font-semibold text-[#2d7a4f] bg-[#2d7a4f]/10 px-2 py-0.5 rounded-full">Main Ticket</span>
+                        <span className="text-xs font-semibold text-[var(--brand-primary)] bg-[var(--brand-primary)]/10 px-2 py-0.5 rounded-full">Main Ticket</span>
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-2">Ticket Photo <span className="text-gray-400 font-normal">(tap to snap)</span></label>
                           {main.imagePreview ? (
@@ -564,12 +564,12 @@ export default function ContractorsPage() {
                               </button>
                             </div>
                           ) : (
-                            <button type="button" onClick={() => fileInputRefs.current.get(main.id)?.click()} className="w-full rounded-xl border-2 border-dashed border-gray-200 bg-white hover:border-[#2d7a4f] hover:bg-[#2d7a4f]/5 transition-all py-8 flex flex-col items-center gap-2 group">
-                              <div className="h-12 w-12 rounded-full bg-white border border-gray-200 flex items-center justify-center group-hover:border-[#2d7a4f] shadow-sm">
-                                <Camera className="h-5 w-5 text-gray-400 group-hover:text-[#2d7a4f]" />
+                            <button type="button" onClick={() => fileInputRefs.current.get(main.id)?.click()} className="w-full rounded-xl border-2 border-dashed border-gray-200 bg-white hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/5 transition-all py-8 flex flex-col items-center gap-2 group">
+                              <div className="h-12 w-12 rounded-full bg-white border border-gray-200 flex items-center justify-center group-hover:border-[var(--brand-primary)] shadow-sm">
+                                <Camera className="h-5 w-5 text-gray-400 group-hover:text-[var(--brand-primary)]" />
                               </div>
                               <div className="text-center">
-                                <p className="text-sm font-medium text-gray-600 group-hover:text-[#2d7a4f]">Take photo or upload</p>
+                                <p className="text-sm font-medium text-gray-600 group-hover:text-[var(--brand-primary)]">Take photo or upload</p>
                                 <p className="text-xs text-gray-400 mt-0.5">JPG, PNG up to 10MB</p>
                               </div>
                             </button>
@@ -578,7 +578,7 @@ export default function ContractorsPage() {
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Tonnage / Count</label>
-                          <input type="number" min="0" step="0.01" value={main.tonnage} onChange={e => updateSlipRow(main.id, { tonnage: e.target.value })} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white" placeholder="14.5" />
+                          <input type="number" min="0" step="0.01" value={main.tonnage} onChange={e => updateSlipRow(main.id, { tonnage: e.target.value })} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white" placeholder="14.5" />
                         </div>
                       </div>
                     )
@@ -594,7 +594,7 @@ export default function ContractorsPage() {
                       <div className="flex gap-3 items-start">
                         <div className="flex-1">
                           <label className="block text-xs font-medium text-gray-600 mb-1">Tonnage / Count</label>
-                          <input type="number" min="0" step="0.01" value={row.tonnage} onChange={e => updateSlipRow(row.id, { tonnage: e.target.value })} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white" placeholder="14.5" />
+                          <input type="number" min="0" step="0.01" value={row.tonnage} onChange={e => updateSlipRow(row.id, { tonnage: e.target.value })} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white" placeholder="14.5" />
                         </div>
                         <div className="shrink-0">
                           <label className="block text-xs font-medium text-gray-600 mb-1">Photo</label>
@@ -604,7 +604,7 @@ export default function ContractorsPage() {
                               <button type="button" onClick={() => { updateSlipRow(row.id, { imageFile: null, imagePreview: null }); const el = fileInputRefs.current.get(row.id); if (el) el.value = '' }} className="absolute inset-0 bg-black/40 flex items-center justify-center text-white opacity-0 hover:opacity-100 transition-opacity"><X className="h-3 w-3" /></button>
                             </div>
                           ) : (
-                            <button type="button" onClick={() => fileInputRefs.current.get(row.id)?.click()} className="h-[42px] w-[42px] rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center hover:border-[#2d7a4f] hover:bg-[#2d7a4f]/5 transition-all">
+                            <button type="button" onClick={() => fileInputRefs.current.get(row.id)?.click()} className="h-[42px] w-[42px] rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/5 transition-all">
                               <Camera className="h-4 w-4 text-gray-400" />
                             </button>
                           )}
@@ -614,14 +614,14 @@ export default function ContractorsPage() {
                     </div>
                   ))}
 
-                  <button type="button" onClick={() => setSlipRows(prev => [...prev, makeEmptySlip()])} className="mt-3 w-full rounded-xl border-2 border-dashed border-gray-200 py-2.5 text-sm font-medium text-gray-400 hover:border-[#2d7a4f] hover:text-[#2d7a4f] transition-all flex items-center justify-center gap-2">
+                  <button type="button" onClick={() => setSlipRows(prev => [...prev, makeEmptySlip()])} className="mt-3 w-full rounded-xl border-2 border-dashed border-gray-200 py-2.5 text-sm font-medium text-gray-400 hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)] transition-all flex items-center justify-center gap-2">
                     <Plus className="h-4 w-4" /> Add Extra Ticket
                   </button>
                 </div>
 
                 <div className="flex gap-3 pt-1">
                   <button type="button" onClick={() => setShowTicketForm(false)} className="flex-1 rounded-lg border border-gray-200 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
-                  <button type="submit" disabled={savingTicket || uploadingImage} className="flex-1 rounded-lg bg-[#2d7a4f] py-3 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                  <button type="submit" disabled={savingTicket || uploadingImage} className="flex-1 rounded-lg bg-[var(--brand-primary)] py-3 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                     {(savingTicket || uploadingImage) && <Loader2 className="h-4 w-4 animate-spin" />}
                     {savingTicket ? 'Saving…' : uploadingImage ? 'Uploading…' : editingTicket ? 'Update Ticket' : 'Add Ticket'}
                   </button>
@@ -680,7 +680,7 @@ export default function ContractorsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Subcontractors</h1>
           <p className="text-gray-500 text-sm mt-0.5">Manage your independent operators</p>
         </div>
-        <button onClick={openAddContractor} className="inline-flex items-center gap-2 rounded-lg bg-[#2d7a4f] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors">
+        <button onClick={openAddContractor} className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors">
           <Plus className="h-4 w-4" /> Add Subcontractor
         </button>
       </div>
@@ -689,7 +689,7 @@ export default function ContractorsPage() {
         <div className="bg-white rounded-xl border border-gray-100 text-center py-16">
           <Truck className="h-10 w-10 text-gray-200 mx-auto mb-3" />
           <p className="text-sm font-medium text-gray-400">No subcontractors yet</p>
-          <button onClick={openAddContractor} className="mt-3 text-sm text-[#2d7a4f]">Add your first subcontractor →</button>
+          <button onClick={openAddContractor} className="mt-3 text-sm text-[var(--brand-primary)]">Add your first subcontractor →</button>
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -697,7 +697,7 @@ export default function ContractorsPage() {
             <div key={c.id} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-[#1e3a2a] flex items-center justify-center text-sm font-bold text-white shrink-0">
+                  <div className="h-10 w-10 rounded-full bg-[var(--brand-dark)] flex items-center justify-center text-sm font-bold text-white shrink-0">
                     {c.name.slice(0, 2).toUpperCase()}
                   </div>
                   <div>
@@ -706,7 +706,7 @@ export default function ContractorsPage() {
                   </div>
                 </div>
                 <div className="flex gap-1">
-                  <button onClick={() => openEditContractor(c)} className="p-1 text-gray-400 hover:text-[#2d7a4f] transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
+                  <button onClick={() => openEditContractor(c)} className="p-1 text-gray-400 hover:text-[var(--brand-primary)] transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
                   <button onClick={() => handleDeleteContractor(c.id, c.name)} className="p-1 text-gray-400 hover:text-red-500 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>
               </div>
@@ -717,7 +717,7 @@ export default function ContractorsPage() {
                   {c.email && <p className="flex items-center gap-1.5 text-xs text-gray-500"><Mail className="h-3 w-3 text-gray-400" />{c.email}</p>}
                 </div>
               )}
-              <button onClick={() => selectContractor(c)} className="w-full rounded-lg bg-[#2d7a4f]/10 hover:bg-[#2d7a4f]/20 text-[#2d7a4f] text-sm font-medium py-2 transition-colors">
+              <button onClick={() => selectContractor(c)} className="w-full rounded-lg bg-[var(--brand-primary)]/10 hover:bg-[var(--brand-primary)]/20 text-[var(--brand-primary)] text-sm font-medium py-2 transition-colors">
                 View Tickets →
               </button>
             </div>
@@ -736,20 +736,20 @@ export default function ContractorsPage() {
             <form onSubmit={handleSaveContractor} className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Name *</label>
-                <input required value={contractorForm.name} onChange={e => setContractorForm(p => ({ ...p, name: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="Danny Schultz" />
+                <input required value={contractorForm.name} onChange={e => setContractorForm(p => ({ ...p, name: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="Danny Schultz" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Address</label>
-                <input value={contractorForm.address} onChange={e => setContractorForm(p => ({ ...p, address: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="123 Main St, City, ST 00000" />
+                <input value={contractorForm.address} onChange={e => setContractorForm(p => ({ ...p, address: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="123 Main St, City, ST 00000" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
-                  <input type="tel" value={contractorForm.phone} onChange={e => setContractorForm(p => ({ ...p, phone: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="(555) 000-0000" />
+                  <input type="tel" value={contractorForm.phone} onChange={e => setContractorForm(p => ({ ...p, phone: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="(555) 000-0000" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
-                  <select value={contractorForm.status} onChange={e => setContractorForm(p => ({ ...p, status: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white">
+                  <select value={contractorForm.status} onChange={e => setContractorForm(p => ({ ...p, status: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white">
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                   </select>
@@ -757,15 +757,15 @@ export default function ContractorsPage() {
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-                <input type="email" value={contractorForm.email} onChange={e => setContractorForm(p => ({ ...p, email: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="danny@atlashauling.com" />
+                <input type="email" value={contractorForm.email} onChange={e => setContractorForm(p => ({ ...p, email: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="danny@atlashauling.com" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
-                <textarea value={contractorForm.notes} onChange={e => setContractorForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] resize-none" placeholder="Optional notes..." />
+                <textarea value={contractorForm.notes} onChange={e => setContractorForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] resize-none" placeholder="Optional notes..." />
               </div>
               <div className="flex gap-3 pt-1">
                 <button type="button" onClick={() => setShowContractorForm(false)} className="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-                <button type="submit" disabled={savingContractor} className="flex-1 rounded-lg bg-[#2d7a4f] py-2.5 text-sm font-semibold text-white hover:bg-[#245f3e] disabled:opacity-50 flex items-center justify-center gap-2">
+                <button type="submit" disabled={savingContractor} className="flex-1 rounded-lg bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] disabled:opacity-50 flex items-center justify-center gap-2">
                   {savingContractor && <Loader2 className="h-4 w-4 animate-spin" />}
                   {savingContractor ? 'Saving…' : editingContractor ? 'Update' : 'Add Subcontractor'}
                 </button>

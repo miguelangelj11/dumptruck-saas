@@ -38,7 +38,7 @@ export default function PlanGate({ plan, feature, children, inline = false }: Pl
         <Lock className="h-3.5 w-3.5 shrink-0" />
         <span className="text-xs">
           Requires{' '}
-          <Link href={UPGRADE_URL} className="text-[#2d7a4f] font-semibold hover:underline" onClick={e => e.stopPropagation()}>
+          <Link href={UPGRADE_URL} className="text-[var(--brand-primary)] font-semibold hover:underline" onClick={e => e.stopPropagation()}>
             {requiredLabel}
           </Link>
         </span>
@@ -61,7 +61,7 @@ export default function PlanGate({ plan, feature, children, inline = false }: Pl
         </p>
         <Link
           href={UPGRADE_URL}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-[#1e3a2a] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2d4a3a] transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand-dark)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors"
         >
           Upgrade →
         </Link>

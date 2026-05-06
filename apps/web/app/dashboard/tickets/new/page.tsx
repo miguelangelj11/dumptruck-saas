@@ -174,7 +174,7 @@ export default function QuickTicketPage() {
         <div className="flex gap-3 w-full max-w-xs">
           <button
             onClick={() => { setDone(false); setJob(''); setLoadType(''); setSlips([makeSlip()]) }}
-            className="flex-1 py-4 rounded-2xl bg-[#1e3a2a] text-white font-semibold text-base"
+            className="flex-1 py-4 rounded-2xl bg-[var(--brand-dark)] text-white font-semibold text-base"
           >
             Add Another
           </button>
@@ -189,7 +189,7 @@ export default function QuickTicketPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-[#1e3a2a] text-white px-4 py-4 flex items-center gap-3 sticky top-0 z-10">
+      <div className="bg-[var(--brand-dark)] text-white px-4 py-4 flex items-center gap-3 sticky top-0 z-10">
         <Link href="/dashboard/tickets" className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center">
           <ArrowLeft className="h-5 w-5" />
         </Link>
@@ -210,7 +210,7 @@ export default function QuickTicketPage() {
             placeholder="Enter job name…"
             list="job-list"
             required
-            className="w-full h-14 px-4 rounded-2xl border-2 border-gray-200 bg-white text-base font-medium focus:outline-none focus:border-[#2d7a4f]"
+            className="w-full h-14 px-4 rounded-2xl border-2 border-gray-200 bg-white text-base font-medium focus:outline-none focus:border-[var(--brand-primary)]"
           />
           <datalist id="job-list">
             {recentJobs.map(j => <option key={j} value={j} />)}
@@ -228,7 +228,7 @@ export default function QuickTicketPage() {
                 onClick={() => setLoadType(t === loadType ? '' : t)}
                 className={`h-12 rounded-xl text-sm font-medium border-2 transition-all ${
                   loadType === t
-                    ? 'bg-[#1e3a2a] border-[#1e3a2a] text-white'
+                    ? 'bg-[var(--brand-dark)] border-[#1e3a2a] text-white'
                     : 'bg-white border-gray-200 text-gray-700'
                 }`}
               >
@@ -247,7 +247,7 @@ export default function QuickTicketPage() {
               onChange={e => setTruck(e.target.value)}
               placeholder="Truck #"
               list="truck-list"
-              className="w-full h-14 px-4 rounded-2xl border-2 border-gray-200 bg-white text-base font-medium focus:outline-none focus:border-[#2d7a4f]"
+              className="w-full h-14 px-4 rounded-2xl border-2 border-gray-200 bg-white text-base font-medium focus:outline-none focus:border-[var(--brand-primary)]"
             />
             <datalist id="truck-list">
               {recentTrucks.map(t => <option key={t} value={t} />)}
@@ -260,7 +260,7 @@ export default function QuickTicketPage() {
               onChange={e => setDriver(e.target.value)}
               placeholder="Driver name"
               list="driver-list"
-              className="w-full h-14 px-4 rounded-2xl border-2 border-gray-200 bg-white text-base font-medium focus:outline-none focus:border-[#2d7a4f]"
+              className="w-full h-14 px-4 rounded-2xl border-2 border-gray-200 bg-white text-base font-medium focus:outline-none focus:border-[var(--brand-primary)]"
             />
             <datalist id="driver-list">
               {recentDrivers.map(d => <option key={d} value={d} />)}
@@ -276,7 +276,7 @@ export default function QuickTicketPage() {
               type="date"
               value={date}
               onChange={e => setDate(e.target.value)}
-              className="w-full h-14 px-4 rounded-2xl border-2 border-gray-200 bg-white text-base font-medium focus:outline-none focus:border-[#2d7a4f]"
+              className="w-full h-14 px-4 rounded-2xl border-2 border-gray-200 bg-white text-base font-medium focus:outline-none focus:border-[var(--brand-primary)]"
             />
           </div>
           <div>
@@ -287,12 +287,12 @@ export default function QuickTicketPage() {
                 value={rate}
                 onChange={e => setRate(e.target.value)}
                 placeholder="0.00"
-                className="flex-1 h-14 px-4 rounded-2xl border-2 border-gray-200 bg-white text-base font-medium focus:outline-none focus:border-[#2d7a4f] min-w-0"
+                className="flex-1 h-14 px-4 rounded-2xl border-2 border-gray-200 bg-white text-base font-medium focus:outline-none focus:border-[var(--brand-primary)] min-w-0"
               />
               <select
                 value={rateType}
                 onChange={e => setRateType(e.target.value)}
-                className="h-14 px-2 rounded-2xl border-2 border-gray-200 bg-white text-sm font-medium focus:outline-none focus:border-[#2d7a4f]"
+                className="h-14 px-2 rounded-2xl border-2 border-gray-200 bg-white text-sm font-medium focus:outline-none focus:border-[var(--brand-primary)]"
               >
                 <option value="load">/load</option>
                 <option value="ton">/ton</option>
@@ -365,7 +365,7 @@ export default function QuickTicketPage() {
                       value={slip.ticket_number}
                       onChange={e => updateSlip(slip.id, { ticket_number: e.target.value })}
                       placeholder="e.g. 1042"
-                      className="w-full h-12 px-3 rounded-xl border-2 border-gray-200 bg-white text-sm font-medium focus:outline-none focus:border-[#2d7a4f]"
+                      className="w-full h-12 px-3 rounded-xl border-2 border-gray-200 bg-white text-sm font-medium focus:outline-none focus:border-[var(--brand-primary)]"
                     />
                   </div>
                   <div>
@@ -376,7 +376,7 @@ export default function QuickTicketPage() {
                       value={slip.tonnage}
                       onChange={e => updateSlip(slip.id, { tonnage: e.target.value })}
                       placeholder="0.00"
-                      className="w-full h-12 px-3 rounded-xl border-2 border-gray-200 bg-white text-sm font-medium focus:outline-none focus:border-[#2d7a4f]"
+                      className="w-full h-12 px-3 rounded-xl border-2 border-gray-200 bg-white text-sm font-medium focus:outline-none focus:border-[var(--brand-primary)]"
                     />
                   </div>
                 </div>
@@ -387,7 +387,7 @@ export default function QuickTicketPage() {
           <button
             type="button"
             onClick={() => setSlips(prev => [...prev, makeSlip()])}
-            className="mt-2 w-full h-12 rounded-2xl border-2 border-dashed border-[#2d7a4f] text-[#2d7a4f] font-semibold text-sm flex items-center justify-center gap-2"
+            className="mt-2 w-full h-12 rounded-2xl border-2 border-dashed border-[var(--brand-primary)] text-[var(--brand-primary)] font-semibold text-sm flex items-center justify-center gap-2"
           >
             <Plus className="h-4 w-4" />
             Add Another Slip
@@ -398,7 +398,7 @@ export default function QuickTicketPage() {
         <button
           type="submit"
           disabled={saving}
-          className="w-full h-16 rounded-2xl bg-[#1e3a2a] text-white font-bold text-lg flex items-center justify-center gap-2 active:opacity-90 disabled:opacity-60 mt-2"
+          className="w-full h-16 rounded-2xl bg-[var(--brand-dark)] text-white font-bold text-lg flex items-center justify-center gap-2 active:opacity-90 disabled:opacity-60 mt-2"
         >
           {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
           {saving ? 'Saving…' : 'Save Ticket'}

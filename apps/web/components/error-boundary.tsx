@@ -81,7 +81,7 @@ export function ErrorCard({
           {onReset && (
             <button
               onClick={onReset}
-              className="flex items-center gap-2 px-4 py-2.5 bg-[#1e3a2a] text-white rounded-xl text-sm font-medium hover:bg-[#2d4a3a] transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 bg-[var(--brand-dark)] text-white rounded-xl text-sm font-medium hover:bg-[var(--brand-primary-hover)] transition-colors"
             >
               <RefreshCw className="h-4 w-4" /> Try again
             </button>

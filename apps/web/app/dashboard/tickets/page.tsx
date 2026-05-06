@@ -479,10 +479,10 @@ export default function TicketsPage() {
           <p className="text-gray-500 text-sm mt-0.5">{loads.length} total · {filtered.length} shown</p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/dashboard/tickets/new" className="inline-flex items-center gap-2 rounded-lg border border-[#2d7a4f] px-3 py-2 text-sm font-medium text-[#2d7a4f] hover:bg-[#2d7a4f]/5 transition-colors">
+          <Link href="/dashboard/tickets/new" className="inline-flex items-center gap-2 rounded-lg border border-[var(--brand-primary)] px-3 py-2 text-sm font-medium text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/5 transition-colors">
             <Camera className="h-4 w-4" /> Quick Entry
           </Link>
-          <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-lg bg-[#2d7a4f] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors">
+          <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors">
             <Plus className="h-4 w-4" /> Add Ticket
           </button>
         </div>
@@ -520,7 +520,7 @@ export default function TicketsPage() {
         <PlanGate plan={companyPlan} feature="missing_money">
         <div>
           {loadingMissing ? (
-            <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-[#2d7a4f]" /></div>
+            <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-[var(--brand-primary)]" /></div>
           ) : missingDispatches.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-xl border border-gray-100">
               <CheckCircle2 className="h-10 w-10 text-green-300 mx-auto mb-3" />
@@ -534,7 +534,7 @@ export default function TicketsPage() {
                   <h2 className="font-semibold text-sm text-gray-900">Dispatches Without Tickets</h2>
                   <p className="text-xs text-gray-400 mt-0.5">Past dispatches where no tickets were submitted</p>
                 </div>
-                <button onClick={fetchMissingTickets} className="text-xs text-[#2d7a4f] hover:text-[#245f3e] font-medium">Refresh</button>
+                <button onClick={fetchMissingTickets} className="text-xs text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] font-medium">Refresh</button>
               </div>
               <div className="divide-y divide-gray-50">
                 {missingDispatches.map(d => (
@@ -590,7 +590,7 @@ export default function TicketsPage() {
                             <button
                               onClick={() => sendFollowUp(d)}
                               disabled={followUpSending === d.id}
-                              className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-[#2d7a4f] hover:bg-[#245f3e] px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60"
+                              className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60"
                             >
                               {followUpSending === d.id
                                 ? <><Loader2 className="h-3 w-3 animate-spin" /> Sending…</>
@@ -631,11 +631,11 @@ export default function TicketsPage() {
         <div className="flex gap-3">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tickets..." className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tickets..." className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
           </div>
-          <button onClick={() => setShowFilters(!showFilters)} className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${showFilters || activeFilters > 0 ? 'border-[#2d7a4f] text-[#2d7a4f] bg-[#2d7a4f]/5' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+          <button onClick={() => setShowFilters(!showFilters)} className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${showFilters || activeFilters > 0 ? 'border-[var(--brand-primary)] text-[var(--brand-primary)] bg-[var(--brand-primary)]/5' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
             <Filter className="h-4 w-4" />
-            Filters {activeFilters > 0 && <span className="h-4 w-4 rounded-full bg-[#2d7a4f] text-white text-[10px] flex items-center justify-center">{activeFilters}</span>}
+            Filters {activeFilters > 0 && <span className="h-4 w-4 rounded-full bg-[var(--brand-primary)] text-white text-[10px] flex items-center justify-center">{activeFilters}</span>}
           </button>
           {activeFilters > 0 && (
             <button onClick={() => { setFilterStatus(''); setFilterContractor(''); setFilterTruck(''); setFilterDriver(''); setFilterFrom(''); setFilterTo('') }} className="text-sm text-red-400 hover:text-red-600 font-medium">Clear</button>
@@ -673,12 +673,12 @@ export default function TicketsPage() {
       {/* Table */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-[#2d7a4f]" /></div>
+          <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-[var(--brand-primary)]" /></div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-16">
             <FileText className="h-10 w-10 text-gray-200 mx-auto mb-3" />
             <p className="text-sm font-medium text-gray-400">No tickets found</p>
-            <button onClick={openAdd} className="mt-3 text-sm text-[#2d7a4f] hover:text-[#245f3e]">Add your first ticket →</button>
+            <button onClick={openAdd} className="mt-3 text-sm text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)]">Add your first ticket →</button>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -699,7 +699,7 @@ export default function TicketsPage() {
                     <tr key={l.id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-4 py-3">
                         {photos.length > 0 ? (
-                          <button onClick={() => { setViewingImages(photos); setViewingIndex(0) }} className="relative h-10 w-10 overflow-hidden rounded-lg border border-gray-200 hover:border-[#2d7a4f] transition-colors shrink-0">
+                          <button onClick={() => { setViewingImages(photos); setViewingIndex(0) }} className="relative h-10 w-10 overflow-hidden rounded-lg border border-gray-200 hover:border-[var(--brand-primary)] transition-colors shrink-0">
                             <Image src={photos[0]!} alt="Ticket" fill className="object-cover" sizes="40px" />
                             {photos.length > 1 && <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-[10px] font-bold">+{photos.length}</div>}
                           </button>
@@ -753,7 +753,7 @@ export default function TicketsPage() {
                           {l.status === 'pending' && l.source === 'driver' && (
                             <button onClick={() => handleReject(l)} title="Reject ticket" className="p-1 text-gray-300 hover:text-red-500 transition-colors"><XCircle className="h-3.5 w-3.5" /></button>
                           )}
-                          <button onClick={() => openEdit(l)} className="p-1 text-gray-400 hover:text-[#2d7a4f] transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => openEdit(l)} className="p-1 text-gray-400 hover:text-[var(--brand-primary)] transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
                           <button onClick={() => handleDelete(l.id)} className="p-1 text-gray-400 hover:text-red-500 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
                         </div>
                       </td>
@@ -800,11 +800,11 @@ export default function TicketsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Job Name *</label>
-                  <input required value={form.job_name} onChange={e => setForm(p => ({ ...p, job_name: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="Ironclad Grade Site" />
+                  <input required value={form.job_name} onChange={e => setForm(p => ({ ...p, job_name: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="Ironclad Grade Site" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Working Under (Company)</label>
-                  <select value={form.client_company} onChange={e => setForm(p => ({ ...p, client_company: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white">
+                  <select value={form.client_company} onChange={e => setForm(p => ({ ...p, client_company: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white">
                     <option value="">— Select company —</option>
                     {clientCompanies.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                   </select>
@@ -813,24 +813,24 @@ export default function TicketsPage() {
                 {/* Row 2: Load Type + Date */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Load Type</label>
-                  <select value={form.load_type} onChange={e => setForm(p => ({ ...p, load_type: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white">
+                  <select value={form.load_type} onChange={e => setForm(p => ({ ...p, load_type: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white">
                     <option value="">Select type</option>
                     {LOAD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Date *</label>
-                  <input required type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" />
+                  <input required type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
                 </div>
 
                 {/* Row 3: Origin + Destination */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Origin Location</label>
-                  <input value={form.origin} onChange={e => setForm(p => ({ ...p, origin: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="Quarry Rd pit" />
+                  <input value={form.origin} onChange={e => setForm(p => ({ ...p, origin: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="Quarry Rd pit" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Destination</label>
-                  <input value={form.destination} onChange={e => setForm(p => ({ ...p, destination: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="Hwy 90 job site" />
+                  <input value={form.destination} onChange={e => setForm(p => ({ ...p, destination: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="Hwy 90 job site" />
                 </div>
 
                 {/* Row 4: Driver + Truck */}
@@ -853,7 +853,7 @@ export default function TicketsPage() {
                           setForm(p => ({ ...p, driver_name: name, truck_number: recentTruck }))
                         }
                       }}
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white"
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white"
                     >
                       <option value="">— Select a driver —</option>
                       {driversList.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
@@ -865,14 +865,14 @@ export default function TicketsPage() {
                         required
                         value={form.driver_name}
                         onChange={e => setForm(p => ({ ...p, driver_name: e.target.value }))}
-                        className="flex-1 rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                        className="flex-1 rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                         placeholder="Jake Morrison"
                       />
                       {driversList.length > 0 && (
                         <button
                           type="button"
                           onClick={() => { setDriverMode('dropdown'); setForm(p => ({ ...p, driver_name: '', truck_number: '' })) }}
-                          className="text-xs text-[#2d7a4f] hover:underline whitespace-nowrap"
+                          className="text-xs text-[var(--brand-primary)] hover:underline whitespace-nowrap"
                         >
                           ← Pick from list
                         </button>
@@ -882,7 +882,7 @@ export default function TicketsPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Truck #</label>
-                  <input value={form.truck_number} onChange={e => setForm(p => ({ ...p, truck_number: e.target.value }))} list="truck-dl" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="SA07" />
+                  <input value={form.truck_number} onChange={e => setForm(p => ({ ...p, truck_number: e.target.value }))} list="truck-dl" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="SA07" />
                   <datalist id="truck-dl">{trucks.map(t => <option key={t} value={t} />)}</datalist>
                 </div>
 
@@ -893,7 +893,7 @@ export default function TicketsPage() {
                     type="text"
                     value={form.time_in}
                     onChange={e => setForm(p => ({ ...p, time_in: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                     placeholder="e.g. 7:00AM"
                   />
                 </div>
@@ -903,7 +903,7 @@ export default function TicketsPage() {
                     type="text"
                     value={form.time_out}
                     onChange={e => setForm(p => ({ ...p, time_out: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                     placeholder="e.g. 5:00PM"
                   />
                 </div>
@@ -911,7 +911,7 @@ export default function TicketsPage() {
                 {/* Row 6: Rate + Status */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Rate ($) *</label>
-                  <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[#2d7a4f]/20 focus-within:border-[#2d7a4f]">
+                  <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/20 focus-within:border-[var(--brand-primary)]">
                     <span className="flex items-center px-3 bg-gray-50 text-sm text-gray-500 border-r border-gray-200">$</span>
                     <input required type="number" min="0" step="0.01" value={form.rate} onChange={e => setForm(p => ({ ...p, rate: e.target.value }))} className="flex-1 px-3 py-2.5 text-sm focus:outline-none bg-white" placeholder="450.00" />
                     <select value={form.rate_type} onChange={e => setForm(p => ({ ...p, rate_type: e.target.value }))} className="px-2 text-xs font-medium text-gray-600 bg-gray-50 border-l border-gray-200 focus:outline-none">
@@ -923,7 +923,7 @@ export default function TicketsPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
-                  <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white">
+                  <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white">
                     <option value="pending">Pending</option>
                     <option value="approved">Approved</option>
                     <option value="disputed">Disputed</option>
@@ -934,7 +934,7 @@ export default function TicketsPage() {
 
                 <div className="col-span-2">
                   <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
-                  <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] resize-none" placeholder="Optional notes..." />
+                  <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] resize-none" placeholder="Optional notes..." />
                 </div>
               </div>
 
@@ -945,7 +945,7 @@ export default function TicketsPage() {
                   const main = ticketRows[0]
                   return (
                     <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
-                      <span className="text-xs font-semibold text-[#2d7a4f] bg-[#2d7a4f]/10 px-2 py-0.5 rounded-full">Main Ticket</span>
+                      <span className="text-xs font-semibold text-[var(--brand-primary)] bg-[var(--brand-primary)]/10 px-2 py-0.5 rounded-full">Main Ticket</span>
                       <div>
                         {main.imagePreview ? (
                           <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-white">
@@ -955,7 +955,7 @@ export default function TicketsPage() {
                             <button type="button" onClick={() => { updateRow(main.id, { imageFile: null, imagePreview: null }); const el = fileInputRefs.current.get(main.id); if (el) el.value = '' }} className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 flex items-center justify-center text-white"><X className="h-3.5 w-3.5" /></button>
                           </div>
                         ) : (
-                          <button type="button" onClick={() => fileInputRefs.current.get(main.id)?.click()} className="w-full rounded-xl border-2 border-dashed border-gray-200 bg-white hover:border-[#2d7a4f] hover:bg-[#2d7a4f]/5 transition-all py-6 flex flex-col items-center gap-2">
+                          <button type="button" onClick={() => fileInputRefs.current.get(main.id)?.click()} className="w-full rounded-xl border-2 border-dashed border-gray-200 bg-white hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/5 transition-all py-6 flex flex-col items-center gap-2">
                             <Camera className="h-6 w-6 text-gray-400" />
                             <p className="text-sm font-medium text-gray-500">Take photo or upload</p>
                           </button>
@@ -965,11 +965,11 @@ export default function TicketsPage() {
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Ticket #</label>
-                          <input value={main.ticket_number} onChange={e => updateRow(main.id, { ticket_number: e.target.value })} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white" placeholder="T-1001" />
+                          <input value={main.ticket_number} onChange={e => updateRow(main.id, { ticket_number: e.target.value })} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white" placeholder="T-1001" />
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Tons / Qty</label>
-                          <input type="number" min="0" step="0.01" value={main.tonnage} onChange={e => updateRow(main.id, { tonnage: e.target.value })} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white" placeholder="14.5" />
+                          <input type="number" min="0" step="0.01" value={main.tonnage} onChange={e => updateRow(main.id, { tonnage: e.target.value })} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white" placeholder="14.5" />
                         </div>
                       </div>
                     </div>
@@ -998,7 +998,7 @@ export default function TicketsPage() {
                             <Image src={row.imagePreview} alt="Ticket" fill className="object-cover" sizes="42px" />
                           </div>
                         ) : (
-                          <button type="button" onClick={() => fileInputRefs.current.get(row.id)?.click()} className="h-[42px] w-[42px] rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center hover:border-[#2d7a4f] transition-all">
+                          <button type="button" onClick={() => fileInputRefs.current.get(row.id)?.click()} className="h-[42px] w-[42px] rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center hover:border-[var(--brand-primary)] transition-all">
                             <Camera className="h-4 w-4 text-gray-400" />
                           </button>
                         )}
@@ -1008,14 +1008,14 @@ export default function TicketsPage() {
                   </div>
                 ))}
 
-                <button type="button" onClick={() => setTicketRows(prev => [...prev, makeEmptyRow()])} className="mt-3 w-full rounded-xl border-2 border-dashed border-gray-200 py-2.5 text-sm font-medium text-gray-400 hover:border-[#2d7a4f] hover:text-[#2d7a4f] transition-all flex items-center justify-center gap-2">
+                <button type="button" onClick={() => setTicketRows(prev => [...prev, makeEmptyRow()])} className="mt-3 w-full rounded-xl border-2 border-dashed border-gray-200 py-2.5 text-sm font-medium text-gray-400 hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)] transition-all flex items-center justify-center gap-2">
                   <Plus className="h-4 w-4" /> Add Extra Ticket
                 </button>
               </div>
 
               <div className="flex gap-3 pt-1">
                 <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded-lg border border-gray-200 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
-                <button type="submit" disabled={saving} className="flex-1 rounded-lg bg-[#2d7a4f] py-3 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                <button type="submit" disabled={saving} className="flex-1 rounded-lg bg-[var(--brand-primary)] py-3 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                   {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                   {saving ? 'Saving…' : editing ? 'Update Ticket' : 'Add Ticket'}
                 </button>

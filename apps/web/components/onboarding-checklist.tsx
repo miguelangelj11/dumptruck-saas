@@ -171,7 +171,7 @@ export default function OnboardingChecklist() {
   if (celebrating) {
     return (
       <div className="fixed bottom-0 left-0 right-0 sm:bottom-6 sm:left-auto sm:right-6 z-50 w-full sm:w-80 bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
-        <div style={{ background: '#1e3a2a' }} className="px-4 py-3 flex items-center justify-between">
+        <div style={{ background: 'var(--brand-dark)' }} className="px-4 py-3 flex items-center justify-between">
           <span className="text-sm font-bold text-white">Setup Complete!</span>
           <button onClick={dismiss} className="text-white/60 hover:text-white transition-colors">
             <X className="h-4 w-4" />
@@ -192,7 +192,7 @@ export default function OnboardingChecklist() {
     <div className="fixed bottom-0 left-0 right-0 sm:bottom-6 sm:left-auto sm:right-6 z-50 w-full sm:w-80 bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
 
       {/* Header */}
-      <div style={{ background: '#1e3a2a' }} className="px-4 py-3">
+      <div style={{ background: 'var(--brand-dark)' }} className="px-4 py-3">
         <div className="flex items-center justify-between mb-2.5">
           <span className="text-sm font-bold text-white">🚀 Get Started with DumpTruckBoss</span>
           <div className="flex items-center gap-1 shrink-0 ml-2">
@@ -241,9 +241,9 @@ export default function OnboardingChecklist() {
                   <div
                     className="mt-0.5 h-5 w-5 rounded-full flex items-center justify-center shrink-0 border-2 transition-all"
                     style={isDone
-                      ? { background: '#2d7a4f', borderColor: '#2d7a4f' }
+                      ? { background: 'var(--brand-primary)', borderColor: 'var(--brand-primary)' }
                       : isActive
-                      ? { background: 'transparent', borderColor: '#2d7a4f' }
+                      ? { background: 'transparent', borderColor: 'var(--brand-primary)' }
                       : { background: 'transparent', borderColor: '#d1d5db' }
                     }
                   >
@@ -258,7 +258,7 @@ export default function OnboardingChecklist() {
                         style={isDone
                           ? { textDecoration: 'line-through', color: '#9ca3af' }
                           : isActive
-                          ? { color: '#1e3a2a' }
+                          ? { color: 'var(--brand-dark)' }
                           : { color: '#4b5563' }
                         }
                       >
@@ -270,7 +270,7 @@ export default function OnboardingChecklist() {
                       <Link
                         href={step.href}
                         className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-white px-3 py-1.5 rounded-lg transition-colors hover:opacity-90"
-                        style={{ background: '#2d7a4f' }}
+                        style={{ background: 'var(--brand-primary)' }}
                       >
                         {step.cta} <ArrowRight className="h-3 w-3" />
                       </Link>

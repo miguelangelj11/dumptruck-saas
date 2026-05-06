@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
@@ -21,8 +21,18 @@ function fmtAxis(v: number) {
   return `$${v}`
 }
 
+function useBrandColor() {
+  const [color, setColor] = useState('#2d7a4f')
+  useEffect(() => {
+    const c = getComputedStyle(document.documentElement).getPropertyValue('--brand-primary').trim()
+    if (c) setColor(c)
+  }, [])
+  return color
+}
+
 export default function LoadsChart({ week, month, year }: Props) {
   const [view, setView] = useState<View>('This Week')
+  const brandColor = useBrandColor()
   const data = view === 'This Week' ? week : view === 'This Month' ? month : year
   const hasData = data.some(d => d.revenue > 0)
 
@@ -35,7 +45,7 @@ export default function LoadsChart({ week, month, year }: Props) {
             onClick={() => setView(v)}
             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
               view === v
-                ? 'bg-[#1e3a2a] text-white'
+                ? 'bg-[var(--brand-dark)] text-white'
                 : 'text-gray-500 hover:bg-gray-100'
             }`}
           >
@@ -70,7 +80,7 @@ export default function LoadsChart({ week, month, year }: Props) {
               formatter={(v) => [`$${Number(v).toLocaleString()}`, 'Revenue']}
               cursor={{ fill: '#f0fdf4' }}
             />
-            <Bar dataKey="revenue" fill="#2d7a4f" radius={[3, 3, 0, 0]} maxBarSize={48} />
+            <Bar dataKey="revenue" fill={brandColor} radius={[3, 3, 0, 0]} maxBarSize={48} />
           </BarChart>
         </ResponsiveContainer>
       )}

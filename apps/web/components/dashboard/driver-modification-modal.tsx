@@ -88,7 +88,7 @@ export default function DriverModificationModal({ ticket, companyId, onClose, on
               min="0"
               value={hours}
               onChange={e => setHours(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:border-[#2d7a4f] focus:ring-2 focus:ring-[#2d7a4f]/20"
+              className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
               placeholder="Hours"
             />
           </div>
@@ -101,7 +101,7 @@ export default function DriverModificationModal({ ticket, companyId, onClose, on
               min="0"
               value={rate}
               onChange={e => setRate(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:border-[#2d7a4f] focus:ring-2 focus:ring-[#2d7a4f]/20"
+              className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
               placeholder="Rate"
             />
           </div>
@@ -112,7 +112,7 @@ export default function DriverModificationModal({ ticket, companyId, onClose, on
               value={notes}
               onChange={e => setNotes(e.target.value)}
               rows={2}
-              className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm resize-none focus:outline-none focus:border-[#2d7a4f] focus:ring-2 focus:ring-[#2d7a4f]/20"
+              className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm resize-none focus:outline-none focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
             />
           </div>
 
@@ -125,7 +125,7 @@ export default function DriverModificationModal({ ticket, companyId, onClose, on
               value={reason}
               onChange={e => setReason(e.target.value)}
               rows={2}
-              className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm resize-none focus:outline-none focus:border-[#2d7a4f] focus:ring-2 focus:ring-[#2d7a4f]/20"
+              className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm resize-none focus:outline-none focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
               placeholder="Explain why this ticket was modified…"
             />
             <p className="text-xs text-gray-400 mt-1">This will be shown to the driver.</p>
@@ -142,7 +142,7 @@ export default function DriverModificationModal({ ticket, companyId, onClose, on
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 rounded-lg bg-[#2d7a4f] py-2.5 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 rounded-lg bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {saving ? 'Saving…' : 'Save & Notify Driver'}

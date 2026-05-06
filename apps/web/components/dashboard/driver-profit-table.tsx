@@ -38,7 +38,7 @@ export function DriverProfitTable({ companyId }: { companyId: string }) {
     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-6">
       <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
         <h2 className="font-semibold text-gray-900 text-sm">Top Drivers by Revenue</h2>
-        <Link href="/dashboard/drivers" className="text-xs text-[#2d7a4f] font-medium hover:underline">
+        <Link href="/dashboard/drivers" className="text-xs text-[var(--brand-primary)] font-medium hover:underline">
           View all
         </Link>
       </div>
@@ -65,7 +65,7 @@ export function DriverProfitTable({ companyId }: { companyId: string }) {
                 }`}
               >
                 <td className="px-5 py-3">
-                  <div className="h-6 w-6 rounded-full bg-[#1e3a2a] flex items-center justify-center text-[10px] font-bold text-white">
+                  <div className="h-6 w-6 rounded-full bg-[var(--brand-dark)] flex items-center justify-center text-[10px] font-bold text-white">
                     {i + 1}
                   </div>
                 </td>
@@ -80,7 +80,7 @@ export function DriverProfitTable({ companyId }: { companyId: string }) {
                     )}
                   </div>
                 </td>
-                <td className="px-5 py-3 text-right font-semibold text-[#2d7a4f]">
+                <td className="px-5 py-3 text-right font-semibold text-[var(--brand-primary)]">
                   {fmt(d.totalRevenue)}
                 </td>
                 <td className="px-5 py-3 text-right text-gray-600">
@@ -103,7 +103,7 @@ export function DriverProfitTable({ companyId }: { companyId: string }) {
             key={d.driverId}
             className={`flex items-center gap-3 px-4 py-3 ${d.isBelowAverage ? 'bg-red-50/30' : ''}`}
           >
-            <div className="h-8 w-8 rounded-full bg-[#1e3a2a] flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+            <div className="h-8 w-8 rounded-full bg-[var(--brand-dark)] flex items-center justify-center text-[10px] font-bold text-white shrink-0">
               {i + 1}
             </div>
             <div className="flex-1 min-w-0">
@@ -116,14 +116,14 @@ export function DriverProfitTable({ companyId }: { companyId: string }) {
               </div>
               <p className="text-xs text-gray-400">{d.loadsCount} loads · {fmt(d.profitPerLoad)}/load</p>
             </div>
-            <span className="text-sm font-semibold text-[#2d7a4f] shrink-0">{fmt(d.totalRevenue)}</span>
+            <span className="text-sm font-semibold text-[var(--brand-primary)] shrink-0">{fmt(d.totalRevenue)}</span>
           </div>
         ))}
       </div>
 
       {remaining > 0 && (
         <div className="px-5 py-3 border-t border-gray-50">
-          <Link href="/dashboard/drivers" className="text-xs text-[#2d7a4f] hover:underline">
+          <Link href="/dashboard/drivers" className="text-xs text-[var(--brand-primary)] hover:underline">
             +{remaining} more driver{remaining !== 1 ? 's' : ''} → View all
           </Link>
         </div>

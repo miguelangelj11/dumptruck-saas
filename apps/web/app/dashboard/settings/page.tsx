@@ -112,7 +112,7 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
     <button
       type="button"
       onClick={() => onChange(!on)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${on ? 'bg-[#2d7a4f]' : 'bg-gray-200'}`}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${on ? 'bg-[var(--brand-primary)]' : 'bg-gray-200'}`}
     >
       <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${on ? 'translate-x-6' : 'translate-x-1'}`} />
     </button>
@@ -841,13 +841,13 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-40">
-        <Loader2 className="h-6 w-6 animate-spin text-[#2d7a4f]" />
+        <Loader2 className="h-6 w-6 animate-spin text-[var(--brand-primary)]" />
       </div>
     )
   }
 
-  const inputCls = 'w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]'
-  const btnPrimary = 'inline-flex items-center gap-2 rounded-lg bg-[#2d7a4f] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors disabled:opacity-50'
+  const inputCls = 'w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]'
+  const btnPrimary = 'inline-flex items-center gap-2 rounded-lg bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors disabled:opacity-50'
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 space-y-8">
@@ -882,7 +882,7 @@ export default function SettingsPage() {
               value={companyAddress}
               onChange={e => setCompanyAddress(e.target.value)}
               rows={3}
-              className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+              className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
               placeholder="123 Main St, City, State 12345"
             />
           </div>
@@ -938,12 +938,12 @@ export default function SettingsPage() {
                 value={newCompanyName}
                 onChange={e => setNewCompanyName(e.target.value)}
                 placeholder="Company name…"
-                className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
               />
               <button
                 type="submit"
                 disabled={addingCompany || !newCompanyName.trim()}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-[#2d7a4f] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors disabled:opacity-50"
               >
                 {addingCompany ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                 Add
@@ -953,7 +953,7 @@ export default function SettingsPage() {
               value={newCompanyAddress}
               onChange={e => setNewCompanyAddress(e.target.value)}
               placeholder="Address (optional) — auto-fills on invoices"
-              className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+              className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
             />
           </form>
 
@@ -968,8 +968,8 @@ export default function SettingsPage() {
               {clientCompanies.map(c => (
                 <li key={c.id} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-3">
-                    <div className="h-7 w-7 rounded-lg bg-[#1e3a2a]/10 flex items-center justify-center">
-                      <Building2 className="h-3.5 w-3.5 text-[#2d7a4f]" />
+                    <div className="h-7 w-7 rounded-lg bg-[var(--brand-dark)]/10 flex items-center justify-center">
+                      <Building2 className="h-3.5 w-3.5 text-[var(--brand-primary)]" />
                     </div>
                     <div>
                       <span className="text-sm font-medium text-gray-900">{c.name}</span>
@@ -984,7 +984,7 @@ export default function SettingsPage() {
                           toast.success(`Portal link copied for ${c.name}`)
                         }}
                         title="Copy client portal link"
-                        className="p-1.5 text-gray-400 hover:text-[#2d7a4f] transition-colors"
+                        className="p-1.5 text-gray-400 hover:text-[var(--brand-primary)] transition-colors"
                         aria-label={`Copy portal link for ${c.name}`}
                       >
                         <Link2 className="h-4 w-4" />
@@ -1047,7 +1047,7 @@ export default function SettingsPage() {
                     type="button"
                     onClick={handleLogoUpload}
                     disabled={uploadingLogo || !companyId}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#2d7a4f] px-3 py-2 text-xs font-semibold text-white hover:bg-[#245f3e] transition-colors disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors disabled:opacity-50"
                   >
                     {uploadingLogo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
                     {uploadingLogo ? 'Uploading…' : 'Save Logo'}
@@ -1181,18 +1181,18 @@ export default function SettingsPage() {
                 value={newTruckNum}
                 onChange={e => setNewTruckNum(e.target.value)}
                 placeholder="Truck number (e.g. SA07)"
-                className="w-full sm:flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                className="w-full sm:flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
               />
               <input
                 value={newTruckNotes}
                 onChange={e => setNewTruckNotes(e.target.value)}
                 placeholder="Assigned driver (optional)"
-                className="w-full sm:flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                className="w-full sm:flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
               />
               <button
                 type="submit"
                 disabled={addingTruck || !newTruckNum.trim() || !companyId}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#2d7a4f] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors disabled:opacity-50 shrink-0"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors disabled:opacity-50 shrink-0"
               >
                 {addingTruck ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                 Add Truck
@@ -1211,8 +1211,8 @@ export default function SettingsPage() {
               {trucks.map(t => (
                 <li key={t.id} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-3">
-                    <div className="h-7 w-7 rounded-lg bg-[#1e3a2a]/10 flex items-center justify-center">
-                      <Truck className="h-3.5 w-3.5 text-[#2d7a4f]" />
+                    <div className="h-7 w-7 rounded-lg bg-[var(--brand-dark)]/10 flex items-center justify-center">
+                      <Truck className="h-3.5 w-3.5 text-[var(--brand-primary)]" />
                     </div>
                     <div>
                       <span className="text-sm font-semibold text-gray-900">#{t.truck_number}</span>
@@ -1275,7 +1275,7 @@ export default function SettingsPage() {
                 <select
                   value={invDueDays}
                   onChange={e => setInvDueDays(Number(e.target.value))}
-                  className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                  className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                 >
                   {DUE_DAYS_OPTIONS.map(d => (
                     <option key={d} value={d}>{d === 0 ? 'Due on receipt' : `Net ${d}`}</option>
@@ -1325,7 +1325,7 @@ export default function SettingsPage() {
               onChange={e => setInvNotes(e.target.value)}
               rows={3}
               placeholder="e.g. Thank you for your business. Payment due within 30 days."
-              className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+              className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
             />
           </div>
 
@@ -1340,7 +1340,7 @@ export default function SettingsPage() {
               onChange={e => setInvPayInstr(e.target.value)}
               rows={2}
               placeholder="e.g. Make checks payable to ACME TRUCKING LLC"
-              className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+              className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
             />
           </div>
 
@@ -1353,7 +1353,7 @@ export default function SettingsPage() {
               onChange={e => setInvSignature(e.target.value)}
               rows={3}
               placeholder={'e.g. Thank you,\nJohn Smith\nACME TRUCKING LLC'}
-              className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+              className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
             />
           </div>
 
@@ -1382,7 +1382,7 @@ export default function SettingsPage() {
                 value={notifEmail}
                 onChange={e => setNotifEmail(e.target.value)}
                 placeholder={email}
-                className="w-full rounded-lg border border-gray-200 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                className="w-full rounded-lg border border-gray-200 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
               />
             </div>
           </div>
@@ -1507,7 +1507,7 @@ export default function SettingsPage() {
                     value={inviteEmail}
                     onChange={e => setInviteEmail(e.target.value)}
                     placeholder="driver@email.com"
-                    className="w-full rounded-lg border border-gray-200 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                    className="w-full rounded-lg border border-gray-200 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                   />
                 </div>
               </div>
@@ -1516,7 +1516,7 @@ export default function SettingsPage() {
                 <select
                   value={inviteRole}
                   onChange={e => setInviteRole(e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20"
+                  className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20"
                 >
                   {['Admin', 'Dispatcher', 'Driver', 'Accountant'].map(r => <option key={r}>{r}</option>)}
                 </select>
@@ -1673,7 +1673,7 @@ export default function SettingsPage() {
                   type="date"
                   value={expStart}
                   onChange={e => setExpStart(e.target.value)}
-                  className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                  className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                 />
               </div>
               <div>
@@ -1682,7 +1682,7 @@ export default function SettingsPage() {
                   type="date"
                   value={expEnd}
                   onChange={e => setExpEnd(e.target.value)}
-                  className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                  className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                 />
               </div>
             </div>
@@ -1875,13 +1875,13 @@ export default function SettingsPage() {
             // Enterprise — top plan confirmation (only for explicitly enterprise accounts)
             if (currentPlan === 'enterprise') {
               return (
-                <div className="rounded-xl border-2 border-[#2d7a4f]/30 bg-[#f0f9f4] p-4 flex items-start gap-3">
+                <div className="rounded-xl border-2 border-[var(--brand-primary)]/30 bg-[#f0f9f4] p-4 flex items-start gap-3">
                   <span className="text-xl mt-0.5">🏆</span>
                   <div>
-                    <p className="text-sm font-bold text-[#1e3a2a]">You&apos;re on our top plan</p>
+                    <p className="text-sm font-bold text-[var(--brand-dark)]">You&apos;re on our top plan</p>
                     <p className="text-xs text-gray-600 mt-0.5">
                       Enterprise gives you everything DumpTruckBoss offers. Contact us any time at{' '}
-                      <a href="mailto:hello@dumptruckboss.com" className="text-[#2d7a4f] underline">hello@dumptruckboss.com</a>.
+                      <a href="mailto:hello@dumptruckboss.com" className="text-[var(--brand-primary)] underline">hello@dumptruckboss.com</a>.
                     </p>
                   </div>
                 </div>
@@ -1895,18 +1895,18 @@ export default function SettingsPage() {
             if (subscriptionStatus === 'canceled' || subscriptionStatus === 'expired') return null
 
             return (
-              <div className="rounded-xl border-2 border-[#2d7a4f]/20 bg-[#f0f9f4] p-4 space-y-3">
+              <div className="rounded-xl border-2 border-[var(--brand-primary)]/20 bg-[#f0f9f4] p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-semibold text-[#2d7a4f] uppercase tracking-wide">Next tier up</p>
+                    <p className="text-xs font-semibold text-[var(--brand-primary)] uppercase tracking-wide">Next tier up</p>
                     <p className="text-sm font-bold text-gray-900 mt-0.5">{next.label} — {next.price}</p>
                   </div>
-                  <span className="text-xs bg-[#2d7a4f] text-white px-2.5 py-1 rounded-full font-semibold">Upgrade</span>
+                  <span className="text-xs bg-[var(--brand-primary)] text-white px-2.5 py-1 rounded-full font-semibold">Upgrade</span>
                 </div>
                 <ul className="space-y-1">
                   {next.features.map(f => (
                     <li key={f} className="flex items-start gap-2 text-xs text-gray-700">
-                      <span className="text-[#2d7a4f] font-bold mt-0.5">✓</span>
+                      <span className="text-[var(--brand-primary)] font-bold mt-0.5">✓</span>
                       {f}
                     </li>
                   ))}
@@ -1915,7 +1915,7 @@ export default function SettingsPage() {
                   <button
                     onClick={() => handleUpgradePlan(next.checkoutKey!)}
                     disabled={upgradePlanLoading}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[#2d7a4f] py-2.5 text-sm font-bold text-white hover:bg-[#245f3e] transition-colors disabled:opacity-60"
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--brand-primary)] py-2.5 text-sm font-bold text-white hover:bg-[var(--brand-primary-hover)] transition-colors disabled:opacity-60"
                   >
                     {upgradePlanLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
                     {upgradePlanLoading ? 'Redirecting…' : `Upgrade to ${next.label} →`}
@@ -1923,7 +1923,7 @@ export default function SettingsPage() {
                 ) : (
                   <a
                     href="/schedule-demo"
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[#2d7a4f] py-2.5 text-sm font-bold text-white hover:bg-[#245f3e] transition-colors"
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--brand-primary)] py-2.5 text-sm font-bold text-white hover:bg-[var(--brand-primary-hover)] transition-colors"
                   >
                     <CreditCard className="h-4 w-4" />
                     Talk to Sales →
@@ -1949,7 +1949,7 @@ export default function SettingsPage() {
               {!stripeCustomerId && !subscriptionPlan && (
                 <a
                   href="/pricing"
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#2d7a4f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors"
                 >
                   <CreditCard className="h-4 w-4" />
                   View Plans
@@ -1981,7 +1981,7 @@ export default function SettingsPage() {
                 value={emailCurrentPwd}
                 onChange={e => setEmailCurrentPwd(e.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-lg border border-gray-200 pl-9 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                className="w-full rounded-lg border border-gray-200 pl-9 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
               />
               <button type="button" onClick={() => setShowEmailPwd(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                 {showEmailPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -1998,7 +1998,7 @@ export default function SettingsPage() {
                 value={newEmail}
                 onChange={e => setNewEmail(e.target.value)}
                 placeholder="newemail@example.com"
-                className="w-full rounded-lg border border-gray-200 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                className="w-full rounded-lg border border-gray-200 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
               />
             </div>
           </div>
@@ -2022,7 +2022,7 @@ export default function SettingsPage() {
                 value={currentPwd}
                 onChange={e => setCurrentPwd(e.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-lg border border-gray-200 pl-9 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                className="w-full rounded-lg border border-gray-200 pl-9 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
               />
               <button type="button" onClick={() => setShowCurrentPwd(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                 {showCurrentPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -2039,7 +2039,7 @@ export default function SettingsPage() {
                 value={newPwd}
                 onChange={e => setNewPwd(e.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-lg border border-gray-200 pl-9 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                className="w-full rounded-lg border border-gray-200 pl-9 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
               />
               <button
                 type="button"
@@ -2060,7 +2060,7 @@ export default function SettingsPage() {
                 value={confirmPwd}
                 onChange={e => setConfirmPwd(e.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-lg border border-gray-200 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                className="w-full rounded-lg border border-gray-200 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
               />
             </div>
             {confirmPwd && newPwd !== confirmPwd && (

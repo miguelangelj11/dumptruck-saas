@@ -232,7 +232,7 @@ export default function DriversPage() {
             }
             openAdd()
           }}
-          className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors ${atLimit ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-[#2d7a4f] text-white hover:bg-[#245f3e]'}`}
+          className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors ${atLimit ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary-hover)]'}`}
         >
           <Plus className="h-4 w-4" /> Add Driver
         </button>
@@ -273,7 +273,7 @@ export default function DriversPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-[#2d7a4f]" /></div>
+        <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-[var(--brand-primary)]" /></div>
       ) : activeTab === 'unpaid' ? (
         // ── Unpaid Tab ──────────────────────────────────────────────────────
         driverUnpaidSummary.length === 0 ? (
@@ -296,7 +296,7 @@ export default function DriversPage() {
             <div className="divide-y divide-gray-50">
               {driverUnpaidSummary.map(({ driver: d, loads: dLoads, total, oldestDate }) => (
                 <div key={d.id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50/50 transition-colors">
-                  <div className="h-10 w-10 rounded-full bg-[#1e3a2a] flex items-center justify-center text-white font-bold text-sm shrink-0">
+                  <div className="h-10 w-10 rounded-full bg-[var(--brand-dark)] flex items-center justify-center text-white font-bold text-sm shrink-0">
                     {d.name.slice(0, 2).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -309,7 +309,7 @@ export default function DriversPage() {
                   </div>
                   <button
                     onClick={() => openPayModal(d, total)}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#2d7a4f] px-3 py-2 text-xs font-semibold text-white hover:bg-[#245f3e] transition-colors shrink-0"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors shrink-0"
                   >
                     <CreditCard className="h-3.5 w-3.5" /> Record Payment
                   </button>
@@ -324,7 +324,7 @@ export default function DriversPage() {
           <div className="text-center py-20 bg-white rounded-xl border border-gray-100">
             <Users className="h-12 w-12 text-gray-200 mx-auto mb-4" />
             <p className="text-sm font-medium text-gray-400 mb-1">No drivers yet</p>
-            <button onClick={openAdd} className="text-sm text-[#2d7a4f]">Add your first driver →</button>
+            <button onClick={openAdd} className="text-sm text-[var(--brand-primary)]">Add your first driver →</button>
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -334,7 +334,7 @@ export default function DriversPage() {
                 <div key={d.id} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md transition-all cursor-pointer group" onClick={() => setSelectedDriver(d)}>
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-[#1e3a2a] flex items-center justify-center text-white font-bold text-sm shrink-0">
+                      <div className="h-10 w-10 rounded-full bg-[var(--brand-dark)] flex items-center justify-center text-white font-bold text-sm shrink-0">
                         {d.name.slice(0, 2).toUpperCase()}
                       </div>
                       <div>
@@ -343,7 +343,7 @@ export default function DriversPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={e => openEdit(d, e)} className="h-7 w-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-[#2d7a4f]"><Pencil className="h-3.5 w-3.5" /></button>
+                      <button onClick={e => openEdit(d, e)} className="h-7 w-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-[var(--brand-primary)]"><Pencil className="h-3.5 w-3.5" /></button>
                       <button onClick={e => handleDelete(d, e)} className="h-7 w-7 rounded-lg hover:bg-red-50 flex items-center justify-center text-gray-400 hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button>
                     </div>
                   </div>
@@ -354,7 +354,7 @@ export default function DriversPage() {
                     </div>
                     <div className="bg-gray-50 rounded-lg p-2.5">
                       <p className="text-gray-400 text-xs mb-0.5">Revenue</p>
-                      <p className="font-bold text-[#2d7a4f] text-xs">${stats.revenue.toLocaleString()}</p>
+                      <p className="font-bold text-[var(--brand-primary)] text-xs">${stats.revenue.toLocaleString()}</p>
                     </div>
                     <div className={`rounded-lg p-2.5 ${stats.owed > 0 ? 'bg-orange-50' : 'bg-gray-50'}`}>
                       <p className="text-gray-400 text-xs mb-0.5">Owed</p>
@@ -364,7 +364,7 @@ export default function DriversPage() {
                   {d.phone && <div className="flex items-center gap-2 mt-3 text-xs text-gray-400"><Phone className="h-3 w-3" /> {d.phone}</div>}
                   {d.email && <div className="flex items-center gap-2 mt-1 text-xs text-gray-400"><Mail className="h-3 w-3" /> {d.email}</div>}
                   <div className="flex gap-2 mt-4">
-                    <button onClick={e => { e.stopPropagation(); toggleStatus(d) }} className="flex-1 text-xs py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-[#2d7a4f] hover:text-[#2d7a4f] transition-colors">
+                    <button onClick={e => { e.stopPropagation(); toggleStatus(d) }} className="flex-1 text-xs py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)] transition-colors">
                       {d.status === 'active' ? 'Mark Inactive' : 'Mark Active'}
                     </button>
                     {stats.owed > 0 && (
@@ -382,7 +382,7 @@ export default function DriversPage() {
 
       {/* At-limit upgrade card */}
       {!atLimitCardDismissed && atLimit && companyPlan !== 'enterprise' && (
-        <div className="mt-4 relative rounded-2xl overflow-hidden border-2 border-[#2d7a4f] bg-[#1e3a2a] text-white p-6">
+        <div className="mt-4 relative rounded-2xl overflow-hidden border-2 border-[var(--brand-primary)] bg-[var(--brand-dark)] text-white p-6">
           <button
             onClick={() => setAtLimitCardDismissed(true)}
             className="absolute top-3 right-3 text-white/50 hover:text-white"
@@ -409,7 +409,7 @@ export default function DriversPage() {
               <button
                 onClick={() => startUpgradeCheckout('fleet')}
                 disabled={upgradeLoading}
-                className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-[#2d7a4f] px-5 py-3 text-sm font-bold text-white hover:bg-[#3a9462] transition-colors disabled:opacity-60"
+                className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-5 py-3 text-sm font-bold text-white hover:bg-[#3a9462] transition-colors disabled:opacity-60"
               >
                 {upgradeLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 Upgrade to Fleet →
@@ -450,7 +450,7 @@ export default function DriversPage() {
                 <div className="flex flex-col gap-2 pt-1">
                   <a
                     href="/pricing"
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#2d7a4f] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors"
                   >
                     View Plans &amp; Upgrade →
                   </a>
@@ -466,20 +466,20 @@ export default function DriversPage() {
               <form onSubmit={handleSave} className="p-6 space-y-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Full Name *</label>
-                  <input required value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="Jake Morrison" />
+                  <input required value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="Jake Morrison" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
-                  <input type="tel" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="(555) 000-0000" />
+                  <input type="tel" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="(555) 000-0000" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-                  <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="driver@email.com" />
+                  <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="driver@email.com" />
                 </div>
                 {editingDriver && (
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
-                    <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]">
+                    <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]">
                       <option value="active">Active</option>
                       <option value="inactive">Inactive</option>
                     </select>
@@ -487,7 +487,7 @@ export default function DriversPage() {
                 )}
                 <div className="flex gap-3 pt-2">
                   <button type="button" onClick={() => { setShowForm(false); setEditingDriver(null); setForm(EMPTY_DRIVER) }} className="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-                  <button type="submit" disabled={saving} className="flex-1 rounded-lg bg-[#2d7a4f] py-2.5 text-sm font-semibold text-white hover:bg-[#245f3e] disabled:opacity-50 flex items-center justify-center gap-2">
+                  <button type="submit" disabled={saving} className="flex-1 rounded-lg bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] disabled:opacity-50 flex items-center justify-center gap-2">
                     {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                     {saving ? 'Saving…' : editingDriver ? 'Save Changes' : 'Add Driver'}
                   </button>
@@ -523,16 +523,16 @@ export default function DriversPage() {
               })()}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Amount ($) *</label>
-                <input required type="number" min="0.01" step="0.01" value={payForm.amount} onChange={e => setPayForm(p => ({ ...p, amount: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="0.00" />
+                <input required type="number" min="0.01" step="0.01" value={payForm.amount} onChange={e => setPayForm(p => ({ ...p, amount: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="0.00" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Payment Date *</label>
-                  <input required type="date" value={payForm.payment_date} onChange={e => setPayForm(p => ({ ...p, payment_date: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" />
+                  <input required type="date" value={payForm.payment_date} onChange={e => setPayForm(p => ({ ...p, payment_date: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Method</label>
-                  <select value={payForm.payment_method} onChange={e => setPayForm(p => ({ ...p, payment_method: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]">
+                  <select value={payForm.payment_method} onChange={e => setPayForm(p => ({ ...p, payment_method: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]">
                     {PAY_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
                 </div>
@@ -540,26 +540,26 @@ export default function DriversPage() {
               {payForm.payment_method === 'Check' && (
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Check Number</label>
-                  <input value={payForm.check_number} onChange={e => setPayForm(p => ({ ...p, check_number: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="1234" />
+                  <input value={payForm.check_number} onChange={e => setPayForm(p => ({ ...p, check_number: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="1234" />
                 </div>
               )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Period Start</label>
-                  <input type="date" value={payForm.period_start} onChange={e => setPayForm(p => ({ ...p, period_start: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" />
+                  <input type="date" value={payForm.period_start} onChange={e => setPayForm(p => ({ ...p, period_start: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Period End</label>
-                  <input type="date" value={payForm.period_end} onChange={e => setPayForm(p => ({ ...p, period_end: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" />
+                  <input type="date" value={payForm.period_end} onChange={e => setPayForm(p => ({ ...p, period_end: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
-                <input value={payForm.notes} onChange={e => setPayForm(p => ({ ...p, notes: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="Reference, memo, etc." />
+                <input value={payForm.notes} onChange={e => setPayForm(p => ({ ...p, notes: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="Reference, memo, etc." />
               </div>
               <div className="flex gap-3 pt-1">
                 <button type="button" onClick={() => { setPayingDriver(null); setPayForm(EMPTY_PAY) }} className="flex-1 h-10 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-                <button type="submit" disabled={savingPay} className="flex-1 h-10 rounded-xl bg-[#2d7a4f] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[#245f3e] disabled:opacity-60">
+                <button type="submit" disabled={savingPay} className="flex-1 h-10 rounded-xl bg-[var(--brand-primary)] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[var(--brand-primary-hover)] disabled:opacity-60">
                   {savingPay && <Loader2 className="h-4 w-4 animate-spin" />}
                   {savingPay ? 'Saving…' : 'Record Payment'}
                 </button>
@@ -576,14 +576,14 @@ export default function DriversPage() {
           <div className="w-full max-w-md bg-white h-full overflow-y-auto shadow-2xl">
             <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
               <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-full bg-[#1e3a2a] flex items-center justify-center text-white font-bold text-sm shrink-0">{selectedDriver.name.slice(0, 2).toUpperCase()}</div>
+                <div className="h-9 w-9 rounded-full bg-[var(--brand-dark)] flex items-center justify-center text-white font-bold text-sm shrink-0">{selectedDriver.name.slice(0, 2).toUpperCase()}</div>
                 <div>
                   <p className="font-semibold text-gray-900">{selectedDriver.name}</p>
                   <p className="text-xs text-gray-400">{driverLoads.length} loads total</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={e => openEdit(selectedDriver, e)} className="h-8 w-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-[#2d7a4f]"><Pencil className="h-4 w-4" /></button>
+                <button onClick={e => openEdit(selectedDriver, e)} className="h-8 w-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-[var(--brand-primary)]"><Pencil className="h-4 w-4" /></button>
                 <button onClick={() => setSelectedDriver(null)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
               </div>
             </div>
@@ -601,9 +601,9 @@ export default function DriversPage() {
                   <p className="text-xs text-gray-400 mb-1">Total Loads</p>
                   <p className="text-xl font-bold text-gray-900">{driverLoads.length}</p>
                 </div>
-                <div className="bg-[#2d7a4f]/5 rounded-xl p-3">
+                <div className="bg-[var(--brand-primary)]/5 rounded-xl p-3">
                   <p className="text-xs text-gray-400 mb-1">Revenue</p>
-                  <p className="text-base font-bold text-[#2d7a4f]">${driverLoads.filter(l => l.status === 'paid').reduce((s, l) => s + (l.rate ?? 0), 0).toLocaleString()}</p>
+                  <p className="text-base font-bold text-[var(--brand-primary)]">${driverLoads.filter(l => l.status === 'paid').reduce((s, l) => s + (l.rate ?? 0), 0).toLocaleString()}</p>
                 </div>
                 <div className={`rounded-xl p-3 ${driverAmountOwed > 0 ? 'bg-orange-50' : 'bg-gray-50'}`}>
                   <p className="text-xs text-gray-400 mb-1">Owed</p>
@@ -618,7 +618,7 @@ export default function DriversPage() {
                     <h3 className="font-semibold text-sm text-gray-900 flex items-center gap-2">
                       <AlertCircle className="h-4 w-4 text-orange-500" /> Unpaid Work
                     </h3>
-                    <button onClick={() => openPayModal(selectedDriver, driverAmountOwed)} className="inline-flex items-center gap-1 text-xs font-semibold text-white bg-[#2d7a4f] rounded-lg px-2.5 py-1.5 hover:bg-[#245f3e] transition-colors">
+                    <button onClick={() => openPayModal(selectedDriver, driverAmountOwed)} className="inline-flex items-center gap-1 text-xs font-semibold text-white bg-[var(--brand-primary)] rounded-lg px-2.5 py-1.5 hover:bg-[var(--brand-primary-hover)] transition-colors">
                       <CreditCard className="h-3 w-3" /> Pay Now
                     </button>
                   </div>
@@ -680,7 +680,7 @@ export default function DriversPage() {
                       </div>
                       <div className="text-right shrink-0">
                         <p className="text-sm font-semibold text-gray-900">${l.rate?.toLocaleString()}</p>
-                        <span className={`text-xs capitalize ${l.status === 'paid' ? 'text-green-600' : l.status === 'invoiced' ? 'text-blue-600' : l.status === 'approved' ? 'text-[#2d7a4f]' : 'text-yellow-600'}`}>{l.status}{l.driver_paid ? ' · paid' : ''}</span>
+                        <span className={`text-xs capitalize ${l.status === 'paid' ? 'text-green-600' : l.status === 'invoiced' ? 'text-blue-600' : l.status === 'approved' ? 'text-[var(--brand-primary)]' : 'text-yellow-600'}`}>{l.status}{l.driver_paid ? ' · paid' : ''}</span>
                       </div>
                     </div>
                   ))}

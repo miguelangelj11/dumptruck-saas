@@ -269,7 +269,7 @@ export default async function DashboardPage() {
       value: thisWeekTickets.toString(),
       sub:   pctBadge(ticketPct, 'week'),
       icon:  Truck,
-      color: 'text-[#2d7a4f] bg-[#2d7a4f]/10',
+      color: 'text-[var(--brand-primary)] bg-[var(--brand-primary)]/10',
       href:  '/dashboard/tickets',
     },
     {
@@ -398,7 +398,7 @@ export default async function DashboardPage() {
             </Link>
             <Link href="/dashboard/tickets" className="flex items-center justify-between gap-2 group">
               <span className="text-sm text-gray-700 group-hover:underline">Loads completed today</span>
-              <span className="text-sm font-bold text-[#2d7a4f]">{loadsToday.length}</span>
+              <span className="text-sm font-bold text-[var(--brand-primary)]">{loadsToday.length}</span>
             </Link>
           </div>
         </div>
@@ -434,7 +434,7 @@ export default async function DashboardPage() {
             </Link>
             <Link href="/dashboard/revenue" className="flex items-center justify-between gap-2 group">
               <span className="text-sm text-gray-700 group-hover:underline">Revenue collected</span>
-              <span className="text-sm font-bold text-[#2d7a4f]">{fmt(weekRevCollected)}</span>
+              <span className="text-sm font-bold text-[var(--brand-primary)]">{fmt(weekRevCollected)}</span>
             </Link>
           </div>
         </div>
@@ -460,10 +460,10 @@ export default async function DashboardPage() {
       {/* Quick Actions */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {[
-          { label: 'Dispatch Driver', icon: Send,      href: '/dashboard/dispatch',       bg: 'bg-[#1e3a2a] text-white hover:bg-[#2d4a3a]' },
-          { label: 'Add Ticket',      icon: Plus,      href: '/dashboard/tickets',        bg: 'bg-white text-gray-800 border border-gray-200 hover:border-[#2d7a4f] hover:bg-[#f0fdf4]' },
-          { label: 'New Invoice',     icon: FileText,  href: '/dashboard/invoices?new=1', bg: 'bg-white text-gray-800 border border-gray-200 hover:border-[#2d7a4f] hover:bg-[#f0fdf4]' },
-          { label: 'Add Driver',      icon: Users,     href: '/dashboard/drivers',        bg: 'bg-white text-gray-800 border border-gray-200 hover:border-[#2d7a4f] hover:bg-[#f0fdf4]' },
+          { label: 'Dispatch Driver', icon: Send,      href: '/dashboard/dispatch',       bg: 'bg-[var(--brand-dark)] text-white hover:bg-[var(--brand-primary-hover)]' },
+          { label: 'Add Ticket',      icon: Plus,      href: '/dashboard/tickets',        bg: 'bg-white text-gray-800 border border-gray-200 hover:border-[var(--brand-primary)] hover:bg-[#f0fdf4]' },
+          { label: 'New Invoice',     icon: FileText,  href: '/dashboard/invoices?new=1', bg: 'bg-white text-gray-800 border border-gray-200 hover:border-[var(--brand-primary)] hover:bg-[#f0fdf4]' },
+          { label: 'Add Driver',      icon: Users,     href: '/dashboard/drivers',        bg: 'bg-white text-gray-800 border border-gray-200 hover:border-[var(--brand-primary)] hover:bg-[#f0fdf4]' },
         ].map(({ label, icon: Icon, href, bg }) => (
           <Link
             key={label}
@@ -512,7 +512,7 @@ export default async function DashboardPage() {
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-gray-900 text-sm">Top Drivers</h2>
-            <Link href="/dashboard/drivers" className="text-xs text-[#2d7a4f] font-medium hover:underline">View all</Link>
+            <Link href="/dashboard/drivers" className="text-xs text-[var(--brand-primary)] font-medium hover:underline">View all</Link>
           </div>
           {topDrivers.length === 0 ? (
             <div className="text-center py-8">
@@ -526,13 +526,13 @@ export default async function DashboardPage() {
                 return (
                   <div key={d.name}>
                     <div className="flex items-center gap-2 mb-1">
-                      <div className="h-5 w-5 rounded-full bg-[#1e3a2a] flex items-center justify-center text-[10px] font-bold text-white shrink-0">{i + 1}</div>
+                      <div className="h-5 w-5 rounded-full bg-[var(--brand-dark)] flex items-center justify-center text-[10px] font-bold text-white shrink-0">{i + 1}</div>
                       <p className="text-sm font-medium text-gray-900 truncate flex-1">{d.name}</p>
-                      <span className="text-xs font-semibold text-[#2d7a4f] shrink-0">{fmt(d.revenue)}</span>
+                      <span className="text-xs font-semibold text-[var(--brand-primary)] shrink-0">{fmt(d.revenue)}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-[#2d7a4f] rounded-full" style={{ width: `${barPct}%` }} />
+                        <div className="h-full bg-[var(--brand-primary)] rounded-full" style={{ width: `${barPct}%` }} />
                       </div>
                       <span className="text-[10px] text-gray-400 shrink-0 w-14 text-right">{d.loads} load{d.loads !== 1 ? 's' : ''}</span>
                     </div>
@@ -558,13 +558,13 @@ export default async function DashboardPage() {
                 <span className="rounded-full bg-purple-100 text-purple-700 px-2 py-0.5 text-xs font-bold">{dispatchedToday}</span>
               )}
             </div>
-            <Link href="/dashboard/dispatch" className="text-xs text-[#2d7a4f] hover:text-[#245f3e] font-medium">View all →</Link>
+            <Link href="/dashboard/dispatch" className="text-xs text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] font-medium">View all →</Link>
           </div>
           {todayDispatches.length === 0 ? (
             <div className="text-center py-10">
               <Radio className="h-8 w-8 text-gray-200 mx-auto mb-2" />
               <p className="text-sm text-gray-400">No dispatches today</p>
-              <Link href="/dashboard/dispatch" className="text-xs text-[#2d7a4f] mt-1 inline-block hover:underline">Dispatch a driver →</Link>
+              <Link href="/dashboard/dispatch" className="text-xs text-[var(--brand-primary)] mt-1 inline-block hover:underline">Dispatch a driver →</Link>
             </div>
           ) : (
             <div className="divide-y divide-gray-50">
@@ -572,7 +572,7 @@ export default async function DashboardPage() {
                 const badge = dispStatusBadge[d.status] ?? { label: d.status, cls: 'bg-gray-100 text-gray-600' }
                 return (
                   <div key={d.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50/50">
-                    <div className="h-9 w-9 rounded-full bg-[#1e3a2a]/10 flex items-center justify-center text-[#1e3a2a] font-bold text-xs shrink-0">
+                    <div className="h-9 w-9 rounded-full bg-[var(--brand-dark)]/10 flex items-center justify-center text-[var(--brand-dark)] font-bold text-xs shrink-0">
                       {d.driver_name.slice(0, 2).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -597,13 +597,13 @@ export default async function DashboardPage() {
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-6">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="font-semibold text-gray-900 text-sm">Recent Tickets</h2>
-          <Link href="/dashboard/tickets" className="text-xs text-[#2d7a4f] hover:text-[#245f3e] font-medium">View all →</Link>
+          <Link href="/dashboard/tickets" className="text-xs text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] font-medium">View all →</Link>
         </div>
         {recentLoads.length === 0 ? (
           <div className="text-center py-12">
             <Truck className="h-10 w-10 text-gray-200 mx-auto mb-3" />
             <p className="text-sm text-gray-400 font-medium">No tickets yet</p>
-            <Link href="/dashboard/tickets" className="text-xs text-[#2d7a4f] mt-1 inline-block hover:underline">Add your first ticket →</Link>
+            <Link href="/dashboard/tickets" className="text-xs text-[var(--brand-primary)] mt-1 inline-block hover:underline">Add your first ticket →</Link>
           </div>
         ) : (
           <div className="overflow-x-auto">

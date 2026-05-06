@@ -732,7 +732,7 @@ export default function DispatchPage() {
           </button>
           <button
             onClick={openAddJob}
-            className="flex items-center gap-2 bg-[#1e3a2a] text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#2d4a3a] transition-colors"
+            className="flex items-center gap-2 bg-[var(--brand-dark)] text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-[var(--brand-primary-hover)] transition-colors"
           >
             <Plus className="h-4 w-4" /> New Job
           </button>
@@ -744,8 +744,8 @@ export default function DispatchPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 px-6 pb-4">
           {[
             { icon: Send,          iconColor: 'text-blue-600',       bg: 'bg-blue-50',         label: 'Dispatched Today', value: String(dispatches.length),   alert: false },
-            { icon: Truck,         iconColor: 'text-[#2d7a4f]',      bg: 'bg-[#2d7a4f]/10',    label: "Loads Today",      value: String(todayLoads.length),    alert: false },
-            { icon: TrendingUp,    iconColor: 'text-[#2d7a4f]',      bg: 'bg-[#2d7a4f]/10',    label: "Today's Revenue",  value: `$${fmtMoney(todayRevenue)}`, alert: false },
+            { icon: Truck,         iconColor: 'text-[var(--brand-primary)]',      bg: 'bg-[var(--brand-primary)]/10',    label: "Loads Today",      value: String(todayLoads.length),    alert: false },
+            { icon: TrendingUp,    iconColor: 'text-[var(--brand-primary)]',      bg: 'bg-[var(--brand-primary)]/10',    label: "Today's Revenue",  value: `$${fmtMoney(todayRevenue)}`, alert: false },
             { icon: AlertTriangle, iconColor: noResponseCount > 0 ? 'text-yellow-600' : 'text-gray-400', bg: noResponseCount > 0 ? 'bg-yellow-100' : 'bg-gray-50', label: 'No Response', value: String(noResponseCount), alert: noResponseCount > 0 },
           ].map(({ icon: Icon, iconColor, bg, label, value, alert }) => (
             <div key={label} className={`rounded-2xl border p-4 ${alert ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-gray-100'}`}>
@@ -763,13 +763,13 @@ export default function DispatchPage() {
 
       {/* All-drivers-dispatched upsell banner */}
       {!loading && !dispatchBannerDismissed && availableDrivers.length === 0 && drivers.length > 0 && companyPlan !== 'enterprise' && (
-        <div className="mx-6 mb-4 flex items-center gap-3 rounded-xl border border-[#2d7a4f]/30 bg-[#2d7a4f]/8 px-4 py-3" style={{ background: 'rgba(45,122,79,0.07)' }}>
+        <div className="mx-6 mb-4 flex items-center gap-3 rounded-xl border border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/8 px-4 py-3" style={{ background: 'rgba(45,122,79,0.07)' }}>
           <span className="text-base shrink-0">🚛</span>
-          <p className="flex-1 text-sm text-[#1e3a2a] font-medium">
+          <p className="flex-1 text-sm text-[var(--brand-dark)] font-medium">
             All {drivers.length} driver{drivers.length !== 1 ? 's' : ''} are out! Need more capacity?{' '}
             <a
               href={companyPlan === 'owner_operator' ? '/pricing' : '/schedule-demo'}
-              className="font-semibold text-[#2d7a4f] underline hover:no-underline"
+              className="font-semibold text-[var(--brand-primary)] underline hover:no-underline"
             >
               Upgrade your plan →
             </a>
@@ -796,7 +796,7 @@ export default function DispatchPage() {
           >
             {label}
             {count != null && count > 0 && (
-              <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-[1rem] px-1 text-[10px] font-bold bg-[#2d7a4f] text-white rounded-full">
+              <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-[1rem] px-1 text-[10px] font-bold bg-[var(--brand-primary)] text-white rounded-full">
                 {count}
               </span>
             )}
@@ -851,7 +851,7 @@ export default function DispatchPage() {
                     key={tab}
                     onClick={() => setJobFilter(tab)}
                     className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                      jobFilter === tab ? 'bg-[#1e3a2a] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      jobFilter === tab ? 'bg-[var(--brand-dark)] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
                     {tab === 'on_hold' ? 'On Hold' : tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -869,7 +869,7 @@ export default function DispatchPage() {
                   <Truck className="h-10 w-10 mx-auto mb-3 text-gray-200" />
                   <p className="font-medium text-gray-400">No jobs</p>
                   <p className="text-sm text-gray-300 mt-1">Create a job to start dispatching</p>
-                  <button onClick={openAddJob} className="mt-4 text-sm text-[#2d7a4f] font-medium">+ New Job</button>
+                  <button onClick={openAddJob} className="mt-4 text-sm text-[var(--brand-primary)] font-medium">+ New Job</button>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -901,7 +901,7 @@ export default function DispatchPage() {
                             <div className="flex items-center gap-1 shrink-0">
                               <button
                                 onClick={e => openDispatchFromJob(job, e)}
-                                className="flex items-center gap-1.5 bg-[#2d7a4f] hover:bg-[#245f3e] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                                className="flex items-center gap-1.5 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
                               >
                                 <Send className="h-3 w-3" /> Dispatch
                               </button>
@@ -931,8 +931,8 @@ export default function DispatchPage() {
                               <p className="text-lg font-bold text-gray-900">{jobLoads.length}</p>
                               <p className="text-[10px] text-gray-500 mt-0.5">Total Loads</p>
                             </div>
-                            <div className="bg-[#2d7a4f]/5 rounded-xl p-2.5 text-center">
-                              <p className="text-base font-bold text-[#2d7a4f] leading-tight">${fmtMoney(jobRevenue)}</p>
+                            <div className="bg-[var(--brand-primary)]/5 rounded-xl p-2.5 text-center">
+                              <p className="text-base font-bold text-[var(--brand-primary)] leading-tight">${fmtMoney(jobRevenue)}</p>
                               <p className="text-[10px] text-gray-500 mt-0.5">Revenue</p>
                             </div>
                           </div>
@@ -962,7 +962,7 @@ export default function DispatchPage() {
                                 {JOB_STATUSES.map(s => (
                                   <button key={s} onClick={() => updateJobStatus(job.id, s)}
                                     className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                                      job.status === s ? 'bg-[#1e3a2a] text-white border-[#1e3a2a]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                                      job.status === s ? 'bg-[var(--brand-dark)] text-white border-[#1e3a2a]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
                                     }`}>
                                     {s === 'on_hold' ? 'On Hold' : s.charAt(0).toUpperCase() + s.slice(1)}
                                   </button>
@@ -1002,7 +1002,7 @@ export default function DispatchPage() {
               <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden sticky top-6">
                 <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Radio className="h-4 w-4 text-[#2d7a4f]" />
+                    <Radio className="h-4 w-4 text-[var(--brand-primary)]" />
                     <h3 className="text-sm font-semibold text-gray-900">Driver Status</h3>
                   </div>
                   <span className="text-xs text-gray-400">{drivers.length} active</span>
@@ -1074,7 +1074,7 @@ export default function DispatchPage() {
             <p className="text-sm text-gray-500">{driverDispatches.length} driver dispatch{driverDispatches.length !== 1 ? 'es' : ''} today</p>
             <button
               onClick={() => openNewDispatch('driver')}
-              className="flex items-center gap-2 bg-[#1e3a2a] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#2d4a3a] transition-colors"
+              className="flex items-center gap-2 bg-[var(--brand-dark)] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[var(--brand-primary-hover)] transition-colors"
             >
               <Plus className="h-4 w-4" /> Dispatch Driver
             </button>
@@ -1145,7 +1145,7 @@ export default function DispatchPage() {
                         >
                           {DISPATCH_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                         </select>
-                        <button onClick={() => openEditDispatch(d)} className="h-8 w-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:text-[#2d7a4f]"><Pencil className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => openEditDispatch(d)} className="h-8 w-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:text-[var(--brand-primary)]"><Pencil className="h-3.5 w-3.5" /></button>
                         <button onClick={() => deleteDispatch(d.id)} className="h-8 w-8 rounded-lg border border-red-100 flex items-center justify-center text-red-400 hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /></button>
                       </div>
                     </div>
@@ -1212,7 +1212,7 @@ export default function DispatchPage() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1.5">
-                              <button onClick={() => openEditDispatch(d)} className="p-1.5 text-gray-400 hover:text-[#2d7a4f] transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
+                              <button onClick={() => openEditDispatch(d)} className="p-1.5 text-gray-400 hover:text-[var(--brand-primary)] transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
                               <button onClick={() => deleteDispatch(d.id)} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
                             </div>
                           </td>
@@ -1235,7 +1235,7 @@ export default function DispatchPage() {
             <p className="text-sm text-gray-500">{subDispatches.length} subcontractor dispatch{subDispatches.length !== 1 ? 'es' : ''} today</p>
             <button
               onClick={() => openNewDispatch('subcontractor')}
-              className="flex items-center gap-2 bg-[#1e3a2a] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#2d4a3a] transition-colors"
+              className="flex items-center gap-2 bg-[var(--brand-dark)] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[var(--brand-primary-hover)] transition-colors"
             >
               <Plus className="h-4 w-4" /> Dispatch Sub
             </button>
@@ -1289,7 +1289,7 @@ export default function DispatchPage() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1.5">
-                            <button onClick={() => openEditDispatch(d)} className="p-1.5 text-gray-400 hover:text-[#2d7a4f] transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
+                            <button onClick={() => openEditDispatch(d)} className="p-1.5 text-gray-400 hover:text-[var(--brand-primary)] transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
                             <button onClick={() => deleteDispatch(d.id)} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
                           </div>
                         </td>
@@ -1333,7 +1333,7 @@ export default function DispatchPage() {
                       type="button"
                       onClick={() => setDispFormType(t)}
                       className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-all ${
-                        dispFormType === t ? 'bg-[#1e3a2a] text-white border-[#1e3a2a]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                        dispFormType === t ? 'bg-[var(--brand-dark)] text-white border-[#1e3a2a]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
                       }`}
                     >
                       {t === 'driver' ? 'Driver' : 'Subcontractor'}
@@ -1348,7 +1348,7 @@ export default function DispatchPage() {
                 <select
                   value={dispForm.job_id}
                   onChange={e => setDispForm(f => ({ ...f, job_id: e.target.value }))}
-                  className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]"
+                  className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
                 >
                   <option value="">— No specific job —</option>
                   {jobs.filter(j => j.status === 'active').map(j => (
@@ -1375,7 +1375,7 @@ export default function DispatchPage() {
                           onClick={() => setDispForm(f => ({ ...f, driver_id: ds.driverId }))}
                           className={`w-full text-left p-2.5 rounded-xl border-2 transition-all ${
                             dispForm.driver_id === ds.driverId
-                              ? 'border-[#2d7a4f] bg-[#2d7a4f]/5'
+                              ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)]/5'
                               : i === 0 && !recommendation.noDriversAvailable
                                 ? 'border-green-300 bg-green-50/40 hover:border-green-400'
                                 : 'border-gray-200 hover:border-gray-300'
@@ -1408,7 +1408,7 @@ export default function DispatchPage() {
                       required
                       value={dispForm.driver_id}
                       onChange={e => setDispForm(f => ({ ...f, driver_id: e.target.value }))}
-                      className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]"
+                      className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
                     >
                       <option value="">— Select a driver —</option>
                       {availableDrivers.map(d => (
@@ -1430,7 +1430,7 @@ export default function DispatchPage() {
                     required
                     value={subcontractorId}
                     onChange={e => setSubcontractorId(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]"
+                    className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
                   >
                     <option value="">— Select a subcontractor —</option>
                     {contractors.map(c => (
@@ -1451,7 +1451,7 @@ export default function DispatchPage() {
                     value={dispForm.truck_number}
                     onChange={e => setDispForm(f => ({ ...f, truck_number: e.target.value }))}
                     placeholder="e.g. 12"
-                    className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]"
+                    className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
                   />
                 </div>
                 <div>
@@ -1460,7 +1460,7 @@ export default function DispatchPage() {
                     type="time"
                     value={dispForm.start_time}
                     onChange={e => setDispForm(f => ({ ...f, start_time: e.target.value }))}
-                    className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]"
+                    className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
                   />
                 </div>
               </div>
@@ -1473,7 +1473,7 @@ export default function DispatchPage() {
                   onChange={e => setDispForm(f => ({ ...f, instructions: e.target.value }))}
                   rows={3}
                   placeholder="Loading site details, contact, special notes…"
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
                 />
               </div>
 
@@ -1484,7 +1484,7 @@ export default function DispatchPage() {
                 <button
                   type="submit"
                   disabled={savingDispatch}
-                  className="flex-1 h-11 rounded-xl bg-[#1e3a2a] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[#2d4a3a] disabled:opacity-60"
+                  className="flex-1 h-11 rounded-xl bg-[var(--brand-dark)] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[var(--brand-primary-hover)] disabled:opacity-60"
                 >
                   {savingDispatch && <Loader2 className="h-4 w-4 animate-spin" />}
                   {savingDispatch ? 'Saving…' : editingDispatch ? 'Save Changes' : 'Dispatch Now'}
@@ -1510,7 +1510,7 @@ export default function DispatchPage() {
             <form onSubmit={handleSaveJob} className="p-5 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Job Name *</label>
-                <input required value={jobForm.job_name} onChange={e => setJobForm(f => ({ ...f, job_name: e.target.value }))} placeholder="e.g. Downtown Grading Phase 1" className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]" />
+                <input required value={jobForm.job_name} onChange={e => setJobForm(f => ({ ...f, job_name: e.target.value }))} placeholder="e.g. Downtown Grading Phase 1" className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]" />
               </div>
               {/* Working Under (Company) */}
               <div>
@@ -1520,7 +1520,7 @@ export default function DispatchPage() {
                     <button
                       type="button"
                       onClick={() => setContractorMode(m => m === 'dropdown' ? 'manual' : 'dropdown')}
-                      className="text-xs text-[#2d7a4f] hover:underline"
+                      className="text-xs text-[var(--brand-primary)] hover:underline"
                     >
                       {contractorMode === 'dropdown' ? '✏️ Enter manually' : '← Back to list'}
                     </button>
@@ -1530,7 +1530,7 @@ export default function DispatchPage() {
                   <select
                     value={jobForm.contractor}
                     onChange={e => setJobForm(f => ({ ...f, contractor: e.target.value }))}
-                    className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]"
+                    className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
                   >
                     <option value="">— Select a company —</option>
                     {clientCompanies.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
@@ -1540,7 +1540,7 @@ export default function DispatchPage() {
                     value={jobForm.contractor}
                     onChange={e => setJobForm(f => ({ ...f, contractor: e.target.value }))}
                     placeholder="Company name"
-                    className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]"
+                    className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
                   />
                 )}
               </div>
@@ -1549,21 +1549,21 @@ export default function DispatchPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Pick Up Location *</label>
-                  <input required value={jobForm.pick_up_location} onChange={e => setJobForm(f => ({ ...f, pick_up_location: e.target.value }))} placeholder="e.g. 123 Quarry Rd, Atlanta GA" className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]" />
+                  <input required value={jobForm.pick_up_location} onChange={e => setJobForm(f => ({ ...f, pick_up_location: e.target.value }))} placeholder="e.g. 123 Quarry Rd, Atlanta GA" className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Drop Location *</label>
-                  <input required value={jobForm.drop_location} onChange={e => setJobForm(f => ({ ...f, drop_location: e.target.value }))} placeholder="e.g. 456 Site Blvd, Atlanta GA" className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]" />
+                  <input required value={jobForm.drop_location} onChange={e => setJobForm(f => ({ ...f, drop_location: e.target.value }))} placeholder="e.g. 456 Site Blvd, Atlanta GA" className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Material</label>
-                  <input value={jobForm.material} onChange={e => setJobForm(f => ({ ...f, material: e.target.value }))} placeholder="e.g. Gravel, Dirt" className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]" />
+                  <input value={jobForm.material} onChange={e => setJobForm(f => ({ ...f, material: e.target.value }))} placeholder="e.g. Gravel, Dirt" className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                  <select value={jobForm.status} onChange={e => setJobForm(f => ({ ...f, status: e.target.value as Job['status'] }))} className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30">
+                  <select value={jobForm.status} onChange={e => setJobForm(f => ({ ...f, status: e.target.value as Job['status'] }))} className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30">
                     <option value="active">Active</option>
                     <option value="on_hold">On Hold</option>
                     <option value="completed">Completed</option>
@@ -1573,11 +1573,11 @@ export default function DispatchPage() {
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Rate</label>
-                  <input type="number" value={jobForm.rate} onChange={e => setJobForm(f => ({ ...f, rate: e.target.value }))} placeholder="0.00" className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]" />
+                  <input type="number" value={jobForm.rate} onChange={e => setJobForm(f => ({ ...f, rate: e.target.value }))} placeholder="0.00" className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Per</label>
-                  <select value={jobForm.rate_type} onChange={e => setJobForm(f => ({ ...f, rate_type: e.target.value }))} className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30">
+                  <select value={jobForm.rate_type} onChange={e => setJobForm(f => ({ ...f, rate_type: e.target.value }))} className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30">
                     {RATE_TYPES.map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </div>
@@ -1595,20 +1595,20 @@ export default function DispatchPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-                  <input type="date" value={jobForm.start_date} onChange={e => setJobForm(f => ({ ...f, start_date: e.target.value }))} className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]" />
+                  <input type="date" value={jobForm.start_date} onChange={e => setJobForm(f => ({ ...f, start_date: e.target.value }))} className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                  <input type="date" value={jobForm.end_date} onChange={e => setJobForm(f => ({ ...f, end_date: e.target.value }))} className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]" />
+                  <input type="date" value={jobForm.end_date} onChange={e => setJobForm(f => ({ ...f, end_date: e.target.value }))} className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]" />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                <textarea value={jobForm.notes} onChange={e => setJobForm(f => ({ ...f, notes: e.target.value }))} rows={3} placeholder="Any notes about this job…" className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/30 focus:border-[#2d7a4f]" />
+                <textarea value={jobForm.notes} onChange={e => setJobForm(f => ({ ...f, notes: e.target.value }))} rows={3} placeholder="Any notes about this job…" className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]" />
               </div>
               <div className="flex gap-3 pt-1">
                 <button type="button" onClick={() => setShowJobForm(false)} className="flex-1 h-11 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-                <button type="submit" disabled={savingJob} className="flex-1 h-11 rounded-xl bg-[#1e3a2a] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[#2d4a3a] disabled:opacity-60">
+                <button type="submit" disabled={savingJob} className="flex-1 h-11 rounded-xl bg-[var(--brand-dark)] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[var(--brand-primary-hover)] disabled:opacity-60">
                   {savingJob && <Loader2 className="h-4 w-4 animate-spin" />}
                   {savingJob ? 'Saving…' : editingJob ? 'Save Changes' : 'Create Job'}
                 </button>

@@ -863,11 +863,11 @@ export default function InvoicesPage() {
             <p className="text-gray-500 text-sm mt-0.5">Client invoices, pay stubs &amp; bills received</p>
           </div>
           {invoiceTab === 'sent' ? (
-            <button onClick={() => { resetCreateForm(); setView('create') }} className="inline-flex items-center gap-2 rounded-lg bg-[#2d7a4f] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors">
+            <button onClick={() => { resetCreateForm(); setView('create') }} className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors">
               <Plus className="h-4 w-4" /> New Invoice
             </button>
           ) : (
-            <button onClick={() => setShowRecvForm(true)} className="inline-flex items-center gap-2 rounded-lg bg-[#2d7a4f] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors">
+            <button onClick={() => setShowRecvForm(true)} className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors">
               <Plus className="h-4 w-4" /> Add Received Invoice
             </button>
           )}
@@ -924,12 +924,12 @@ export default function InvoicesPage() {
             )}
             <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
               {loading ? (
-                <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-[#2d7a4f]" /></div>
+                <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-[var(--brand-primary)]" /></div>
               ) : receivedInvoices.length === 0 ? (
                 <div className="text-center py-16">
                   <Receipt className="h-10 w-10 text-gray-200 mx-auto mb-3" />
                   <p className="text-sm font-medium text-gray-400">No received invoices yet</p>
-                  <button onClick={() => setShowRecvForm(true)} className="mt-3 text-sm text-[#2d7a4f]">Add first received invoice →</button>
+                  <button onClick={() => setShowRecvForm(true)} className="mt-3 text-sm text-[var(--brand-primary)]">Add first received invoice →</button>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -996,35 +996,35 @@ export default function InvoicesPage() {
               <form onSubmit={handleSaveReceived} className="p-5 space-y-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Subcontractor Name *</label>
-                  <input required value={recvForm.subcontractor_name} onChange={e => setRecvForm(p => ({ ...p, subcontractor_name: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="ABC Trucking LLC" />
+                  <input required value={recvForm.subcontractor_name} onChange={e => setRecvForm(p => ({ ...p, subcontractor_name: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="ABC Trucking LLC" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Their Invoice #</label>
-                    <input value={recvForm.their_invoice_number} onChange={e => setRecvForm(p => ({ ...p, their_invoice_number: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="INV-0042" />
+                    <input value={recvForm.their_invoice_number} onChange={e => setRecvForm(p => ({ ...p, their_invoice_number: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="INV-0042" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Amount Billed ($) *</label>
-                    <input required type="number" min="0" step="0.01" value={recvForm.amount} onChange={e => setRecvForm(p => ({ ...p, amount: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" placeholder="2500.00" />
+                    <input required type="number" min="0" step="0.01" value={recvForm.amount} onChange={e => setRecvForm(p => ({ ...p, amount: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="2500.00" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Date Received</label>
-                  <input type="date" value={recvForm.date_received} onChange={e => setRecvForm(p => ({ ...p, date_received: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" />
+                  <input type="date" value={recvForm.date_received} onChange={e => setRecvForm(p => ({ ...p, date_received: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Work Period From</label>
-                    <input type="date" value={recvForm.work_start_date} onChange={e => setRecvForm(p => ({ ...p, work_start_date: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" />
+                    <input type="date" value={recvForm.work_start_date} onChange={e => setRecvForm(p => ({ ...p, work_start_date: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Work Period To</label>
-                    <input type="date" value={recvForm.work_end_date} onChange={e => setRecvForm(p => ({ ...p, work_end_date: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]" />
+                    <input type="date" value={recvForm.work_end_date} onChange={e => setRecvForm(p => ({ ...p, work_end_date: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
-                  <textarea value={recvForm.notes} onChange={e => setRecvForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] resize-none" placeholder="Optional notes..." />
+                  <textarea value={recvForm.notes} onChange={e => setRecvForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] resize-none" placeholder="Optional notes..." />
                 </div>
 
                 {/* ── File / Photo Upload ── */}
@@ -1055,7 +1055,7 @@ export default function InvoicesPage() {
                     <button
                       type="button"
                       onClick={() => recvFileRef.current?.click()}
-                      className="w-full rounded-xl border-2 border-dashed border-gray-200 bg-white hover:border-[#2d7a4f] hover:bg-[#2d7a4f]/5 transition-all py-5 flex flex-col items-center gap-2"
+                      className="w-full rounded-xl border-2 border-dashed border-gray-200 bg-white hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/5 transition-all py-5 flex flex-col items-center gap-2"
                     >
                       <Upload className="h-5 w-5 text-gray-400" />
                       <p className="text-sm font-medium text-gray-500">Tap to upload or take photo</p>
@@ -1080,7 +1080,7 @@ export default function InvoicesPage() {
 
                 <div className="flex gap-3 pt-1">
                   <button type="button" onClick={() => { setShowRecvForm(false); setRecvFile(null); setRecvFilePreview(null) }} className="flex-1 h-10 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-                  <button type="submit" disabled={savingRecv} className="flex-1 h-10 rounded-xl bg-[#2d7a4f] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[#245f3e] disabled:opacity-60">
+                  <button type="submit" disabled={savingRecv} className="flex-1 h-10 rounded-xl bg-[var(--brand-primary)] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[var(--brand-primary-hover)] disabled:opacity-60">
                     {savingRecv && <Loader2 className="h-4 w-4 animate-spin" />}
                     {savingRecv ? 'Saving…' : 'Add Invoice'}
                   </button>
@@ -1111,7 +1111,7 @@ export default function InvoicesPage() {
                     key={val}
                     onClick={() => setInvStatusFilter(val)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                      isActive ? 'bg-[#1e3a2a] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      isActive ? 'bg-[var(--brand-dark)] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     } ${val === 'overdue' && count > 0 && !isActive ? 'bg-red-100 text-red-700 hover:bg-red-200' : ''}`}
                   >
                     {label}
@@ -1128,13 +1128,13 @@ export default function InvoicesPage() {
 
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="h-6 w-6 animate-spin text-[#2d7a4f]" />
+              <Loader2 className="h-6 w-6 animate-spin text-[var(--brand-primary)]" />
             </div>
           ) : invoices.length === 0 ? (
             <div className="text-center py-16">
               <Receipt className="h-10 w-10 text-gray-200 mx-auto mb-3" />
               <p className="text-sm font-medium text-gray-400">No invoices yet</p>
-              <button onClick={() => { resetCreateForm(); setView('create') }} className="mt-3 text-sm text-[#2d7a4f] hover:text-[#245f3e]">
+              <button onClick={() => { resetCreateForm(); setView('create') }} className="mt-3 text-sm text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)]">
                 Create your first invoice →
               </button>
             </div>
@@ -1193,7 +1193,7 @@ export default function InvoicesPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3 flex-wrap">
-                          <button onClick={() => openDetail(inv)} className="text-xs text-[#2d7a4f] hover:text-[#245f3e] font-medium">
+                          <button onClick={() => openDetail(inv)} className="text-xs text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] font-medium">
                             View →
                           </button>
                           {inv.status === 'overdue' && (
@@ -1284,12 +1284,12 @@ export default function InvoicesPage() {
                     }}
                     className={`w-full rounded-xl border-2 px-4 py-3 text-left transition-all ${
                       locked ? 'border-gray-100 bg-gray-50 opacity-70 cursor-not-allowed' :
-                      invoiceType === type ? 'border-[#2d7a4f] bg-[#2d7a4f]/5' : 'border-gray-200 hover:border-gray-300'
+                      invoiceType === type ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)]/5' : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
                     <div className="flex items-center gap-2">
                       {locked && <Lock className="h-3.5 w-3.5 text-gray-400 shrink-0" />}
-                      <p className={`text-sm font-semibold ${locked ? 'text-gray-400' : invoiceType === type ? 'text-[#2d7a4f]' : 'text-gray-700'}`}>{label}</p>
+                      <p className={`text-sm font-semibold ${locked ? 'text-gray-400' : invoiceType === type ? 'text-[var(--brand-primary)]' : 'text-gray-700'}`}>{label}</p>
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5">{locked ? 'Fleet Plan only' : desc}</p>
                   </button>
@@ -1316,7 +1316,7 @@ export default function InvoicesPage() {
                       const c = contractors.find(c => c.id === e.target.value)
                       if (c) setCreateForm(p => ({ ...p, client_name: c.name, client_address: c.address ?? '', client_phone: c.phone ?? '', client_email: c.email ?? '' }))
                     }}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white"
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white"
                   >
                     <option value="">— Select a contractor —</option>
                     {contractors.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -1337,7 +1337,7 @@ export default function InvoicesPage() {
                           setCreateForm(p => ({ ...p, client_name: name, client_address: '' }))
                           setDriverFilter(name)
                         }}
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white"
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white"
                       >
                         <option value="">— Select a driver —</option>
                         {driversList.map(d => (
@@ -1358,7 +1358,7 @@ export default function InvoicesPage() {
                             setCreateForm(p => ({ ...p, client_name: val, client_address: co?.address ?? p.client_address }))
                           }
                         }}
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white"
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white"
                       >
                         <option value="">— Select a client —</option>
                         {clientCompanies.map(c => (
@@ -1372,14 +1372,14 @@ export default function InvoicesPage() {
                           required
                           value={createForm.client_name}
                           onChange={e => setCreateForm(p => ({ ...p, client_name: e.target.value }))}
-                          className="flex-1 rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                          className="flex-1 rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                           placeholder={invoiceType === 'client' ? 'Atlas Hauling Co.' : 'Jake Morrison'}
                         />
                         {invoiceType === 'client' && clientCompanies.length > 0 && (
                           <button
                             type="button"
                             onClick={() => { setClientNameMode('dropdown'); setCreateForm(p => ({ ...p, client_name: '', client_address: '' })) }}
-                            className="text-xs text-[#2d7a4f] hover:underline whitespace-nowrap"
+                            className="text-xs text-[var(--brand-primary)] hover:underline whitespace-nowrap"
                           >
                             ← Pick from list
                           </button>
@@ -1392,7 +1392,7 @@ export default function InvoicesPage() {
                     <input
                       value={createForm.client_address}
                       onChange={e => setCreateForm(p => ({ ...p, client_address: e.target.value }))}
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                       placeholder="123 Main St, City, ST 00000"
                     />
                   </div>
@@ -1412,9 +1412,9 @@ export default function InvoicesPage() {
                           key={type}
                           type="button"
                           onClick={() => setDriverPayType(type)}
-                          className={`rounded-xl border-2 px-4 py-3 text-left transition-all ${driverPayType === type ? 'border-[#2d7a4f] bg-[#2d7a4f]/5' : 'border-gray-200 hover:border-gray-300'}`}
+                          className={`rounded-xl border-2 px-4 py-3 text-left transition-all ${driverPayType === type ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)]/5' : 'border-gray-200 hover:border-gray-300'}`}
                         >
-                          <p className={`text-sm font-semibold ${driverPayType === type ? 'text-[#2d7a4f]' : 'text-gray-700'}`}>{label}</p>
+                          <p className={`text-sm font-semibold ${driverPayType === type ? 'text-[var(--brand-primary)]' : 'text-gray-700'}`}>{label}</p>
                           <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
                         </button>
                       ))}
@@ -1423,7 +1423,7 @@ export default function InvoicesPage() {
                   {driverPayType === 'percentage' ? (
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">Pay Percentage *</label>
-                      <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[#2d7a4f]/20 focus-within:border-[#2d7a4f]">
+                      <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/20 focus-within:border-[var(--brand-primary)]">
                         <input
                           required type="number" min="0" max="100" step="0.1"
                           value={driverPayPct} onChange={e => setDriverPayPct(e.target.value)}
@@ -1437,7 +1437,7 @@ export default function InvoicesPage() {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Hourly Rate *</label>
-                        <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[#2d7a4f]/20 focus-within:border-[#2d7a4f]">
+                        <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/20 focus-within:border-[var(--brand-primary)]">
                           <span className="flex items-center px-3 bg-gray-50 text-sm text-gray-500 border-r border-gray-200">$</span>
                           <input
                             required type="number" min="0" step="0.01"
@@ -1451,7 +1451,7 @@ export default function InvoicesPage() {
                         <input
                           required type="number" min="0" step="0.5"
                           value={driverTotalHours} onChange={e => setDriverTotalHours(e.target.value)}
-                          className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                          className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                           placeholder="40"
                         />
                       </div>
@@ -1464,7 +1464,7 @@ export default function InvoicesPage() {
               {invoiceType === 'contractor' && (
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Deduction %</label>
-                  <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[#2d7a4f]/20 focus-within:border-[#2d7a4f]">
+                  <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/20 focus-within:border-[var(--brand-primary)]">
                     <input
                       type="number" min="0" max="100" step="0.1"
                       value={deductionPct} onChange={e => setDeductionPct(e.target.value)}
@@ -1481,7 +1481,7 @@ export default function InvoicesPage() {
                   value={createForm.notes}
                   onChange={e => setCreateForm(p => ({ ...p, notes: e.target.value }))}
                   rows={2}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] resize-none"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] resize-none"
                   placeholder="Optional notes..."
                 />
               </div>
@@ -1490,7 +1490,7 @@ export default function InvoicesPage() {
                 <select
                   value={createForm.payment_method}
                   onChange={e => setCreateForm(p => ({ ...p, payment_method: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] bg-white"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white"
                 >
                   <option value="check">Check</option>
                   <option value="ach">ACH / Bank Transfer</option>
@@ -1505,7 +1505,7 @@ export default function InvoicesPage() {
                   type="date"
                   value={createForm.due_date}
                   onChange={e => setCreateForm(p => ({ ...p, due_date: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                 />
               </div>
               <div>
@@ -1514,7 +1514,7 @@ export default function InvoicesPage() {
                   type="date"
                   value={createForm.date_paid}
                   onChange={e => setCreateForm(p => ({ ...p, date_paid: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                 />
               </div>
             </div>
@@ -1535,7 +1535,7 @@ export default function InvoicesPage() {
               ) : (
                 <>
                   <div className="flex gap-3 mb-3">
-                    <button type="button" onClick={() => setSelectedCTIds(new Set(contractorTickets.map(t => t.id)))} className="text-xs text-[#2d7a4f] hover:text-[#245f3e] font-medium">
+                    <button type="button" onClick={() => setSelectedCTIds(new Set(contractorTickets.map(t => t.id)))} className="text-xs text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] font-medium">
                       Select all ({contractorTickets.length})
                     </button>
                     {selectedCTIds.size > 0 && (
@@ -1550,8 +1550,8 @@ export default function InvoicesPage() {
                       const totalTons = slips.reduce((s, t) => s + (t.tonnage ?? 0), 0)
                       const sel = selectedCTIds.has(ticket.id)
                       return (
-                        <label key={ticket.id} className={`flex items-start gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${sel ? 'border-[#2d7a4f] bg-[#2d7a4f]/5' : 'border-gray-100 hover:border-gray-200'}`}>
-                          <div className={`mt-0.5 h-5 w-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${sel ? 'bg-[#2d7a4f] border-[#2d7a4f]' : 'border-gray-300'}`}>
+                        <label key={ticket.id} className={`flex items-start gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${sel ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)]/5' : 'border-gray-100 hover:border-gray-200'}`}>
+                          <div className={`mt-0.5 h-5 w-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${sel ? 'bg-[var(--brand-primary)] border-[var(--brand-primary)]' : 'border-gray-300'}`}>
                             {sel && <Check className="h-3 w-3 text-white" />}
                           </div>
                           <input type="checkbox" className="hidden" checked={sel} onChange={() => setSelectedCTIds(prev => { const n = new Set(prev); n.has(ticket.id) ? n.delete(ticket.id) : n.add(ticket.id); return n })} />
@@ -1577,10 +1577,10 @@ export default function InvoicesPage() {
               <>
                 <div className="flex flex-wrap gap-3 mb-4">
                   <div className="flex gap-2">
-                    <input type="date" value={createForm.date_from} onChange={e => setCreateForm(p => ({ ...p, date_from: e.target.value }))} className="rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20" />
-                    <input type="date" value={createForm.date_to} onChange={e => setCreateForm(p => ({ ...p, date_to: e.target.value }))} className="rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20" />
+                    <input type="date" value={createForm.date_from} onChange={e => setCreateForm(p => ({ ...p, date_from: e.target.value }))} className="rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
+                    <input type="date" value={createForm.date_to} onChange={e => setCreateForm(p => ({ ...p, date_to: e.target.value }))} className="rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
                   </div>
-                  <select value={driverFilter} onChange={e => setDriverFilter(e.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20">
+                  <select value={driverFilter} onChange={e => setDriverFilter(e.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20">
                     <option value="">All Drivers</option>
                     {drivers.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
@@ -1588,12 +1588,12 @@ export default function InvoicesPage() {
                     <button
                       type="button"
                       onClick={selectAllUninvoiced}
-                      className="text-xs font-semibold text-white bg-[#2d7a4f] hover:bg-[#245f3e] px-2.5 py-1 rounded-lg transition-colors"
+                      className="text-xs font-semibold text-white bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] px-2.5 py-1 rounded-lg transition-colors"
                     >
                       Select All Uninvoiced ({unselectedApprovedLoads.length})
                     </button>
                   )}
-                  <button type="button" onClick={selectAllFiltered} className="text-xs text-[#2d7a4f] hover:text-[#245f3e] font-medium">Select filtered ({filteredLoads.length})</button>
+                  <button type="button" onClick={selectAllFiltered} className="text-xs text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] font-medium">Select filtered ({filteredLoads.length})</button>
                   {selectedLoadIds.size > 0 && (
                     <button type="button" onClick={() => setSelectedLoadIds(new Set())} className="text-xs text-red-400 hover:text-red-600 font-medium">Clear ({selectedLoadIds.size})</button>
                   )}
@@ -1616,8 +1616,8 @@ export default function InvoicesPage() {
                     const totalTons = slips.reduce((s, t) => s + (t.tonnage ?? 0), 0)
                     const selected = selectedLoadIds.has(load.id)
                     return (
-                      <label key={load.id} className={`flex items-start gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${selected ? 'border-[#2d7a4f] bg-[#2d7a4f]/5' : 'border-gray-100 hover:border-gray-200'}`}>
-                        <div className={`mt-0.5 h-5 w-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${selected ? 'bg-[#2d7a4f] border-[#2d7a4f]' : 'border-gray-300'}`}>
+                      <label key={load.id} className={`flex items-start gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${selected ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)]/5' : 'border-gray-100 hover:border-gray-200'}`}>
+                        <div className={`mt-0.5 h-5 w-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${selected ? 'bg-[var(--brand-primary)] border-[var(--brand-primary)]' : 'border-gray-300'}`}>
                           {selected && <Check className="h-3 w-3 text-white" />}
                         </div>
                         <input type="checkbox" className="hidden" checked={selected} onChange={() => toggleLoad(load.id)} />
@@ -1700,7 +1700,7 @@ export default function InvoicesPage() {
                   <span className="w-32 text-right text-sm font-bold text-gray-900">
                     {invoiceType === 'contractor' ? 'Net Pay' : 'Total Due'}
                   </span>
-                  <span className="w-24 text-right text-base font-bold text-[#2d7a4f] tabular-nums">${fmt(subtotal)}</span>
+                  <span className="w-24 text-right text-base font-bold text-[var(--brand-primary)] tabular-nums">${fmt(subtotal)}</span>
                 </div>
               </div>
             </div>
@@ -1710,7 +1710,7 @@ export default function InvoicesPage() {
             <button type="button" onClick={() => setView('list')} className="flex-1 rounded-lg border border-gray-200 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
               Cancel
             </button>
-            <button type="submit" disabled={saving || activeSelectionSize === 0} className="flex-1 rounded-lg bg-[#2d7a4f] py-3 text-sm font-semibold text-white hover:bg-[#245f3e] transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+            <button type="submit" disabled={saving || activeSelectionSize === 0} className="flex-1 rounded-lg bg-[var(--brand-primary)] py-3 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {saving ? 'Creating…' : 'Create Invoice'}
             </button>
@@ -1725,7 +1725,7 @@ export default function InvoicesPage() {
     if (detailLoading || !detailInvoice) {
       return (
         <div className="flex items-center justify-center min-h-[50vh]">
-          <Loader2 className="h-6 w-6 animate-spin text-[#2d7a4f]" />
+          <Loader2 className="h-6 w-6 animate-spin text-[var(--brand-primary)]" />
         </div>
       )
     }
@@ -1804,7 +1804,7 @@ export default function InvoicesPage() {
             />
             <button
               onClick={() => openSendModal(inv)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[#2d7a4f] bg-[#2d7a4f] px-3 py-2 text-xs font-medium text-white hover:bg-[#245f3e] transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--brand-primary)] bg-[var(--brand-primary)] px-3 py-2 text-xs font-medium text-white hover:bg-[var(--brand-primary-hover)] transition-colors"
             >
               <Mail className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Send </span>Invoice
             </button>
@@ -1853,7 +1853,7 @@ export default function InvoicesPage() {
 
                 {/* Left: INVOICE label + number */}
                 <div>
-                  <p className="text-xs font-bold text-[#2d7a4f] uppercase tracking-[0.18em] mb-2">
+                  <p className="text-xs font-bold text-[var(--brand-primary)] uppercase tracking-[0.18em] mb-2">
                     {inv.invoice_type === 'paystub' ? 'Driver Payment' : inv.invoice_type === 'contractor' ? 'Payment Voucher' : 'Invoice'}
                   </p>
                   <p className="text-4xl font-extrabold text-gray-900 tracking-tight leading-none">
@@ -1979,7 +1979,7 @@ export default function InvoicesPage() {
                 )}
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'baseline', paddingTop:14}}>
                   <span style={{fontSize:14, fontWeight:700, color:'#111827'}}>{isPaystub ? 'Net Pay' : 'Total Due'}</span>
-                  <span style={{fontSize:22, fontWeight:800, color:'#2d7a4f', fontVariantNumeric:'tabular-nums'}}>${fmt(total)}</span>
+                  <span style={{fontSize:22, fontWeight:800, color:'var(--brand-primary)', fontVariantNumeric:'tabular-nums'}}>${fmt(total)}</span>
                 </div>
               </div>
             </div>
@@ -2045,7 +2045,7 @@ export default function InvoicesPage() {
                     value={sendForm.toEmail}
                     onChange={e => setSendForm(p => ({ ...p, toEmail: e.target.value }))}
                     placeholder="client@example.com"
-                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                   />
                 </div>
                 <div>
@@ -2054,7 +2054,7 @@ export default function InvoicesPage() {
                     required
                     value={sendForm.subject}
                     onChange={e => setSendForm(p => ({ ...p, subject: e.target.value }))}
-                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                   />
                 </div>
                 <div>
@@ -2063,7 +2063,7 @@ export default function InvoicesPage() {
                     value={sendForm.message}
                     onChange={e => setSendForm(p => ({ ...p, message: e.target.value }))}
                     rows={5}
-                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f] resize-none"
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] resize-none"
                   />
                 </div>
                 <p className="text-xs text-gray-400">Invoice details and line items will be included in the email body.</p>
@@ -2071,7 +2071,7 @@ export default function InvoicesPage() {
                   <button type="button" onClick={() => setShowSendModal(false)} className="flex-1 h-10 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
                     Cancel
                   </button>
-                  <button type="submit" disabled={sending} className="flex-1 h-10 rounded-xl bg-[#2d7a4f] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[#245f3e] disabled:opacity-60">
+                  <button type="submit" disabled={sending} className="flex-1 h-10 rounded-xl bg-[var(--brand-primary)] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[var(--brand-primary-hover)] disabled:opacity-60">
                     {sending && <Loader2 className="h-4 w-4 animate-spin" />}
                     {sending ? 'Sending…' : 'Send Invoice'}
                   </button>
@@ -2114,7 +2114,7 @@ export default function InvoicesPage() {
                     value={paymentForm.amount}
                     onChange={e => setPaymentForm(p => ({ ...p, amount: e.target.value }))}
                     placeholder={fmt(Math.max(0, inv.total - payments.reduce((s, p) => s + p.amount, 0)))}
-                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -2124,7 +2124,7 @@ export default function InvoicesPage() {
                       required type="date"
                       value={paymentForm.payment_date}
                       onChange={e => setPaymentForm(p => ({ ...p, payment_date: e.target.value }))}
-                      className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                      className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                     />
                   </div>
                   <div>
@@ -2132,7 +2132,7 @@ export default function InvoicesPage() {
                     <select
                       value={paymentForm.payment_method}
                       onChange={e => setPaymentForm(p => ({ ...p, payment_method: e.target.value }))}
-                      className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                      className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                     >
                       {['Check', 'ACH', 'Cash', 'Zelle', 'Other'].map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
@@ -2144,14 +2144,14 @@ export default function InvoicesPage() {
                     value={paymentForm.notes}
                     onChange={e => setPaymentForm(p => ({ ...p, notes: e.target.value }))}
                     placeholder="Check #1234, reference, etc."
-                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d7a4f]/20 focus:border-[#2d7a4f]"
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                   />
                 </div>
                 <div className="flex gap-3 pt-1">
                   <button type="button" onClick={() => setShowPaymentForm(false)} className="flex-1 h-10 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
                     Cancel
                   </button>
-                  <button type="submit" disabled={savingPayment} className="flex-1 h-10 rounded-xl bg-[#2d7a4f] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[#245f3e] disabled:opacity-60">
+                  <button type="submit" disabled={savingPayment} className="flex-1 h-10 rounded-xl bg-[var(--brand-primary)] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[var(--brand-primary-hover)] disabled:opacity-60">
                     {savingPayment && <Loader2 className="h-4 w-4 animate-spin" />}
                     {savingPayment ? 'Saving…' : 'Record Payment'}
                   </button>
