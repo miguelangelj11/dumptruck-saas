@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Camera, ChevronLeft, Loader2, Minus, Plus } from 'lucide-react'
+import { Camera, ChevronLeft, ChevronDown, ChevronUp, Loader2, Minus, Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import * as Sentry from '@sentry/nextjs'
@@ -20,33 +20,43 @@ function calcHours(start: string, end: string): string {
   return (diff / 60).toFixed(2)
 }
 
+function AutoFilledBadge() {
+  return (
+    <span className="ml-2 inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-md px-1.5 py-0.5">
+      ✓ Auto-filled
+    </span>
+  )
+}
+
 export default function DriverSubmitPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const photoRef = useRef<HTMLInputElement>(null)
 
   const today = new Date().toISOString().split('T')[0]!
-  const [driverId, setDriverId]       = useState('')
-  const [companyId, setCompanyId]     = useState('')
-  const [driverName, setDriverName]   = useState('')
-  const [dispatchId, setDispatchId]   = useState<string | null>(null)
+  const [driverId, setDriverId]     = useState('')
+  const [companyId, setCompanyId]   = useState('')
+  const [driverName, setDriverName] = useState('')
+  const [dispatchId, setDispatchId] = useState<string | null>(null)
 
-  const [photo, setPhoto] = useState<File | null>(null)
+  const [photo, setPhoto]             = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
-  const [ocrLoading, setOcrLoading] = useState(false)
-  const [ocrFilled, setOcrFilled] = useState(false)
-  const [jobs, setJobs] = useState<{ id: string; dispatchId: string; job_name: string }[]>([])
+  const [ocrLoading, setOcrLoading]   = useState(false)
+  const [ocrFilledFields, setOcrFilledFields] = useState<Record<string, boolean>>({})
+
+  const [jobs, setJobs] = useState<{ id: string; dispatchId: string; job_name: string; material: string | null }[]>([])
   const [selectedJob, setSelectedJob] = useState('')
-  const [date, setDate] = useState(today)
-  const [startTime, setStartTime] = useState('')
-  const [endTime, setEndTime] = useState('')
-  const [hours, setHours] = useState('')
+  const [date, setDate]               = useState(today)
+  const [startTime, setStartTime]     = useState('')
+  const [endTime, setEndTime]         = useState('')
+  const [hours, setHours]             = useState('')
   const [truckNumber, setTruckNumber] = useState('')
-  const [loads, setLoads] = useState(1)
-  const [material, setMaterial] = useState('')
-  const [ticketNum, setTicketNum] = useState('')
-  const [notes, setNotes] = useState('')
+  const [loads, setLoads]             = useState(1)
+  const [material, setMaterial]       = useState('')
+  const [ticketNum, setTicketNum]     = useState('')
+  const [notes, setNotes]             = useState('')
 
   useEffect(() => {
     async function init() {
@@ -56,7 +66,7 @@ export default function DriverSubmitPage() {
 
       const { data: driver } = await supabase
         .from('drivers')
-        .select('id, company_id, name')
+        .select('id, company_id, name, truck_number')
         .eq('auth_user_id', user.id)
         .maybeSingle()
 
@@ -65,11 +75,13 @@ export default function DriverSubmitPage() {
       setCompanyId(driver.company_id)
       setDriverName(driver.name)
 
-      // Fetch today's dispatched jobs for this driver
+      // Pre-fill truck from driver profile
+      if (driver.truck_number) setTruckNumber(driver.truck_number)
+
       const todayStr = new Date().toISOString().split('T')[0]!
       const { data: dispatches } = await supabase
         .from('dispatches')
-        .select('id, job_id, jobs(job_name)')
+        .select('id, job_id, jobs(job_name, material)')
         .eq('company_id', driver.company_id)
         .eq('driver_id', driver.id)
         .eq('dispatch_date', todayStr)
@@ -77,11 +89,19 @@ export default function DriverSubmitPage() {
 
       const jobList = (dispatches ?? [])
         .filter((d: { id: string; job_id: string | null; jobs: unknown }) => d.job_id && d.jobs)
-        .map((d: { id: string; job_id: string | null; jobs: unknown }) => ({ id: d.job_id as string, dispatchId: d.id, job_name: (d.jobs as { job_name: string }).job_name }))
+        .map((d: { id: string; job_id: string | null; jobs: unknown }) => {
+          const j = d.jobs as { job_name: string; material: string | null }
+          return { id: d.job_id as string, dispatchId: d.id, job_name: j.job_name, material: j.material ?? null }
+        })
       setJobs(jobList)
+
       if (jobList[0]) {
         setSelectedJob(jobList[0].job_name)
         setDispatchId(jobList[0].dispatchId)
+        // Pre-fill material from job when only one dispatch (no ambiguity)
+        if (jobList.length === 1 && jobList[0].material) {
+          setMaterial(jobList[0].material)
+        }
       }
 
       setLoading(false)
@@ -104,9 +124,8 @@ export default function DriverSubmitPage() {
     }
     setPhoto(file)
     setPhotoPreview(URL.createObjectURL(file))
-    setOcrFilled(false)
+    setOcrFilledFields({})
 
-    // Run OCR
     setOcrLoading(true)
     try {
       const fd = new FormData()
@@ -117,15 +136,16 @@ export default function DriverSubmitPage() {
         fields?: { ticket_number?: string | null; tonnage?: string | number | null; date?: string | null; material?: string | null; truck_number?: string | null }
       }
       if (data.ok && data.fields && (data.confidence ?? 0) >= 30) {
-        if (data.fields.ticket_number)  setTicketNum(data.fields.ticket_number)
-        if (data.fields.date)           setDate(data.fields.date)
-        if (data.fields.material)       setMaterial(data.fields.material)
-        if (data.fields.truck_number)   setTruckNumber(data.fields.truck_number)
-        setOcrFilled(true)
+        const filled: Record<string, boolean> = {}
+        if (data.fields.ticket_number)  { setTicketNum(data.fields.ticket_number);   filled.ticketNum   = true }
+        if (data.fields.date)           { setDate(data.fields.date);                  filled.date        = true }
+        if (data.fields.material)       { setMaterial(data.fields.material);          filled.material    = true }
+        if (data.fields.truck_number)   { setTruckNumber(data.fields.truck_number);   filled.truckNumber = true }
+        setOcrFilledFields(filled)
         toast.success('Fields auto-filled from ticket photo ✓')
       }
     } catch {
-      // Non-fatal — just skip auto-fill
+      // Non-fatal — skip auto-fill
     } finally {
       setOcrLoading(false)
     }
@@ -134,7 +154,6 @@ export default function DriverSubmitPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
-    // Validate before touching the network
     const validation = validate(ticketSchema, {
       job_name:          selectedJob,
       driver_name:       driverName,
@@ -215,7 +234,7 @@ export default function DriverSubmitPage() {
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <button onClick={() => router.push('/driver')} className="h-9 w-9 rounded-lg border border-gray-200 flex items-center justify-center">
+        <button onClick={() => router.push('/driver')} className="h-11 w-11 rounded-xl border border-gray-200 flex items-center justify-center active:bg-gray-100">
           <ChevronLeft className="h-5 w-5 text-gray-600" />
         </button>
         <h1 className="text-xl font-bold text-gray-900">Submit Ticket</h1>
@@ -245,11 +264,6 @@ export default function DriverSubmitPage() {
               </div>
             )}
           </button>
-          {ocrFilled && (
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-1.5">
-              <span>✓</span> Fields auto-filled from ticket — tap to edit
-            </div>
-          )}
           <input
             ref={photoRef}
             type="file"
@@ -260,89 +274,73 @@ export default function DriverSubmitPage() {
           />
         </div>
 
-        {/* Job */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Job *</label>
-          {jobs.length > 0 ? (
-            <select
-              required
-              value={selectedJob}
-              onChange={e => {
-                setSelectedJob(e.target.value)
-                const j = jobs.find(j => j.job_name === e.target.value)
-                setDispatchId(j?.dispatchId ?? null)
-              }}
-              className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-base focus:outline-none focus:border-[#1e3a2a]"
-            >
-              {jobs.map(j => <option key={j.id} value={j.job_name}>{j.job_name}</option>)}
-            </select>
-          ) : (
-            <input
-              required
-              value={selectedJob}
-              onChange={e => setSelectedJob(e.target.value)}
-              placeholder="Enter job name"
-              className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-base focus:outline-none focus:border-[#1e3a2a]"
-            />
-          )}
-        </div>
+        {/* Job — hidden when only 1 dispatch (auto-selected) */}
+        {jobs.length !== 1 && (
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Job *</label>
+            {jobs.length > 1 ? (
+              <select
+                required
+                value={selectedJob}
+                onChange={e => {
+                  setSelectedJob(e.target.value)
+                  const j = jobs.find(j => j.job_name === e.target.value)
+                  setDispatchId(j?.dispatchId ?? null)
+                  if (j?.material) setMaterial(j.material)
+                }}
+                className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-base focus:outline-none focus:border-[#1e3a2a]"
+              >
+                {jobs.map(j => <option key={j.id} value={j.job_name}>{j.job_name}</option>)}
+              </select>
+            ) : (
+              <input
+                required
+                value={selectedJob}
+                onChange={e => setSelectedJob(e.target.value)}
+                placeholder="Enter job name"
+                className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-base focus:outline-none focus:border-[#1e3a2a]"
+              />
+            )}
+          </div>
+        )}
+
+        {/* Auto-selected job banner */}
+        {jobs.length === 1 && (
+          <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3.5 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-0.5">Today's Job</p>
+              <p className="text-base font-bold text-green-900">{selectedJob}</p>
+            </div>
+            <span className="text-xs font-semibold text-green-700 bg-white border border-green-200 rounded-lg px-2.5 py-1">✓ Auto</span>
+          </div>
+        )}
 
         {/* Date */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Date *</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Date *
+            {ocrFilledFields.date && <AutoFilledBadge />}
+          </label>
           <input
             type="date"
             required
             value={date}
-            onChange={e => setDate(e.target.value)}
+            onChange={e => { setDate(e.target.value); setOcrFilledFields(f => ({ ...f, date: false })) }}
             className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-base focus:outline-none focus:border-[#1e3a2a]"
           />
         </div>
 
-        {/* Times */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Start Time</label>
-            <input
-              type="time"
-              value={startTime}
-              onChange={e => setStartTime(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-base focus:outline-none focus:border-[#1e3a2a]"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">End Time</label>
-            <input
-              type="time"
-              value={endTime}
-              onChange={e => setEndTime(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-base focus:outline-none focus:border-[#1e3a2a]"
-            />
-          </div>
-        </div>
-
-        {/* Hours worked */}
+        {/* Ticket # */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Hours Worked</label>
-          <input
-            type="number"
-            step="0.25"
-            min="0"
-            value={hours}
-            onChange={e => setHours(e.target.value)}
-            placeholder="Auto-calculated from times"
-            className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-base focus:outline-none focus:border-[#1e3a2a]"
-          />
-        </div>
-
-        {/* Truck # */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Truck #</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Paper Ticket #
+            {ocrFilledFields.ticketNum && <AutoFilledBadge />}
+          </label>
           <input
             type="text"
-            value={truckNumber}
-            onChange={e => setTruckNumber(e.target.value)}
-            placeholder="e.g. T-101"
+            value={ticketNum}
+            onChange={e => { setTicketNum(e.target.value); setOcrFilledFields(f => ({ ...f, ticketNum: false })) }}
+            placeholder="e.g. 4821"
             className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-base focus:outline-none focus:border-[#1e3a2a]"
           />
         </div>
@@ -354,7 +352,7 @@ export default function DriverSubmitPage() {
             <button
               type="button"
               onClick={() => setLoads(l => Math.max(0, l - 1))}
-              className="h-12 w-12 rounded-xl border border-gray-200 flex items-center justify-center text-gray-600 active:bg-gray-100 text-xl"
+              className="h-12 w-12 rounded-xl border border-gray-200 flex items-center justify-center text-gray-600 active:bg-gray-100"
             >
               <Minus className="h-5 w-5" />
             </button>
@@ -362,19 +360,37 @@ export default function DriverSubmitPage() {
             <button
               type="button"
               onClick={() => setLoads(l => l + 1)}
-              className="h-12 w-12 rounded-xl border border-gray-200 flex items-center justify-center text-gray-600 active:bg-gray-100 text-xl"
+              className="h-12 w-12 rounded-xl border border-gray-200 flex items-center justify-center text-gray-600 active:bg-gray-100"
             >
               <Plus className="h-5 w-5" />
             </button>
           </div>
         </div>
 
+        {/* Truck # */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Truck #
+            {ocrFilledFields.truckNumber && <AutoFilledBadge />}
+          </label>
+          <input
+            type="text"
+            value={truckNumber}
+            onChange={e => { setTruckNumber(e.target.value); setOcrFilledFields(f => ({ ...f, truckNumber: false })) }}
+            placeholder="e.g. T-101"
+            className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-base focus:outline-none focus:border-[#1e3a2a]"
+          />
+        </div>
+
         {/* Material */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Material</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Material
+            {ocrFilledFields.material && <AutoFilledBadge />}
+          </label>
           <select
             value={material}
-            onChange={e => setMaterial(e.target.value)}
+            onChange={e => { setMaterial(e.target.value); setOcrFilledFields(f => ({ ...f, material: false })) }}
             className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-base focus:outline-none focus:border-[#1e3a2a]"
           >
             <option value="">Select material…</option>
@@ -382,29 +398,68 @@ export default function DriverSubmitPage() {
           </select>
         </div>
 
-        {/* Ticket # */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Paper Ticket #</label>
-          <input
-            type="text"
-            value={ticketNum}
-            onChange={e => setTicketNum(e.target.value)}
-            placeholder="e.g. 4821"
-            className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-base focus:outline-none focus:border-[#1e3a2a]"
-          />
-        </div>
+        {/* Advanced toggle */}
+        <button
+          type="button"
+          onClick={() => setShowAdvanced(v => !v)}
+          className="w-full flex items-center justify-center gap-2 py-3 text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+        >
+          {showAdvanced ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          {showAdvanced ? 'Hide details' : 'Add times & notes'}
+        </button>
 
-        {/* Notes */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Notes (optional)</label>
-          <textarea
-            value={notes}
-            onChange={e => setNotes(e.target.value)}
-            rows={3}
-            placeholder="Any additional notes…"
-            className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-base resize-none focus:outline-none focus:border-[#1e3a2a]"
-          />
-        </div>
+        {/* Advanced fields */}
+        {showAdvanced && (
+          <div className="space-y-4 rounded-2xl border border-gray-100 bg-gray-50 p-4">
+            {/* Times */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Start Time</label>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={e => setStartTime(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-base focus:outline-none focus:border-[#1e3a2a] bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">End Time</label>
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={e => setEndTime(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-base focus:outline-none focus:border-[#1e3a2a] bg-white"
+                />
+              </div>
+            </div>
+
+            {/* Hours worked */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Hours Worked</label>
+              <input
+                type="number"
+                step="0.25"
+                min="0"
+                value={hours}
+                onChange={e => setHours(e.target.value)}
+                placeholder="Auto-calculated from times"
+                className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-base focus:outline-none focus:border-[#1e3a2a] bg-white"
+              />
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Notes (optional)</label>
+              <textarea
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                rows={3}
+                placeholder="Any additional notes…"
+                className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-base resize-none focus:outline-none focus:border-[#1e3a2a] bg-white"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Submit */}
         <button

@@ -5,7 +5,7 @@ const features = [
     icon: FileText,
     title: 'Digital Ticket Management',
     description: 'Capture load tickets from any device in seconds. Job name, material, driver, quantity, and rate — all logged and searchable. Never lose a ticket again.',
-    color: 'bg-[#2d7a4f]/10 text-[#2d7a4f]',
+    color: 'bg-[#2d7a4f]/10 text-[#F5B731]',
   },
   {
     icon: Radio,
@@ -44,7 +44,7 @@ export default function FeaturesSection() {
     <section className="py-16 md:py-24 bg-gray-50" id="features">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-10 md:mb-16">
-          <p className="text-sm font-semibold text-[#2d7a4f] uppercase tracking-wider mb-3">Features</p>
+          <p className="text-sm font-semibold text-[#F5B731] uppercase tracking-wider mb-3">Features</p>
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
             Everything you need to run your dump truck business
           </h2>

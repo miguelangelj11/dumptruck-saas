@@ -28,8 +28,8 @@ export default function Footer() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
           <div>
             <Link href="/" className="flex items-center gap-2 mb-4">
-              <div className="h-7 w-7 rounded-lg bg-[#2d7a4f] flex items-center justify-center">
-                <Truck className="h-3.5 w-3.5 text-white" />
+              <div className="h-7 w-7 rounded-lg flex items-center justify-center" style={{ background: '#F5B731' }}>
+                <Truck className="h-3.5 w-3.5" style={{ color: '#1a1a1a' }} />
               </div>
               <span className="font-bold text-white">DumpTruckBoss</span>
             </Link>

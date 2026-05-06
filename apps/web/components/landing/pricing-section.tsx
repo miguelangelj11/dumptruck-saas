@@ -162,7 +162,7 @@ export default function PricingSection() {
 
         {/* Heading */}
         <div className="text-center mb-12">
-          <p className="text-sm font-semibold text-[#2d7a4f] uppercase tracking-wider mb-3">Pricing</p>
+          <p className="text-sm font-semibold text-[#F5B731] uppercase tracking-wider mb-3">Pricing</p>
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">Simple, honest pricing</h2>
           <p className="text-gray-500 text-lg max-w-xl mx-auto">No contracts, no surprises. Owner Operator and Fleet plans include a free 14-day trial.</p>
         </div>
@@ -172,7 +172,7 @@ export default function PricingSection() {
           <span className={`text-sm font-medium ${billing === 'monthly' ? 'text-gray-900' : 'text-gray-400'}`}>Monthly</span>
           <button
             onClick={() => setBilling(billing === 'monthly' ? 'annually' : 'monthly')}
-            className={`relative h-6 w-11 rounded-full overflow-hidden transition-colors ${billing === 'annually' ? 'bg-[#2d7a4f]' : 'bg-gray-300'}`}
+            className={`relative h-6 w-11 rounded-full overflow-hidden transition-colors ${billing === 'annually' ? 'bg-[#F5B731]' : 'bg-gray-300'}`}
           >
             <span
               className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform"
@@ -180,7 +180,7 @@ export default function PricingSection() {
             />
           </button>
           <span className={`text-sm font-medium ${billing === 'annually' ? 'text-gray-900' : 'text-gray-400'}`}>Annual</span>
-          <span className="text-xs font-semibold bg-[#2d7a4f] text-white px-2 py-0.5 rounded-full">Save 20%</span>
+          <span className="text-xs font-semibold bg-[#F5B731] text-[#1a1a1a] px-2 py-0.5 rounded-full">Save 20%</span>
         </div>
 
         {/* Cards — single col on mobile, 3 cols on lg+ */}
@@ -199,7 +199,7 @@ export default function PricingSection() {
 
             const badgeColors: Record<string, { background: string; color: string }> = {
               gold:        { background: '#FFB800', color: '#000000' },
-              green:       { background: '#2d7a4f', color: '#ffffff' },
+              green:       { background: '#F5B731', color: '#1a1a1a' },
               'dark-gold': { background: '#0f1923', color: '#FFB800' },
               dark:        { background: '#374151', color: '#ffffff' },
             }
@@ -224,7 +224,7 @@ export default function PricingSection() {
                 style={{ padding: cardPadding }}
                 className={`relative rounded-2xl flex flex-col ${
                   isDarkGreen
-                    ? 'bg-[#1e3a2a] text-white shadow-2xl ring-2 ring-[#2d7a4f]'
+                    ? 'bg-[#1a1a1a] text-white shadow-2xl ring-2 ring-[#F5B731]'
                     : isNavy
                     ? 'bg-[#0f1923] text-white border border-white/10'
                     : 'bg-white border border-gray-200 text-gray-900'
@@ -284,7 +284,7 @@ export default function PricingSection() {
                   )}
 
                   {billing === 'annually' && tier.annualSavings && (
-                    <p className={`text-xs mb-2 font-medium ${isDark ? 'text-[#4ade80]' : 'text-[#2d7a4f]'}`}>
+                    <p className={`text-xs mb-2 font-medium ${isDark ? 'text-[#4ade80]' : 'text-[#F5B731]'}`}>
                       {tier.annualSavings} · billed annually
                     </p>
                   )}
@@ -304,7 +304,7 @@ export default function PricingSection() {
                     className={
                       tier.ctaStyle === 'gold'
                         ? 'bg-[#FFB800] text-[#000000] hover:bg-[#E6A600]'
-                        : 'bg-[#2d5a3d] text-white hover:bg-[#1e3a2a]'
+                        : 'bg-[#F5B731] text-[#1a1a1a] hover:brightness-95'
                     }
                   >
                     {checkoutLoading === tier.checkoutPlan ? 'Redirecting…' : tier.cta}
@@ -332,7 +332,7 @@ export default function PricingSection() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '20px' }}>
                     {['No credit card required', 'Full access for 14 days', 'Cancel anytime'].map((bullet) => (
                       <div key={bullet} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: isDark ? 'rgba(255,255,255,0.6)' : '#6b7280' }}>
-                        <span style={{ color: isDark ? '#4ade80' : '#2d7a4f', fontWeight: 600 }}>✓</span>
+                        <span style={{ color: isDark ? '#4ade80' : '#F5B731', fontWeight: 600 }}>✓</span>
                         {bullet}
                       </div>
                     ))}
@@ -364,7 +364,7 @@ export default function PricingSection() {
                     <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                       <Check
                         style={{ width: '14px', height: '14px', flexShrink: 0, marginTop: '2px' }}
-                        className={isDarkGreen ? 'text-[#4ade80]' : isNavy ? 'text-[#4ade80]' : 'text-[#2d7a4f]'}
+                        className={isDarkGreen ? 'text-[#4ade80]' : isNavy ? 'text-[#4ade80]' : 'text-[#F5B731]'}
                       />
                       <span style={{
                         fontSize: isNavy ? '13px' : '14px',

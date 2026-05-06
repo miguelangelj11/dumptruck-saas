@@ -63,16 +63,15 @@ export default function Sidebar({ user, logoUrl, companyName: companyNameProp, p
 
   const SidebarContent = () => (
     <div className="flex h-full flex-col">
-      {/* App brand — DTB logo only, no company info here */}
-      <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/10">
+      {/* App brand */}
+      <div className="flex items-center justify-center px-4 py-3 border-b border-white/10">
         <Image
           src="/dtb-logo.png"
           alt="DumpTruckBoss"
-          width={36}
-          height={36}
-          className="rounded-full shrink-0 object-contain"
+          width={100}
+          height={34}
+          className="object-contain"
         />
-        <span className="text-base font-bold text-white">DumpTruckBoss</span>
       </div>
 
       {/* Nav links */}
@@ -86,11 +85,11 @@ export default function Sidebar({ user, logoUrl, companyName: companyNameProp, p
               onClick={() => setMobileOpen(false)}
               className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
                 active
-                  ? 'bg-white/15 text-white'
+                  ? 'bg-[#F5B731]/15 text-[#F5B731]'
                   : 'text-white/60 hover:text-white hover:bg-white/8'
               }`}
             >
-              <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-[var(--hf-sidebar-highlight)]' : ''}`} />
+              <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-[#F5B731]' : ''}`} />
               {label}
             </Link>
           )

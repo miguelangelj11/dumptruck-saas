@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState, useRef, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Pencil, Trash2, Loader2, FileText, Camera, X, ImageIcon, ChevronLeft, ChevronRight, Search, Filter, CheckCircle2, XCircle } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, FileText, Camera, X, ImageIcon, ChevronLeft, ChevronRight, Search, Filter, CheckCircle2, XCircle, DollarSign, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Load, LoadTicket, Contractor } from '@/lib/types'
 import { linkTicketToDispatch, approveTicket } from '@/lib/workflows'
@@ -10,6 +11,7 @@ import { getCompanyId } from '@/lib/get-company-id'
 import { PAGE_SIZE, pageRange } from '@/lib/pagination'
 import Image from 'next/image'
 import Link from 'next/link'
+import PlanGate from '@/components/plan-gate'
 
 const statusColor = {
   pending:  'bg-yellow-100 text-yellow-700',
@@ -98,16 +100,35 @@ export default function TicketsPage() {
   const [ticketRows, setTicketRows] = useState<TicketRow[]>([makeEmptyRow()])
   const fileInputRefs = useRef<Map<string, HTMLInputElement>>(new Map())
 
-  // Tabs
-  const [activeTab, setActiveTab] = useState<'tickets' | 'missing'>('tickets')
+  // Tabs — ?tab=missing deeplinks from dashboard alert
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState<'tickets' | 'missing'>(
+    searchParams.get('tab') === 'missing' ? 'missing' : 'tickets'
+  )
 
   // Source filter
   const [sourceFilter, setSourceFilter] = useState<'all' | 'office' | 'driver'>('all')
 
   // Missing tickets
-  type MissingDispatch = { id: string; driver_name: string; dispatch_date: string; loads_completed: number; job_name: string | null; daysAgo: number; ticketsFound: number }
+  type MissingDispatch = {
+    id: string
+    driver_name: string
+    dispatch_date: string
+    loads_completed: number
+    job_name: string | null
+    daysAgo: number
+    ticketsFound: number
+    missingCount: number
+    expectedRevenue: number
+    actualRevenue: number
+    missingRevenue: number
+    driverEmail: string | null
+    followup_count: number
+    last_followup_sent_at: string | null
+  }
   const [missingDispatches, setMissingDispatches] = useState<MissingDispatch[]>([])
   const [loadingMissing, setLoadingMissing]       = useState(false)
+  const [followUpSending, setFollowUpSending]     = useState<string | null>(null)
 
   // Lightbox
   const [viewingImages, setViewingImages] = useState<string[]>([])
@@ -175,7 +196,10 @@ export default function TicketsPage() {
     setLoadingMore(false)
   }
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => {
+    fetchData()
+    if (searchParams.get('tab') === 'missing') fetchMissingTickets()
+  }, [])
 
   // Debounce search input so the filter doesn't run on every keystroke
   useEffect(() => {
@@ -340,24 +364,65 @@ export default function TicketsPage() {
     const companyId = await getCompanyId()
     if (!companyId) { setLoadingMissing(false); return }
     const todayStr = new Date().toISOString().split('T')[0]!
-    const { data: dispatches, error } = await supabase
-      .from('dispatches')
-      .select('id, driver_name, dispatch_date, loads_completed, job_id, jobs(job_name)')
-      .eq('company_id', companyId)
-      .lt('dispatch_date', todayStr)
-      .neq('status', 'completed')
-      .order('dispatch_date', { ascending: false })
-      .limit(50)
-    if (error && !error.message.includes('schema cache')) {
+
+    const [dispRes, driversRes] = await Promise.all([
+      supabase
+        .from('dispatches')
+        .select('id, driver_name, dispatch_date, loads_completed, job_id, followup_count, last_followup_sent_at, jobs(job_name, rate, rate_type)')
+        .eq('company_id', companyId)
+        .lt('dispatch_date', todayStr)
+        .neq('status', 'completed')
+        .order('dispatch_date', { ascending: false })
+        .limit(50),
+      supabase
+        .from('drivers')
+        .select('name, email')
+        .eq('company_id', companyId),
+    ])
+
+    if (dispRes.error && !dispRes.error.message.includes('schema cache')) {
       setLoadingMissing(false); return
     }
+
+    const driverEmailMap = new Map<string, string | null>(
+      (driversRes.data ?? []).map((d: { name: string; email: string | null }) => [d.name, d.email ?? null])
+    )
+
     const now = new Date()
-    const results: MissingDispatch[] = (dispatches ?? []).map((d: { id: string; driver_name: string; dispatch_date: string; loads_completed: number; jobs?: { job_name?: string } | null }) => {
-      const ticketsFound = loads.filter(l => l.driver_name === d.driver_name && l.date === d.dispatch_date).length
-      const dispDate     = new Date(d.dispatch_date + 'T00:00:00')
-      const daysAgo      = Math.floor((now.getTime() - dispDate.getTime()) / (1000 * 60 * 60 * 24))
-      return { id: d.id, driver_name: d.driver_name, dispatch_date: d.dispatch_date, loads_completed: d.loads_completed, job_name: (d.jobs as { job_name?: string } | null)?.job_name ?? null, daysAgo, ticketsFound }
-    }).filter((d: MissingDispatch) => d.ticketsFound === 0)
+    const results: MissingDispatch[] = (dispRes.data ?? []).map((d: {
+      id: string; driver_name: string; dispatch_date: string; loads_completed: number
+      followup_count?: number | null; last_followup_sent_at?: string | null
+      jobs?: { job_name?: string; rate?: number | null; rate_type?: string | null } | null
+    }) => {
+      const matchedLoads  = loads.filter(l => l.driver_name === d.driver_name && l.date === d.dispatch_date)
+      const ticketsFound  = matchedLoads.length
+      const missingCount  = Math.max(0, d.loads_completed - ticketsFound)
+      const dispDate      = new Date(d.dispatch_date + 'T00:00:00')
+      const daysAgo       = Math.floor((now.getTime() - dispDate.getTime()) / (1000 * 60 * 60 * 24))
+      const job           = d.jobs as { job_name?: string; rate?: number | null; rate_type?: string | null } | null
+      const rate          = job?.rate ?? 0
+      const rateType      = job?.rate_type ?? 'load'
+      const expectedRevenue = rateType === 'load' ? d.loads_completed * rate : 0
+      const actualRevenue   = matchedLoads.reduce((s, l) => s + (l.rate ?? 0), 0)
+      const missingRevenue  = Math.max(0, expectedRevenue - actualRevenue)
+      return {
+        id: d.id,
+        driver_name: d.driver_name,
+        dispatch_date: d.dispatch_date,
+        loads_completed: d.loads_completed,
+        job_name: job?.job_name ?? null,
+        daysAgo,
+        ticketsFound,
+        missingCount,
+        expectedRevenue,
+        actualRevenue,
+        missingRevenue,
+        driverEmail: driverEmailMap.get(d.driver_name) ?? null,
+        followup_count: d.followup_count ?? 0,
+        last_followup_sent_at: d.last_followup_sent_at ?? null,
+      }
+    }).filter((d: MissingDispatch) => d.missingCount > 0 || d.ticketsFound === 0)
+
     setMissingDispatches(results)
     setLoadingMissing(false)
   }
@@ -366,6 +431,28 @@ export default function TicketsPage() {
     await supabase.from('dispatches').update({ status: 'completed', updated_at: new Date().toISOString() }).eq('id', dispatchId)
     setMissingDispatches(prev => prev.filter(d => d.id !== dispatchId))
     toast.success('Marked as no work done')
+  }
+
+  async function sendFollowUp(d: MissingDispatch) {
+    if (!d.driverEmail) { toast.error(`No email on file for ${d.driver_name}`); return }
+    setFollowUpSending(d.id)
+    try {
+      const res  = await fetch(`/api/dispatches/${d.id}/follow-up`, { method: 'POST' })
+      const json = await res.json() as { sent?: boolean; error?: string; followup_count?: number; last_followup_sent_at?: string }
+      if (json.sent) {
+        toast.success(`Reminder sent to ${d.driver_name}`)
+        // Update local state so button reflects new count immediately
+        setMissingDispatches(prev => prev.map(x =>
+          x.id === d.id
+            ? { ...x, followup_count: json.followup_count ?? x.followup_count + 1, last_followup_sent_at: json.last_followup_sent_at ?? new Date().toISOString() }
+            : x
+        ))
+      } else {
+        toast.error(json.error ?? 'Could not send reminder')
+      }
+    } finally {
+      setFollowUpSending(null)
+    }
   }
 
   async function handleApprove(l: Load) {
@@ -461,6 +548,7 @@ export default function TicketsPage() {
 
       {/* Missing Tickets Tab */}
       {activeTab === 'missing' && (
+        <PlanGate plan={companyPlan} feature="missing_money">
         <div>
           {loadingMissing ? (
             <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-[#2d7a4f]" /></div>
@@ -481,27 +569,90 @@ export default function TicketsPage() {
               </div>
               <div className="divide-y divide-gray-50">
                 {missingDispatches.map(d => (
-                  <div key={d.id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50/50">
-                    <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-sm shrink-0">
-                      {d.driver_name.slice(0, 2).toUpperCase()}
+                  <div key={d.id} className="px-5 py-4 hover:bg-gray-50/50">
+                    <div className="flex items-start gap-4">
+                      <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-sm shrink-0">
+                        {d.driver_name.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-3 flex-wrap">
+                          <div>
+                            <p className="font-semibold text-gray-900">{d.driver_name}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              {d.job_name ?? 'No job assigned'} · {new Date(d.dispatch_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                              {' · '}<span className="text-orange-500 font-medium">{d.daysAgo} day{d.daysAgo !== 1 ? 's' : ''} ago</span>
+                            </p>
+                          </div>
+                          {d.missingRevenue > 0 && (
+                            <div className="flex items-center gap-1.5 bg-red-50 border border-red-100 rounded-lg px-2.5 py-1 shrink-0">
+                              <DollarSign className="h-3.5 w-3.5 text-red-500" />
+                              <span className="text-sm font-bold text-red-600">${d.missingRevenue.toLocaleString()}</span>
+                              <span className="text-xs text-red-400">at risk</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Expected vs submitted progress */}
+                        <div className="mt-2.5 flex items-center gap-3">
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[10px] text-gray-400 uppercase tracking-wider">Tickets submitted</span>
+                              <span className="text-xs font-semibold text-gray-700">{d.ticketsFound} / {d.loads_completed}</span>
+                            </div>
+                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-orange-400"
+                                style={{ width: `${d.loads_completed > 0 ? (d.ticketsFound / d.loads_completed) * 100 : 0}%` }}
+                              />
+                            </div>
+                          </div>
+                          <span className="text-xs font-bold text-red-600 whitespace-nowrap shrink-0">
+                            {d.missingCount} missing
+                          </span>
+                        </div>
+
+                        {/* Follow-up status + action */}
+                        <div className="flex items-center gap-2 mt-3 flex-wrap">
+                          {d.followup_count >= 2 ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 bg-gray-100 px-3 py-1.5 rounded-lg">
+                              📧 Max reminders sent
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => sendFollowUp(d)}
+                              disabled={followUpSending === d.id}
+                              className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-[#2d7a4f] hover:bg-[#245f3e] px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60"
+                            >
+                              {followUpSending === d.id
+                                ? <><Loader2 className="h-3 w-3 animate-spin" /> Sending…</>
+                                : <><Send className="h-3 w-3" /> Follow Up</>
+                              }
+                            </button>
+                          )}
+                          {d.last_followup_sent_at && (
+                            <span className="text-xs text-gray-400">
+                              {d.followup_count >= 2
+                                ? '2 reminders sent — no response'
+                                : `📧 Sent ${Math.round((Date.now() - new Date(d.last_followup_sent_at).getTime()) / 3_600_000)}h ago`
+                              }
+                            </span>
+                          )}
+                          {!d.last_followup_sent_at && d.followup_count < 2 && (
+                            <span className="text-xs text-gray-400">Not sent</span>
+                          )}
+                          <button onClick={() => markNoWork(d.id)} className="text-xs text-gray-400 hover:text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 hover:border-gray-300 transition-colors ml-auto">
+                            Mark No Work
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900">{d.driver_name}</p>
-                      <p className="text-xs text-gray-500">{d.job_name ?? 'No job assigned'} · {new Date(d.dispatch_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
-                    </div>
-                    <div className="text-right shrink-0 mr-4">
-                      <p className="text-xs font-semibold text-orange-600">{d.daysAgo} day{d.daysAgo !== 1 ? 's' : ''} ago</p>
-                      <p className="text-xs text-gray-400">{d.loads_completed} loads on dispatch</p>
-                    </div>
-                    <button onClick={() => markNoWork(d.id)} className="text-xs text-gray-400 hover:text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 whitespace-nowrap hover:border-gray-300 transition-colors">
-                      Mark No Work
-                    </button>
                   </div>
                 ))}
               </div>
             </div>
           )}
         </div>
+        </PlanGate>
       )}
 
       {activeTab === 'tickets' && (<>

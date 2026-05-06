@@ -16,7 +16,8 @@ export default function FinalCTA() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-10">
             <Link
               href="/signup"
-              className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-lg bg-[#2d7a4f] px-8 py-4 text-base font-semibold text-white hover:bg-[#245f3e] transition-all hover:shadow-lg hover:shadow-[#2d7a4f]/25"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-lg px-8 py-4 text-base font-semibold transition-all hover:shadow-lg"
+              style={{ background: '#F5B731', color: '#1a1a1a' }}
             >
               Start Free 14-Day Trial <ArrowRight className="h-4 w-4 shrink-0" />
             </Link>

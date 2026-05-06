@@ -51,9 +51,9 @@
 }
 
 :root {
-    --hf-sidebar-bg: #1e3a2a;
-    --hf-sidebar-accent: #2d7a4f;
-    --hf-sidebar-highlight: #4ade80;
+    --hf-sidebar-bg: #1a1a1a;
+    --hf-sidebar-accent: #F5B731;
+    --hf-sidebar-highlight: #F5B731;
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
     --card: oklch(1 0 0);
@@ -140,6 +140,16 @@
 @keyframes fadeInMockup {
   from { opacity: 0; transform: translateY(8px) translateZ(0); }
   to   { opacity: 1; transform: translateY(0) translateZ(0); }
+}
+
+/* ── Dispatch board: ticket arrival flash ─────────────────────────────────── */
+@keyframes ticket-flash {
+  0%   { background-color: transparent; }
+  30%  { background-color: rgba(45, 106, 79, 0.12); }
+  100% { background-color: transparent; }
+}
+.ticket-flash {
+  animation: ticket-flash 0.65s ease-out;
 }
 
 /* Respect the user's motion preferences — disable all animations */

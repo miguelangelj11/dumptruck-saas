@@ -41,13 +41,13 @@ export default function FAQ() {
     <section className="py-16 md:py-24 bg-white" id="faq">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-10 md:mb-16">
-          <p className="text-sm font-semibold text-[#2d7a4f] uppercase tracking-wider mb-3">FAQ</p>
+          <p className="text-sm font-semibold text-[#F5B731] uppercase tracking-wider mb-3">FAQ</p>
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
             Frequently asked questions
           </h2>
           <p className="text-gray-500 text-lg">
             Can't find what you're looking for?{' '}
-            <a href="mailto:support@dumptruckboss.com" className="text-[#2d7a4f] hover:underline">
+            <a href="mailto:support@dumptruckboss.com" className="text-[#F5B731] hover:underline">
               Reach out to our team.
             </a>
           </p>

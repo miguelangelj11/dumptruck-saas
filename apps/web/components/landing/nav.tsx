@@ -38,14 +38,11 @@ export default function Nav() {
           <Image
             src="/dtb-logo.png"
             alt="DumpTruckBoss"
-            width={64}
-            height={64}
-            className="object-contain w-16 h-16 rounded-full"
+            width={150}
+            height={50}
+            className="object-contain"
             priority
           />
-          <span className="font-bold text-[17px] text-white whitespace-nowrap">
-            DumpTruckBoss
-          </span>
         </Link>
 
         {/* Desktop center links */}
@@ -68,8 +65,8 @@ export default function Nav() {
           </Link>
           <Link
             href="/signup"
-            className="text-sm font-semibold text-white no-underline px-4 py-2 rounded-lg whitespace-nowrap transition-colors"
-            style={{ backgroundColor: '#2d5a3d' }}
+            className="text-sm font-semibold no-underline px-4 py-2 rounded-lg whitespace-nowrap transition-colors"
+            style={{ backgroundColor: '#F5B731', color: '#1a1a1a' }}
           >
             Start Free Trial
           </Link>
@@ -120,7 +117,7 @@ export default function Nav() {
                   href="/signup"
                   onClick={() => setOpen(false)}
                   className="text-center text-[15px] font-semibold text-white py-3 rounded-xl transition-colors no-underline"
-                  style={{ backgroundColor: '#FFB800', color: '#000' }}
+                  style={{ backgroundColor: '#F5B731', color: '#1a1a1a' }}
                 >
                   Start Free Trial
                 </Link>

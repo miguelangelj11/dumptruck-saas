@@ -1,10 +1,26 @@
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { createClient } from '@/lib/supabase/server'
+import { checkRateLimit, LIMITS } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
 
 export async function POST(request: Request) {
+  // Auth check — OCR calls Anthropic API which costs money; must be authenticated
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  // Rate limit — 30 OCR scans per hour per user
+  const rl = await checkRateLimit(`ocr:${user.id}`, LIMITS.ocr)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Too many OCR requests — try again later' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } }
+    )
+  }
+
   try {
     const formData = await request.formData()
     const file = formData.get('image') as File | null

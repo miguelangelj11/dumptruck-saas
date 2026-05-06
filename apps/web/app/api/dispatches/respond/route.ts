@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { verifyDispatchToken } from '@/lib/dispatch-token'
 
 function getAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -22,8 +23,7 @@ export async function GET(request: NextRequest) {
     return html(errorPage('Invalid action.'), 400)
   }
 
-  const expected = Buffer.from(id).toString('base64')
-  if (token !== expected) {
+  if (!verifyDispatchToken(id, token)) {
     return html(errorPage('Invalid or expired link.'), 403)
   }
 

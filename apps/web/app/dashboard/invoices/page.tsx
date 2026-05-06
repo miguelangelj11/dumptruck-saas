@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import type { Invoice, InvoiceLineItem, Load, LoadTicket, Contractor, ContractorTicket, ContractorTicketSlip, Payment, ReceivedInvoice } from '@/lib/types'
 import { getCompanyId } from '@/lib/get-company-id'
 import { PAGE_SIZE, pageRange } from '@/lib/pagination'
+import { canUse } from '@/lib/plan-gate'
 
 type View = 'list' | 'create' | 'detail'
 type InvoiceType = 'client' | 'paystub' | 'contractor'
@@ -229,6 +230,9 @@ function buildContractorLineItems(tickets: CTWithSlips[], deductionPct: number):
 export default function InvoicesPage() {
   const searchParams = useSearchParams()
   const [view, setView] = useState<View>(searchParams.get('new') === '1' ? 'create' : 'list')
+  const [invStatusFilter, setInvStatusFilter] = useState<string>(searchParams.get('filter') ?? '')
+  const [reminderSending, setReminderSending] = useState<string | null>(null)
+  const [reminderSentIds, setReminderSentIds] = useState<Set<string>>(new Set())
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
   const [invoicePage, setInvoicePage] = useState(0)
@@ -451,6 +455,31 @@ export default function InvoicesPage() {
 
   useEffect(() => { fetchInvoices(); fetchUninvoicedCount() }, [])
 
+  async function sendReminder(inv: Invoice) {
+    setReminderSending(inv.id)
+    try {
+      const res  = await fetch(`/api/invoices/${inv.id}/send-reminder`, { method: 'POST' })
+      const json = await res.json() as { sent?: boolean; error?: string; reminder_count?: number; last_reminder_sent_at?: string }
+      if (json.sent) {
+        toast.success(`Reminder sent to ${inv.client_name}`)
+        setReminderSentIds(s => new Set(s).add(inv.id))
+        setInvoices(prev => prev.map(i => i.id === inv.id
+          ? { ...i, reminder_count: json.reminder_count ?? (i.reminder_count ?? 0) + 1, last_reminder_sent_at: json.last_reminder_sent_at ?? new Date().toISOString() }
+          : i
+        ))
+        setTimeout(() => setReminderSentIds(s => { const next = new Set(s); next.delete(inv.id); return next }), 3000)
+      } else {
+        toast.error(json.error ?? 'Could not send reminder')
+      }
+    } finally {
+      setReminderSending(null)
+    }
+  }
+
+  const filteredInvoices = invStatusFilter
+    ? invoices.filter(i => i.status === invStatusFilter)
+    : invoices
+
   useEffect(() => {
     if (view === 'create') {
       fetchLoadsForCreate()
@@ -490,12 +519,21 @@ export default function InvoicesPage() {
   const subtotal = previewItems.reduce((s, i) => s + i.amount, 0)
   const activeSelectionSize = invoiceType === 'contractor' ? selectedCTIds.size : selectedLoadIds.size
 
+  // Approved loads not yet selected — used for the "you're leaving money behind" warning
+  const unselectedApprovedLoads = allLoads.filter(l => l.status === 'approved' && !selectedLoadIds.has(l.id))
+  const unselectedApprovedTotal = unselectedApprovedLoads.reduce((s, l) => s + (l.rate ?? 0), 0)
+
   function toggleLoad(id: string) {
     setSelectedLoadIds(prev => {
       const n = new Set(prev)
       n.has(id) ? n.delete(id) : n.add(id)
       return n
     })
+  }
+
+  function selectAllUninvoiced() {
+    const ids = new Set(allLoads.filter(l => l.status === 'approved').map(l => l.id))
+    setSelectedLoadIds(ids)
   }
 
   function selectAllFiltered() {
@@ -682,17 +720,14 @@ export default function InvoicesPage() {
         .from('loads')
         .select('id, client_company')
         .eq('company_id', companyId)
-        .in('status', ['pending', 'approved'])
+        .eq('status', 'approved')  // auto-select approved loads only (not pending)
 
       if (uninvoiced && uninvoiced.length > 0) {
-        // Find the most common client_company
+        // Auto-select ALL approved loads; pre-fill client from most common
         const freq = new Map<string, number>()
         uninvoiced.forEach((l: { id: string; client_company: string | null }) => { if (l.client_company) freq.set(l.client_company, (freq.get(l.client_company) ?? 0) + 1) })
         const topClient = [...freq.entries()].sort((a, b) => b[1] - a[1])[0]?.[0]
-        const toSelect = topClient
-          ? uninvoiced.filter((l: { id: string; client_company: string | null }) => l.client_company === topClient)
-          : uninvoiced
-        setSelectedLoadIds(new Set(toSelect.map((l: { id: string; client_company: string | null }) => l.id)))
+        setSelectedLoadIds(new Set(uninvoiced.map((l: { id: string; client_company: string | null }) => l.id)))
         if (topClient) setCreateForm(f => ({ ...f, client_name: topClient }))
       }
     }
@@ -846,14 +881,20 @@ export default function InvoicesPage() {
                 {uninvoicedCount} ticket{uninvoicedCount !== 1 ? 's' : ''} ready to invoice
               </span>
             </div>
-            <button
-              onClick={handleGenerateFromTickets}
-              disabled={generatingInvoice}
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60"
-            >
-              {generatingInvoice ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-              Generate Invoice
-            </button>
+            {canUse(companyPlan, 'auto_invoicing') ? (
+              <button
+                onClick={handleGenerateFromTickets}
+                disabled={generatingInvoice}
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60"
+              >
+                {generatingInvoice ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                Generate Invoice
+              </button>
+            ) : (
+              <a href="/dashboard/settings#billing" className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors">
+                <Lock className="h-3 w-3" /> Fleet Plan →
+              </a>
+            )}
           </div>
         )}
 
@@ -1050,6 +1091,40 @@ export default function InvoicesPage() {
 
         {/* ── Sent Invoices (original table) ───────────────────────── */}
         {invoiceTab === 'sent' && <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+
+          {/* Status filter tabs */}
+          {!loading && invoices.length > 0 && (
+            <div className="px-4 pt-3 pb-0 flex gap-1 flex-wrap">
+              {([
+                ['', 'All'],
+                ['overdue', 'Overdue'],
+                ['sent', 'Sent'],
+                ['partially_paid', 'Partial'],
+                ['paid', 'Paid'],
+                ['draft', 'Draft'],
+              ] as [string, string][]).map(([val, label]) => {
+                const count = val ? invoices.filter(i => i.status === val).length : invoices.length
+                const isActive = invStatusFilter === val
+                return (
+                  <button
+                    key={val}
+                    onClick={() => setInvStatusFilter(val)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                      isActive ? 'bg-[#1e3a2a] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    } ${val === 'overdue' && count > 0 && !isActive ? 'bg-red-100 text-red-700 hover:bg-red-200' : ''}`}
+                  >
+                    {label}
+                    {count > 0 && (
+                      <span className={`ml-1.5 text-[10px] ${isActive ? 'text-white/70' : val === 'overdue' && count > 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="h-6 w-6 animate-spin text-[#2d7a4f]" />
@@ -1062,6 +1137,10 @@ export default function InvoicesPage() {
                 Create your first invoice →
               </button>
             </div>
+          ) : filteredInvoices.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-sm text-gray-400">No {invStatusFilter} invoices</p>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[600px] text-sm">
@@ -1073,8 +1152,14 @@ export default function InvoicesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {invoices.map(inv => (
-                    <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors">
+                  {filteredInvoices.map(inv => {
+                    const daysOverdue = inv.status === 'overdue' && inv.due_date
+                      ? Math.max(0, Math.floor((Date.now() - new Date(inv.due_date + 'T00:00:00').getTime()) / 86_400_000))
+                      : 0
+                    const maxReminders = 3
+                    const reminderCount = inv.reminder_count ?? 0
+                    return (
+                    <tr key={inv.id} className={`hover:bg-gray-50/50 transition-colors ${inv.status === 'overdue' ? 'bg-red-50/20' : ''}`}>
                       <td className="px-4 py-3 font-mono font-medium text-gray-900">{inv.invoice_number}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${inv.invoice_type === 'paystub' ? 'bg-purple-100 text-purple-700' : inv.invoice_type === 'contractor' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
@@ -1086,7 +1171,12 @@ export default function InvoicesPage() {
                         {inv.date_from ? `${fmtDate(inv.date_from)} – ${fmtDate(inv.date_to)}` : '—'}
                       </td>
                       <td className="px-4 py-3 font-semibold text-gray-900">${fmt(inv.total)}</td>
-                      <td className={`px-4 py-3 text-xs ${inv.status === 'overdue' ? 'text-red-600 font-medium' : 'text-gray-500'}`}>{fmtDate(inv.due_date)}</td>
+                      <td className="px-4 py-3 text-xs">
+                        <p className={inv.status === 'overdue' ? 'text-red-600 font-medium' : 'text-gray-500'}>{fmtDate(inv.due_date)}</p>
+                        {daysOverdue > 0 && (
+                          <p className="text-red-500 font-semibold mt-0.5">{daysOverdue}d overdue</p>
+                        )}
+                      </td>
                       <td className="px-4 py-3">
                         <select
                           value={inv.status}
@@ -1101,17 +1191,43 @@ export default function InvoicesPage() {
                         </select>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-wrap">
                           <button onClick={() => openDetail(inv)} className="text-xs text-[#2d7a4f] hover:text-[#245f3e] font-medium">
                             View →
                           </button>
+                          {inv.status === 'overdue' && (
+                            reminderCount >= maxReminders ? (
+                              <span className="text-xs text-gray-400">Max reminders</span>
+                            ) : reminderSentIds.has(inv.id) ? (
+                              <span className="text-xs font-semibold text-green-700">✓ Sent</span>
+                            ) : (
+                              <div className="flex flex-col items-start gap-0.5">
+                                <button
+                                  onClick={() => sendReminder(inv)}
+                                  disabled={reminderSending === inv.id}
+                                  className="text-xs font-semibold text-red-600 hover:text-red-800 disabled:opacity-50 flex items-center gap-1"
+                                >
+                                  {reminderSending === inv.id
+                                    ? <><Loader2 className="h-3 w-3 animate-spin" /> Sending…</>
+                                    : 'Send Reminder'
+                                  }
+                                </button>
+                                {inv.last_reminder_sent_at && (
+                                  <span className="text-[10px] text-gray-400">
+                                    Last sent {Math.round((Date.now() - new Date(inv.last_reminder_sent_at).getTime()) / 3_600_000)}h ago
+                                  </span>
+                                )}
+                              </div>
+                            )
+                          )}
                           <button onClick={() => handleDeleteInvoice(inv)} className="p-1 text-gray-300 hover:text-red-500 transition-colors" title="Delete invoice">
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1467,11 +1583,30 @@ export default function InvoicesPage() {
                     <option value="">All Drivers</option>
                     {drivers.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
-                  <button type="button" onClick={selectAllFiltered} className="text-xs text-[#2d7a4f] hover:text-[#245f3e] font-medium">Select all ({filteredLoads.length})</button>
+                  {unselectedApprovedLoads.length > 0 && canUse(companyPlan, 'auto_invoicing') && (
+                    <button
+                      type="button"
+                      onClick={selectAllUninvoiced}
+                      className="text-xs font-semibold text-white bg-[#2d7a4f] hover:bg-[#245f3e] px-2.5 py-1 rounded-lg transition-colors"
+                    >
+                      Select All Uninvoiced ({unselectedApprovedLoads.length})
+                    </button>
+                  )}
+                  <button type="button" onClick={selectAllFiltered} className="text-xs text-[#2d7a4f] hover:text-[#245f3e] font-medium">Select filtered ({filteredLoads.length})</button>
                   {selectedLoadIds.size > 0 && (
                     <button type="button" onClick={() => setSelectedLoadIds(new Set())} className="text-xs text-red-400 hover:text-red-600 font-medium">Clear ({selectedLoadIds.size})</button>
                   )}
                 </div>
+                {unselectedApprovedTotal > 0 && canUse(companyPlan, 'auto_invoicing') && (
+                  <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 mb-3">
+                    <span className="text-sm">⚠️</span>
+                    <p className="text-xs font-medium text-amber-800 flex-1">
+                      <strong>${fmt(unselectedApprovedTotal)}</strong> in approved tickets not included in this invoice.{' '}
+                      <button type="button" onClick={selectAllUninvoiced} className="underline font-semibold hover:no-underline">Add all →</button>
+                    </p>
+                  </div>
+                )}
+
                 <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                   {filteredLoads.length === 0 ? (
                     <p className="text-sm text-gray-400 text-center py-6">No jobs match the current filters</p>

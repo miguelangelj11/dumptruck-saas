@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Nav from '@/components/landing/nav'
@@ -497,8 +497,8 @@ export default function PricingPage() {
             </thead>
             <tbody>
               {table.map((section, si) => (
-                <>
-                  <tr key={`s${si}`}>
+                <React.Fragment key={`s${si}`}>
+                  <tr>
                     <td colSpan={4} style={{
                       padding: '18px 20px 8px',
                       fontSize: '10px',
@@ -528,7 +528,7 @@ export default function PricingPage() {
                       ))}
                     </tr>
                   ))}
-                </>
+                </React.Fragment>
               ))}
             </tbody>
           </table>

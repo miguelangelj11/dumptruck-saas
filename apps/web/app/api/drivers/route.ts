@@ -2,15 +2,10 @@ import { NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { resolveCompanyId } from '@/lib/resolve-company'
-
-const DRIVER_LIMITS: Record<string, number> = {
-  owner_operator: 3,
-  fleet:          15,
-}
+import { normalizePlan, PLAN_LIMITS } from '@/lib/plan-gate'
 
 function getLimit(plan: string | null | undefined): number {
-  if (plan === 'enterprise') return Infinity
-  return DRIVER_LIMITS[plan ?? ''] ?? 3
+  return PLAN_LIMITS[normalizePlan(plan)].maxDrivers
 }
 
 function getAdmin() {
@@ -52,7 +47,7 @@ export async function POST(request: Request) {
 
       if ((count ?? 0) >= limit) {
         return NextResponse.json(
-          { error: 'Driver limit reached for your plan. Please upgrade.' },
+          { error: 'upgrade_required', feature: 'drivers', required_plan: 'fleet', message: `Driver limit (${limit}) reached for your plan. Upgrade to Fleet for unlimited drivers.` },
           { status: 403 },
         )
       }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { Resend } from 'resend'
+import { generateDispatchToken } from '@/lib/dispatch-token'
 
 export async function POST(request: Request) {
   const supabase = await createServerClient()
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
     `<tr><td style="padding:8px 12px;font-weight:600;color:#374151;width:130px;vertical-align:top">${r.label}</td><td style="padding:8px 12px;color:#111827">${r.value}</td></tr>`
   ).join('')
 
-  const token = dispatchId ? Buffer.from(dispatchId).toString('base64') : null
+  const token = dispatchId ? generateDispatchToken(dispatchId) : null
   const base  = dispatchId ? `https://dumptruckboss.com/api/dispatches/respond?id=${dispatchId}&token=${token}` : null
 
   const portalUrl = companyId ? `https://dumptruckboss.com/portal?c=${companyId}` : null

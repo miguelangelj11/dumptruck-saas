@@ -22,7 +22,7 @@ export async function proxy(request: NextRequest) {
   if (cfg) {
     const ip     = getIp(request)
     const key    = `rl:${ip}:${pathname.split('/').slice(0, 3).join('/')}`
-    const result = checkRateLimit(key, cfg)
+    const result = await checkRateLimit(key, cfg)
 
     if (!result.allowed) {
       return NextResponse.json(

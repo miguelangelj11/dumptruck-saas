@@ -196,9 +196,8 @@ export default function SignupPage() {
 
         {/* Logo + heading */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', textDecoration: 'none', marginBottom: '20px' }}>
-            <Image src="/dtb-logo.png" alt="DumpTruckBoss" width={48} height={48} className="rounded-full object-contain" style={{ width: '48px', height: '48px' }} />
-            <span style={{ fontSize: '20px', fontWeight: 700, color: '#fff' }}>DumpTruckBoss</span>
+          <Link href="/" style={{ display: 'inline-flex', textDecoration: 'none', marginBottom: '20px' }}>
+            <Image src="/dtb-logo.png" alt="DumpTruckBoss" width={160} height={54} className="object-contain" />
           </Link>
           <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#fff', marginBottom: '6px' }}>
             {subscribeMode ? 'Subscribe to DumpTruckBoss' : 'Start your free 14-day trial'}

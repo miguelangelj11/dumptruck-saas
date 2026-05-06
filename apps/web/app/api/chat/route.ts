@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Enterprise plan required' }, { status: 403 })
   }
 
-  const rl = checkRateLimit(`chat:${user.id}`, LIMITS.chat)
+  const rl = await checkRateLimit(`chat:${user.id}`, LIMITS.chat)
   if (!rl.allowed) {
     return NextResponse.json(
       { error: 'Too many requests. Please wait before sending more messages.' },

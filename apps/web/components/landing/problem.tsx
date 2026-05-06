@@ -45,7 +45,7 @@ export default function Problem() {
         <div className="text-center">
           <p className="text-lg font-semibold text-gray-900">
             If this sounds like your business,{' '}
-            <span className="text-[#2d7a4f]">DumpTruckBoss was built for you.</span>
+            <span className="text-[#F5B731]">DumpTruckBoss was built for you.</span>
           </p>
         </div>
       </div>
