@@ -61,6 +61,8 @@ export default function SignupPage() {
         clearTimeout(timer)
         if (/already registered|already exists/i.test(error.message)) {
           setAlreadyExists(true)
+          setPassword('')
+          setConfirmPassword('')
         } else {
           toast.error(error.message)
         }
@@ -241,10 +243,14 @@ export default function SignupPage() {
               <input type="email" value={email} onChange={e => { setEmail(e.target.value); setAlreadyExists(false) }}
                 required autoComplete="email" placeholder="you@company.com" style={inputStyle} />
               {alreadyExistsError && (
-                <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#dc2626' }}>
-                  An account with this email already exists.{' '}
-                  <Link href="/login" style={{ color: '#2d7a4f', fontWeight: 600, textDecoration: 'underline' }}>Sign in instead</Link>
-                </p>
+                <div style={{ marginTop: '8px', padding: '12px', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '8px' }}>
+                  <p style={{ margin: 0, fontSize: '13px', color: '#92400e', fontWeight: 500 }}>
+                    An account with this email already exists.
+                  </p>
+                  <Link href="/login" style={{ display: 'block', marginTop: '4px', fontSize: '13px', fontWeight: 700, color: '#2d6a4f', textDecoration: 'underline' }}>
+                    → Sign in to your existing account
+                  </Link>
+                </div>
               )}
             </Field>
 
