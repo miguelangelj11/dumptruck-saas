@@ -90,6 +90,13 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
   const exhibitLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
   const photoByTicket = new Map(ticketPhotos.map(p => [p.ticketNumber, p.imageUrl]))
 
+  const firstDeduction = lineItems.find(i => (i.deduction_pct ?? 0) > 0)?.deduction_pct ?? 0
+  const netTotal   = lineItems.reduce((s, i) => s + i.amount, 0)
+  const grossTotal = firstDeduction > 0
+    ? lineItems.reduce((s, i) => s + i.amount / (1 - firstDeduction / 100), 0)
+    : netTotal
+  const isPaystub  = invoice.invoice_type === 'paystub' || invoice.invoice_type === 'contractor'
+
   return (
     <Document title={`Invoice ${invoice.invoice_number}`}>
       {/* PAGE 1: Invoice summary */}
@@ -170,13 +177,19 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
         <View style={{ alignItems: 'flex-end' }}>
           <View style={s.totalRow}>
             <Text style={s.totalLabel}>Subtotal</Text>
-            <Text style={s.totalValue}>{fmt(invoice.total)}</Text>
+            <Text style={s.totalValue}>{fmt(grossTotal)}</Text>
           </View>
+          {firstDeduction > 0 && (
+            <View style={s.totalRow}>
+              <Text style={[s.totalLabel, { color: '#ef4444' }]}>Deduction ({firstDeduction}%)</Text>
+              <Text style={[s.totalValue, { color: '#ef4444' }]}>−{fmt(grossTotal - netTotal)}</Text>
+            </View>
+          )}
           <View style={[s.totalRow, { borderTopWidth: 1.5, borderTopColor: '#1e3a2a', paddingTop: 4 }]}>
             <Text style={[s.totalLabel, s.bold]}>
-              {invoice.invoice_type === 'paystub' ? 'Net Pay' : 'Total Due'}
+              {isPaystub ? 'Net Pay' : 'Total Due'}
             </Text>
-            <Text style={[s.totalValue, s.bold, { color: '#1e3a2a', fontSize: 12 }]}>{fmt(invoice.total)}</Text>
+            <Text style={[s.totalValue, s.bold, { color: '#1e3a2a', fontSize: 12 }]}>{fmt(netTotal)}</Text>
           </View>
         </View>
 

@@ -448,6 +448,7 @@ export default function InvoicesPage() {
       .select('*, contractor_ticket_slips(*)')
       .eq('contractor_id', contractorId)
       .eq('company_id', uid)
+      .not('status', 'in', '("invoiced","paid")')
       .order('date', { ascending: false })
     setContractorTickets((data ?? []) as CTWithSlips[])
     setSelectedCTIds(new Set())
@@ -1677,16 +1678,29 @@ export default function InvoicesPage() {
                   </tbody>
                 </table>
               </div>
-              <div className="px-5 py-4 border-t border-gray-100 flex flex-col items-end gap-1">
-                {parseFloat(deductionPct) > 0 && (
-                  <div className="flex items-center gap-6 text-sm text-gray-500">
-                    <span>Deduction ({deductionPct}%)</span>
-                    <span>−${fmt(previewItems.reduce((s, i) => s + i.amount / (1 - parseFloat(deductionPct) / 100) * (parseFloat(deductionPct) / 100), 0))}</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-6 text-base font-bold text-gray-900">
-                  <span>Total</span>
-                  <span>${fmt(subtotal)}</span>
+              <div className="px-5 py-4 border-t border-gray-100 flex flex-col items-end gap-1.5">
+                {parseFloat(deductionPct) > 0 && (() => {
+                  const pct = parseFloat(deductionPct)
+                  const gross = previewItems.reduce((s, i) => s + i.amount / (1 - pct / 100), 0)
+                  const deductAmt = gross - subtotal
+                  return (
+                    <>
+                      <div className="flex items-center gap-8 text-sm text-gray-500">
+                        <span className="w-32 text-right">Subtotal</span>
+                        <span className="w-24 text-right tabular-nums">${fmt(gross)}</span>
+                      </div>
+                      <div className="flex items-center gap-8 text-sm text-red-500">
+                        <span className="w-32 text-right">Deduction ({deductionPct}%)</span>
+                        <span className="w-24 text-right tabular-nums">−${fmt(deductAmt)}</span>
+                      </div>
+                    </>
+                  )
+                })()}
+                <div className="flex items-center gap-8 pt-1.5 border-t border-gray-100 mt-0.5">
+                  <span className="w-32 text-right text-sm font-bold text-gray-900">
+                    {invoiceType === 'contractor' ? 'Net Pay' : 'Total Due'}
+                  </span>
+                  <span className="w-24 text-right text-base font-bold text-[#2d7a4f] tabular-nums">${fmt(subtotal)}</span>
                 </div>
               </div>
             </div>

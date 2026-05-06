@@ -58,6 +58,7 @@ export default function ContractorsPage() {
   // Ticket list + form
   const [tickets, setTickets] = useState<ContractorTicket[]>([])
   const [loadingTickets, setLoadingTickets] = useState(false)
+  const [ticketTab, setTicketTab] = useState<'pending' | 'invoiced' | 'all'>('pending')
   const [showTicketForm, setShowTicketForm] = useState(false)
   const [editingTicket, setEditingTicket] = useState<ContractorTicket | null>(null)
   const [ticketForm, setTicketForm] = useState(EMPTY_TICKET)
@@ -117,6 +118,7 @@ export default function ContractorsPage() {
 
   function selectContractor(c: Contractor) {
     setSelected(c)
+    setTicketTab('pending')
     fetchTickets(c.id)
   }
 
@@ -320,16 +322,37 @@ export default function ContractorsPage() {
           </button>
         </div>
 
+        {/* Ticket status tabs */}
+        <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 w-fit">
+          {(['pending', 'invoiced', 'all'] as const).map(tab => {
+            const count = tab === 'all' ? tickets.length : tickets.filter(t => t.status === tab).length
+            return (
+              <button
+                key={tab}
+                onClick={() => setTicketTab(tab)}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 capitalize ${ticketTab === tab ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                {tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${ticketTab === tab ? 'bg-gray-100 text-gray-600' : 'bg-gray-200/70 text-gray-500'}`}>{count}</span>
+              </button>
+            )
+          })}
+        </div>
+
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
           {loadingTickets ? (
             <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-[#2d7a4f]" /></div>
-          ) : tickets.length === 0 ? (
-            <div className="text-center py-16">
-              <Truck className="h-10 w-10 text-gray-200 mx-auto mb-3" />
-              <p className="text-sm font-medium text-gray-400">No tickets yet for {selected.name}</p>
-              <button onClick={openAddTicket} className="mt-3 text-sm text-[#2d7a4f]">Add first ticket →</button>
-            </div>
-          ) : (
+          ) : (() => {
+            const visibleTickets = ticketTab === 'all' ? tickets : tickets.filter(t => t.status === ticketTab)
+            return visibleTickets.length === 0 ? (
+              <div className="text-center py-16">
+                <Truck className="h-10 w-10 text-gray-200 mx-auto mb-3" />
+                <p className="text-sm font-medium text-gray-400">
+                  {tickets.length === 0 ? `No tickets yet for ${selected.name}` : `No ${ticketTab} tickets`}
+                </p>
+                {tickets.length === 0 && <button onClick={openAddTicket} className="mt-3 text-sm text-[#2d7a4f]">Add first ticket →</button>}
+              </div>
+            ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[700px] text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">
@@ -340,7 +363,7 @@ export default function ContractorsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {tickets.map(t => {
+                  {visibleTickets.map(t => {
                     const photos = getTicketPhotos(t)
                     const slips = t.contractor_ticket_slips ?? []
                     const totalTonnage = slips.reduce((s, r) => s + (r.tonnage ?? 0), 0)
@@ -393,7 +416,8 @@ export default function ContractorsPage() {
                 </tbody>
               </table>
             </div>
-          )}
+          )
+          })()}
         </div>
 
         {/* Ticket form modal */}
