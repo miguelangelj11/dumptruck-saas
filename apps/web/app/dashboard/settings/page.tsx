@@ -1463,12 +1463,14 @@ export default function SettingsPage() {
           {/* Invite form — locked for owner_operator */}
           {subscriptionPlan === 'owner_operator' ? (
             <div className="border-t border-gray-100 pt-5">
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 flex items-start gap-3">
-                <Lock className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-semibold text-amber-800">Team logins require the Fleet Plan</p>
-                  <p className="text-xs text-amber-700 mt-1 mb-3">
-                    The Owner Operator plan is a single-user plan. Upgrade to Fleet to add up to 3 team members (dispatchers, drivers, accountants).
+              <div className="rounded-xl border border-[#F5B731]/40 p-5 flex items-start gap-4" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2000 100%)' }}>
+                <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: '#F5B731' }}>
+                  <Lock className="h-5 w-5 text-[#1a1a1a]" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-white">Team logins require the Fleet Plan</p>
+                  <p className="text-xs text-white/60 mt-1 mb-4">
+                    Owner Operator is a single-user plan. Upgrade to Fleet to add dispatchers, drivers, and accountants as team members with their own logins.
                   </p>
                   <button
                     type="button"
@@ -1482,7 +1484,8 @@ export default function SettingsPage() {
                       setUpgradePlanLoading(false)
                     }}
                     disabled={upgradePlanLoading}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#2d7a4f] text-white text-sm font-semibold hover:bg-[#1e3a2a] transition-colors disabled:opacity-60"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-colors disabled:opacity-60"
+                    style={{ background: '#F5B731', color: '#1a1a1a' }}
                   >
                     {upgradePlanLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                     Upgrade to Fleet — $150/mo →
@@ -1595,6 +1598,63 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          UPGRADE PROMPT — owner_operator only
+      ═══════════════════════════════════════════════════════════════════ */}
+      {subscriptionPlan === 'owner_operator' && (
+        <div className="rounded-xl border border-[#F5B731]/30 overflow-hidden" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #1e1800 100%)' }}>
+          <div className="px-6 pt-6 pb-4">
+            <p className="text-base font-bold text-white">Unlock More Features</p>
+            <p className="text-xs text-white/50 mt-1">Upgrade to Fleet ($150/mo) to stop leaving money on the table.</p>
+          </div>
+          <div className="px-6 pb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {[
+              {
+                icon: '🔍',
+                title: 'Missing Ticket Detection',
+                desc: 'Automatically find loads where tickets never came in. Stop losing $500–$2,000/month to missing paperwork.',
+              },
+              {
+                icon: '🤝',
+                title: 'Subcontractor Management',
+                desc: 'Track subs, their loads, and what you owe them — all in one place with automated billing.',
+              },
+              {
+                icon: '⚡',
+                title: 'Follow-Up Automation',
+                desc: 'Automatically chase overdue invoices and missing tickets so you don\'t have to make awkward calls.',
+              },
+            ].map(card => (
+              <div key={card.title} className="rounded-xl border border-white/10 bg-white/5 p-4 flex flex-col gap-2">
+                <span className="text-2xl">{card.icon}</span>
+                <p className="text-sm font-bold text-white">{card.title}</p>
+                <p className="text-xs text-white/50 flex-1">{card.desc}</p>
+              </div>
+            ))}
+          </div>
+          <div className="px-6 pb-6">
+            <button
+              type="button"
+              onClick={async () => {
+                setUpgradePlanLoading(true)
+                try {
+                  const res = await fetch('/api/stripe/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan: 'fleet' }) })
+                  const d = await res.json()
+                  if (d.url) { window.location.href = d.url; return }
+                } catch { /* fall through */ }
+                setUpgradePlanLoading(false)
+              }}
+              disabled={upgradePlanLoading}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-colors disabled:opacity-60"
+              style={{ background: '#F5B731', color: '#1a1a1a' }}
+            >
+              {upgradePlanLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Upgrade to Fleet — $150/mo →
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ═══════════════════════════════════════════════════════════════════
           8. DATA EXPORT

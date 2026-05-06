@@ -72,6 +72,20 @@ export async function POST(request: Request) {
     companyName = teamCompany.name
   }
 
+  // Block owner_operator plan from inviting team members
+  const { data: companyForPlan } = await admin
+    .from('companies')
+    .select('plan')
+    .eq('id', companyId!)
+    .maybeSingle()
+
+  if (companyForPlan?.plan === 'owner_operator') {
+    return NextResponse.json(
+      { error: 'upgrade_required', message: 'Team invitations require the Fleet plan. Upgrade at /dashboard/settings#billing.' },
+      { status: 403 },
+    )
+  }
+
   // Insert invitation — DB generates the UUID token
   const { data: invitation, error: inviteErr } = await admin
     .from('invitations')

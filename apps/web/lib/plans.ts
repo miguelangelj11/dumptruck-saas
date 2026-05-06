@@ -9,7 +9,7 @@ export const PLANS = {
     badge: null,
     limits: {
       trucks: 5,
-      drivers: 10,
+      drivers: 5,
     },
     features: [
       'Up to 5 trucks',

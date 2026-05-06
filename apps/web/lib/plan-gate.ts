@@ -42,7 +42,7 @@ export const FEATURE_PLAN: Record<Feature, Plan> = {
 }
 
 export const PLAN_LIMITS: Record<Plan, { maxDrivers: number; maxTrucks: number; maxTicketsPerMonth: number }> = {
-  owner_operator: { maxDrivers: 10, maxTrucks: 5, maxTicketsPerMonth: 200 },
+  owner_operator: { maxDrivers: 5, maxTrucks: 5, maxTicketsPerMonth: Infinity },
   fleet:          { maxDrivers: Infinity, maxTrucks: Infinity, maxTicketsPerMonth: Infinity },
   enterprise:     { maxDrivers: Infinity, maxTrucks: Infinity, maxTicketsPerMonth: Infinity },
 }

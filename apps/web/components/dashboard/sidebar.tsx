@@ -14,6 +14,7 @@ import {
   Menu,
   X,
   Clipboard,
+  Lock,
 } from 'lucide-react'
 import { useState } from 'react'
 import Image from 'next/image'
@@ -40,14 +41,14 @@ export default function Sidebar({ user, logoUrl, companyName: companyNameProp, p
   const t = useTranslations('nav')
 
   const nav = [
-    { href: '/dashboard', icon: LayoutDashboard, label: t('dashboard') },
-    { href: '/dashboard/dispatch', icon: Clipboard, label: t('dispatch') },
-    { href: '/dashboard/tickets', icon: FileText, label: t('tickets') },
-    ...(plan !== 'owner_operator' ? [{ href: '/dashboard/contractors', icon: Truck, label: t('subcontractors') }] : []),
-    { href: '/dashboard/drivers', icon: Users, label: t('drivers') },
-    { href: '/dashboard/invoices', icon: Receipt, label: t('invoices') },
-    { href: '/dashboard/revenue', icon: TrendingUp, label: t('revenue') },
-    { href: '/dashboard/settings', icon: Settings, label: t('settings') },
+    { href: '/dashboard', icon: LayoutDashboard, label: t('dashboard'), locked: false },
+    { href: '/dashboard/dispatch', icon: Clipboard, label: t('dispatch'), locked: false },
+    { href: '/dashboard/tickets', icon: FileText, label: t('tickets'), locked: false },
+    { href: '/dashboard/contractors', icon: Truck, label: t('subcontractors'), locked: plan === 'owner_operator' },
+    { href: '/dashboard/drivers', icon: Users, label: t('drivers'), locked: false },
+    { href: '/dashboard/invoices', icon: Receipt, label: t('invoices'), locked: false },
+    { href: '/dashboard/revenue', icon: TrendingUp, label: t('revenue'), locked: false },
+    { href: '/dashboard/settings', icon: Settings, label: t('settings'), locked: false },
   ]
 
   const companyName = companyNameProp || user.user_metadata?.company_name || ''
@@ -76,8 +77,23 @@ export default function Sidebar({ user, logoUrl, companyName: companyNameProp, p
 
       {/* Nav links */}
       <nav className="flex-1 py-4 px-3 space-y-0.5">
-        {nav.map(({ href, icon: Icon, label }) => {
+        {nav.map(({ href, icon: Icon, label, locked }) => {
           const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
+          if (locked) {
+            return (
+              <Link
+                key={href}
+                href="/dashboard/settings#billing"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/30 hover:text-white/50 transition-all cursor-pointer"
+                title="Upgrade to Fleet to unlock"
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="flex-1">{label}</span>
+                <Lock className="h-3 w-3 shrink-0 text-[#F5B731]/60" />
+              </Link>
+            )
+          }
           return (
             <Link
               key={href}
