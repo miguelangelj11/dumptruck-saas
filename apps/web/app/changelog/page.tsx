@@ -102,7 +102,7 @@ const releases: Release[] = [
     entries: [
       { type: 'new', text: 'DumpTruckBoss launches! Core dispatch and load ticketing system for dump truck and hauling companies.' },
       { type: 'new', text: 'Create jobs, dispatch drivers, submit load tickets with photos, and track loads from dispatch to invoice.' },
-      { type: 'new', text: '14-day free trial, no credit card required.' },
+      { type: 'new', text: '7-day free trial, no credit card required.' },
     ],
   },
 ]

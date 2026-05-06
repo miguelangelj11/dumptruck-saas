@@ -122,7 +122,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     )
   }
 
-  // Trial banner — show for all 14 days (not for internal accounts)
+  // Trial banner — show for all 7 days (not for internal accounts)
   let trialBanner: React.ReactNode = null
   if (!isInternal && subscriptionStatus === 'trial' && trialEndsAt) {
     const msLeft   = new Date(trialEndsAt).getTime() - Date.now()

@@ -96,13 +96,13 @@ export default function TermsPage() {
 
             <Section title="4. Free Trial Policy">
               <p className="text-gray-600 leading-relaxed mb-4">
-                We offer a <strong>14-day free trial</strong> for the Owner Operator and Fleet plans. During the
+                We offer a <strong>7-day free trial</strong> for the Owner Operator and Fleet plans. During the
                 trial period:
               </p>
               <ul className="list-disc list-inside space-y-2 text-gray-600 mb-4">
                 <li>No credit card is required to start</li>
                 <li>You have full access to the features of your selected plan</li>
-                <li>No charges are made during the 14-day period</li>
+                <li>No charges are made during the 7-day period</li>
               </ul>
               <p className="text-gray-600 leading-relaxed">
                 At the end of the trial period, you must subscribe to a paid plan to continue using the Service.

@@ -314,7 +314,7 @@ export default function Hero() {
             href="/signup"
             className="hero-cta flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-4 sm:py-3.5 rounded-[10px] text-[15px] font-bold no-underline"
           >
-            Start Free 14-Day Trial <ArrowRight className="w-4 h-4 shrink-0" />
+            Start Free 7-Day Trial <ArrowRight className="w-4 h-4 shrink-0" />
           </Link>
           <Link
             href="#screenshots"

@@ -16,7 +16,7 @@ const tiers = [
     annualSavings: 'Save $192/year',
     period: '/mo',
     description: 'Perfect for owner-operators with 1–3 trucks',
-    trialBanner: { icon: '🎉', line1: '14-Day Free Trial', line2: 'No credit card required' },
+    trialBanner: { icon: '🎉', line1: '7-Day Free Trial', line2: 'No credit card required' },
     sectionHeader: null,
     cta: 'Start Free Trial →',
     href: '/signup?plan=owner_operator',
@@ -47,7 +47,7 @@ const tiers = [
     annualSavings: 'Save $360/year',
     period: '/mo',
     description: 'For growing companies with 4–15 trucks',
-    trialBanner: { icon: '🎉', line1: '14-Day Free Trial', line2: 'No credit card required' },
+    trialBanner: { icon: '🎉', line1: '7-Day Free Trial', line2: 'No credit card required' },
     sectionHeader: 'Everything in Owner Operator Plan, plus:',
     cta: 'Start Free Trial →',
     href: '/signup?plan=fleet',
@@ -164,7 +164,7 @@ export default function PricingSection() {
         <div className="text-center mb-12">
           <p className="text-sm font-semibold text-[#F5B731] uppercase tracking-wider mb-3">Pricing</p>
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">Simple, honest pricing</h2>
-          <p className="text-gray-500 text-lg max-w-xl mx-auto">No contracts, no surprises. Owner Operator and Fleet plans include a free 14-day trial.</p>
+          <p className="text-gray-500 text-lg max-w-xl mx-auto">No contracts, no surprises. Owner Operator and Fleet plans include a free 7-day trial.</p>
         </div>
 
         {/* Billing toggle */}
@@ -330,7 +330,7 @@ export default function PricingSection() {
                 {/* Trust bullets (non-Enterprise) */}
                 {tier.showTrustBullets && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '20px' }}>
-                    {['No credit card required', 'Full access for 14 days', 'Cancel anytime'].map((bullet) => (
+                    {['No credit card required', 'Full access for 7 days', 'Cancel anytime'].map((bullet) => (
                       <div key={bullet} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: isDark ? 'rgba(255,255,255,0.6)' : '#6b7280' }}>
                         <span style={{ color: isDark ? '#4ade80' : '#F5B731', fontWeight: 600 }}>✓</span>
                         {bullet}
@@ -382,7 +382,7 @@ export default function PricingSection() {
         </div>
 
         <p className="text-center text-sm text-gray-400 mt-10">
-          Owner Operator and Fleet plans include a 14-day free trial. No credit card required.
+          Owner Operator and Fleet plans include a 7-day free trial. No credit card required.
         </p>
       </div>
 

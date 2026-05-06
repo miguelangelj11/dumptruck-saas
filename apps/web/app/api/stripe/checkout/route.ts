@@ -43,7 +43,7 @@ export async function POST(request: Request) {
   const siteUrl  = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin
   const isEnterprise = plan === 'enterprise'
   const trialParams = (!isEnterprise && !skipTrial) ? {
-    trial_period_days: 14,
+    trial_period_days: 7,
     trial_settings: { end_behavior: { missing_payment_method: 'cancel' as const } },
   } : {}
   const paymentCollection: Stripe.Checkout.SessionCreateParams['payment_method_collection'] =

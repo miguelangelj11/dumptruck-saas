@@ -76,7 +76,7 @@ export default function SignupPage() {
         return
       }
 
-      const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
+      const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
       await supabase.from('companies').insert({
         id:                  user.id,
         name:                companyName,
@@ -200,7 +200,7 @@ export default function SignupPage() {
             <Image src="/dtb-logo.png" alt="DumpTruckBoss" width={160} height={54} className="object-contain" />
           </Link>
           <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#fff', marginBottom: '6px' }}>
-            {subscribeMode ? 'Subscribe to DumpTruckBoss' : 'Start your free 14-day trial'}
+            {subscribeMode ? 'Subscribe to DumpTruckBoss' : 'Start your free 7-day trial'}
           </h1>
           <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.45)' }}>
             {subscribeMode ? 'Enter your info below and you\'ll be taken to checkout.' : 'No credit card required. Full access from day one.'}
@@ -279,7 +279,7 @@ export default function SignupPage() {
                 cursor: !selectedPlan ? 'not-allowed' : 'pointer', transition: 'all 0.15s',
                 opacity: (loading || buyLoading) ? 0.7 : 1,
               }}>
-                {loading ? 'Creating account…' : 'Start My Free 14-Day Trial'}
+                {loading ? 'Creating account…' : 'Start My Free 7-Day Trial'}
               </button>
 
               <button
@@ -311,7 +311,7 @@ export default function SignupPage() {
                 <span style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>No credit card required</span>
               </div>
               <p style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.5 }}>
-                Your 14-day free trial starts immediately. After 14 days you'll be asked to subscribe to continue using DumpTruckBoss.
+                Your 7-day free trial starts immediately. After 7 days you'll be asked to subscribe to continue using DumpTruckBoss.
               </p>
             </div>
           )}

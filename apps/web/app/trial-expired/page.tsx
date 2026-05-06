@@ -23,7 +23,7 @@ export default async function TrialExpiredPage() {
         {/* Card */}
         <div style={{ background: '#141f2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', padding: '40px', textAlign: 'center' }}>
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚛</div>
-          <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>Your 14-Day Free Trial Has Ended</h1>
+          <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>Your 7-Day Free Trial Has Ended</h1>
           <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.6, marginBottom: '32px' }}>
             Subscribe now to keep your data and continue running your business.
           </p>

@@ -147,7 +147,7 @@ const table: { section: string; rows: { label: string; vals: [V, V, V] }[] }[] =
 // ─── FAQ ─────────────────────────────────────────────────────────────────────
 
 const faq = [
-  { q: 'Is there a free trial?', a: 'Yes — Owner Operator and Fleet plans include a 14-day free trial. No credit card required. Full access from day one.' },
+  { q: 'Is there a free trial?', a: 'Yes — Owner Operator and Fleet plans include a 7-day free trial. No credit card required. Full access from day one.' },
   { q: 'Can I change plans later?', a: 'Absolutely. Upgrade or downgrade any time. Changes take effect at the next billing cycle.' },
   { q: 'What happens to my data if I cancel?', a: 'Your data stays in the system for 30 days after cancellation. You can export everything before then.' },
   { q: 'Is there a limit on load tickets?', a: 'Owner Operator is capped at 200 tickets/month. Fleet and Enterprise include unlimited tickets.' },
@@ -233,7 +233,7 @@ export default function PricingPage() {
           Choose a plan built for<br className="hidden-xs" /> your hauling business.
         </h1>
         <p style={{ fontSize: '17px', color: 'rgba(255,255,255,0.45)', marginBottom: '36px', lineHeight: 1.6 }}>
-          Owner Operator and Fleet plans include a free 14-day trial. No credit card required.
+          Owner Operator and Fleet plans include a free 7-day trial. No credit card required.
         </p>
 
         {/* Billing toggle */}
@@ -443,7 +443,7 @@ export default function PricingPage() {
                 {/* Trust bullets (trial plans) */}
                 {!isEnterprise && (
                   <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: hl ? '1px solid rgba(45,122,79,0.3)' : '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {['14-day free trial', 'No credit card required', 'Cancel anytime'].map((t) => (
+                    {['7-day free trial', 'No credit card required', 'Cancel anytime'].map((t) => (
                       <div key={t} style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: 'rgba(255,255,255,0.35)' }}>
                         <span style={{ color: hl ? GREEN_LIGHT : GREEN, fontWeight: 700 }}>✓</span>
                         {t}
@@ -564,7 +564,7 @@ export default function PricingPage() {
             Ready to run your business like a boss?
           </h2>
           <p style={{ fontSize: '16px', color: 'rgba(255,255,255,0.45)', marginBottom: '36px', maxWidth: '480px', margin: '0 auto 36px' }}>
-            14-day free trial. No credit card required. Set up in 10 minutes.
+            7-day free trial. No credit card required. Set up in 10 minutes.
           </p>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link

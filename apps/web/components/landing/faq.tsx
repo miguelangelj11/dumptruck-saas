@@ -6,7 +6,7 @@ import { ChevronDown } from 'lucide-react'
 const faqs = [
   {
     q: 'Is there really no credit card required for the free trial?',
-    a: "Correct. You can start your 14-day free trial with just an email address. We won't ask for payment information until you decide to subscribe.",
+    a: "Correct. You can start your 7-day free trial with just an email address. We won't ask for payment information until you decide to subscribe.",
   },
   {
     q: 'Can I switch plans at any time?',

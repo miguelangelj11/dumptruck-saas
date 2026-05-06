@@ -19,7 +19,7 @@ export default function FinalCTA() {
               className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-lg px-8 py-4 text-base font-semibold transition-all hover:shadow-lg"
               style={{ background: '#F5B731', color: '#1a1a1a' }}
             >
-              Start Free 14-Day Trial <ArrowRight className="h-4 w-4 shrink-0" />
+              Start Free 7-Day Trial <ArrowRight className="h-4 w-4 shrink-0" />
             </Link>
             <Link
               href="mailto:sales@dumptruckboss.com"
@@ -30,7 +30,7 @@ export default function FinalCTA() {
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-white/40">
-            {['No credit card required', '14-day free trial', 'Cancel anytime'].map((t) => (
+            {['No credit card required', '7-day free trial', 'Cancel anytime'].map((t) => (
               <span key={t} className="flex items-center gap-2">
                 <span className="h-1 w-1 rounded-full bg-[#4ade80]" />
                 {t}

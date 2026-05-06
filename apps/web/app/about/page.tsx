@@ -167,7 +167,7 @@ export default function AboutPage() {
       <div className="bg-[#0f1923] border-t border-white/10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 text-center">
           <h2 className="text-2xl font-bold text-white mb-3">Ready to ditch the paper?</h2>
-          <p className="text-white/50 mb-8">14-day free trial. No credit card required.</p>
+          <p className="text-white/50 mb-8">7-day free trial. No credit card required.</p>
           <a
             href="/signup"
             className="inline-block px-8 py-3 rounded-xl font-semibold text-white transition-colors"
