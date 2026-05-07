@@ -813,6 +813,16 @@ export default function TicketsPage() {
             </div>
 
             <form onSubmit={handleSave} className="p-6 space-y-5">
+              {/* AI-Generated Record banner */}
+              {editing?.generated_by_ai && (
+                <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <span className="text-base mt-0.5">🤖</span>
+                  <div>
+                    <p className="text-sm font-semibold text-amber-800">AI-Generated Record</p>
+                    <p className="text-xs text-amber-700 mt-0.5">This ticket was extracted by AI. Please verify all values before using in invoices or payroll.</p>
+                  </div>
+                </div>
+              )}
               {/* Row 1: Job + Company */}
               <div className="grid grid-cols-2 gap-4">
                 <div>

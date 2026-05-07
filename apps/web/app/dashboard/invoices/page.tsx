@@ -1659,11 +1659,12 @@ export default function InvoicesPage() {
                             <p className="text-sm font-medium text-gray-900 truncate">{load.job_name}</p>
                             <p className="text-sm font-semibold text-gray-700 shrink-0">${fmt(load.rate)}<span className="text-xs font-normal text-gray-400">/{load.rate_type ?? 'load'}</span></p>
                           </div>
-                          <div className="flex items-center gap-3 mt-0.5">
+                          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                             <span className="text-xs text-gray-500">{load.driver_name}</span>
                             {load.truck_number && <span className="text-xs text-gray-400">Truck {load.truck_number}</span>}
                             <span className="text-xs text-gray-400">{fmtDate(load.date)}</span>
                             {slips.length > 0 && <span className="text-xs text-gray-400">{slips.length} ticket{slips.length !== 1 ? 's' : ''}{totalTons > 0 ? ` · ${totalTons} tons` : ''}</span>}
+                            {load.generated_by_ai && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[10px] font-bold uppercase tracking-wide">🤖 AI — Verify before invoicing</span>}
                           </div>
                         </div>
                       </label>
