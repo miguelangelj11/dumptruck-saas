@@ -33,9 +33,10 @@ type Props = {
   companyName?: string | null
   profileName?: string | null
   plan?: string | null
+  isSuperAdmin?: boolean
 }
 
-export default function Sidebar({ user, logoUrl, companyName: companyNameProp, profileName, plan }: Props) {
+export default function Sidebar({ user, logoUrl, companyName: companyNameProp, profileName, plan, isSuperAdmin }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -121,7 +122,12 @@ export default function Sidebar({ user, logoUrl, companyName: companyNameProp, p
         <div className="flex items-center gap-3 px-2 mb-2">
           <CompanyAvatar logoUrl={logoUrl} name={companyName} size={32} bg="var(--hf-sidebar-accent)" />
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-white truncate">{profileName || companyName}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs font-bold text-white truncate">{profileName || companyName}</p>
+              {isSuperAdmin && (
+                <span className="shrink-0 text-[9px] font-bold bg-yellow-400/20 text-yellow-300 px-1.5 py-0.5 rounded-full">👑 Owner</span>
+              )}
+            </div>
             <p className="text-[10px] text-white/50 truncate">{user.email}</p>
           </div>
         </div>

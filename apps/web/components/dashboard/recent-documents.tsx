@@ -3,7 +3,16 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { FolderOpen, FileText, Image as ImageIcon, Bot, Receipt, Truck } from 'lucide-react'
-import type { DocumentItem } from '@/app/api/documents/route'
+type DocumentItem = {
+  id: string
+  category: 'ai_import' | 'ticket_photo' | 'subcontractor_photo' | 'received_invoice'
+  name: string
+  url: string
+  mime: string
+  job_name: string | null
+  created_at: string
+  meta: Record<string, unknown>
+}
 
 type Category = DocumentItem['category']
 

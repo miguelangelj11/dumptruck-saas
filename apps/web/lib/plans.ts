@@ -148,14 +148,32 @@ function normalizePlanId(plan: string | null | undefined): PlanId {
   return 'owner_operator'
 }
 
-export function getPlanGate(company: { plan?: string | null; subscription_status?: string | null }) {
+export function getPlanGate(company: {
+  plan?: string | null
+  subscription_status?: string | null
+  is_super_admin?: boolean | null
+  subscription_override?: string | null
+}) {
+  if (company.is_super_admin || company.subscription_override) {
+    return {
+      planId:          'growth' as PlanId,
+      can:             (_feature: FeatureKey) => true,
+      truckLimit:      null,
+      isOwnerOperator: false,
+      isFleet:         false,
+      isGrowth:        true,
+      isSuperAdmin:    true,
+    }
+  }
+
   const planId = normalizePlanId(company.plan ?? company.subscription_status)
   return {
     planId,
-    can: (feature: FeatureKey) => canAccess(planId, feature),
-    truckLimit: PLANS[planId].limits.trucks,
+    can:             (feature: FeatureKey) => canAccess(planId, feature),
+    truckLimit:      PLANS[planId].limits.trucks,
     isOwnerOperator: planId === 'owner_operator',
     isFleet:         planId === 'fleet',
     isGrowth:        planId === 'growth',
+    isSuperAdmin:    false,
   }
 }

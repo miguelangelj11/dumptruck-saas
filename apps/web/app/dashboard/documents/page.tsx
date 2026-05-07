@@ -6,9 +6,18 @@ import {
   FileText, Image as ImageIcon, Bot, Receipt, Truck,
   RefreshCw, Download,
 } from 'lucide-react'
-import type { DocumentItem } from '@/app/api/documents/route'
-
 type Category = 'all' | 'ai_import' | 'ticket_photo' | 'subcontractor_photo' | 'received_invoice'
+
+type DocumentItem = {
+  id: string
+  category: Exclude<Category, 'all'>
+  name: string
+  url: string
+  mime: string
+  job_name: string | null
+  created_at: string
+  meta: Record<string, unknown>
+}
 type ViewMode = 'grid' | 'list'
 
 const CATEGORY_TABS: { id: Category; label: string; icon: React.ElementType; color: string }[] = [

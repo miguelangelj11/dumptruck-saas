@@ -224,6 +224,16 @@ export async function POST(request: Request) {
         const plan   = priceToPlan(sub.items.data[0]?.price.id)
         const status = stripeStatus(sub.status)
 
+        const { data: existingCo } = await admin
+          .from('companies')
+          .select('is_super_admin, subscription_override')
+          .eq('stripe_customer_id', sub.customer as string)
+          .maybeSingle()
+        if (existingCo?.is_super_admin || existingCo?.subscription_override) {
+          console.log('[stripe-webhook] Super admin account — skipping subscription.updated')
+          break
+        }
+
         const updates: Record<string, unknown> = {
           stripe_subscription_id: sub.id,
           stripe_price_id:        sub.items.data[0]?.price.id ?? null,
@@ -248,6 +258,16 @@ export async function POST(request: Request) {
       case 'customer.subscription.deleted': {
         const sub = event.data.object as Stripe.Subscription
 
+        const { data: existingCo } = await admin
+          .from('companies')
+          .select('is_super_admin, subscription_override')
+          .eq('stripe_customer_id', sub.customer as string)
+          .maybeSingle()
+        if (existingCo?.is_super_admin || existingCo?.subscription_override) {
+          console.log('[stripe-webhook] Super admin account — skipping subscription.deleted')
+          break
+        }
+
         const { error } = await admin
           .from('companies')
           .update({
@@ -267,6 +287,16 @@ export async function POST(request: Request) {
       // ── Payment failed → past_due ──────────────────────────────────────────
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice
+
+        const { data: existingCo } = await admin
+          .from('companies')
+          .select('is_super_admin, subscription_override')
+          .eq('stripe_customer_id', invoice.customer as string)
+          .maybeSingle()
+        if (existingCo?.is_super_admin || existingCo?.subscription_override) {
+          console.log('[stripe-webhook] Super admin account — skipping payment_failed')
+          break
+        }
 
         const { error } = await admin
           .from('companies')

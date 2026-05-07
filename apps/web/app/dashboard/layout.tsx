@@ -44,7 +44,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (organizationId) {
     const { data } = await admin
       .from('companies')
-      .select('name, logo_url, primary_color, accent_color, onboarding_completed, trial_ends_at, subscription_status, plan, owner_id, is_internal')
+      .select('name, logo_url, primary_color, accent_color, onboarding_completed, trial_ends_at, subscription_status, plan, owner_id, is_internal, is_super_admin, subscription_override')
       .eq('id', organizationId)
       .maybeSingle()
     coData = data as Record<string, unknown> | null
@@ -53,7 +53,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!coData) {
     const { data } = await admin
       .from('companies')
-      .select('name, logo_url, primary_color, accent_color, onboarding_completed, trial_ends_at, subscription_status, plan, owner_id, is_internal')
+      .select('name, logo_url, primary_color, accent_color, onboarding_completed, trial_ends_at, subscription_status, plan, owner_id, is_internal, is_super_admin, subscription_override')
       .eq('owner_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -68,11 +68,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/onboarding')
   }
 
-  const trialEndsAt        = (co?.trial_ends_at       as string | null | undefined) ?? null
-  const subscriptionStatus = (co?.subscription_status as string | null | undefined) ?? null
-  const isInternal         = !!(co?.is_internal        as boolean | null | undefined)
+  const trialEndsAt        = (co?.trial_ends_at         as string | null | undefined) ?? null
+  const subscriptionStatus = (co?.subscription_status   as string | null | undefined) ?? null
+  const isInternal         = !!(co?.is_internal          as boolean | null | undefined)
+  const isSuperAdmin       = !!(co?.is_super_admin       as boolean | null | undefined)
+  const subscriptionOverride = (co?.subscription_override as string | null | undefined) ?? null
 
-  if (!isInternal) {
+  if (!isInternal && !isSuperAdmin && !subscriptionOverride) {
     if (subscriptionStatus === 'expired' && !isSettingsPath) {
       redirect('/subscribe')
     }
@@ -86,9 +88,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
     }
   }
 
-  // Past-due payment banner
+  // Past-due payment banner (never shown to super admin)
   let pastDueBanner: React.ReactNode = null
-  if (subscriptionStatus === 'past_due') {
+  if (!isSuperAdmin && !subscriptionOverride && subscriptionStatus === 'past_due') {
     pastDueBanner = (
       <div style={{
         background: '#fef2f2',
@@ -122,9 +124,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
     )
   }
 
-  // Trial banner — show for all 7 days (not for internal accounts)
+  // Trial banner — show for all 7 days (not for internal/super-admin accounts)
   let trialBanner: React.ReactNode = null
-  if (!isInternal && subscriptionStatus === 'trial' && trialEndsAt) {
+  if (!isInternal && !isSuperAdmin && !subscriptionOverride && subscriptionStatus === 'trial' && trialEndsAt) {
     const msLeft   = new Date(trialEndsAt).getTime() - Date.now()
     const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24))
     if (daysLeft > 0) {
@@ -180,6 +182,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           companyName={(co?.name as string | null | undefined) ?? null}
           profileName={(profile as { full_name?: string | null } | null)?.full_name ?? null}
           plan={plan}
+          isSuperAdmin={isSuperAdmin}
         />
         <main className="flex-1 overflow-y-auto pt-14 md:pt-0 flex flex-col">
           <Suspense fallback={null}>
