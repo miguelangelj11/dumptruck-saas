@@ -16,9 +16,11 @@ const companyLinks = [
 ]
 
 const legalLinks = [
-  { label: 'Privacy',  href: '/privacy' },
-  { label: 'Terms',    href: '/terms' },
-  { label: 'Security', href: '/security' },
+  { label: 'Privacy Policy',   href: '/privacy' },
+  { label: 'Terms of Service', href: '/terms' },
+  { label: 'Acceptable Use',   href: '/legal/acceptable-use' },
+  { label: 'AI Disclaimer',    href: '/legal/ai-disclaimer' },
+  { label: 'Security',         href: '/security' },
 ]
 
 export default function Footer() {

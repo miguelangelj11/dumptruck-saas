@@ -80,21 +80,31 @@ export default function SignupPage() {
         return
       }
 
+      const now = new Date().toISOString()
       const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
       await supabase.from('companies').insert({
         id:                  user.id,
         name:                companyName,
         owner_id:            user.id,
         plan:                selectedPlan,
-        trial_started_at:    new Date().toISOString(),
+        trial_started_at:    now,
         trial_ends_at:       trialEndsAt,
         subscription_status: 'trial',
+        terms_accepted_at:   now,
+        terms_version:       '2026-05-07',
+        privacy_accepted_at: now,
       })
 
       await supabase.from('profiles').upsert({
         id:              user.id,
         organization_id: user.id,
       }, { onConflict: 'id' })
+
+      // Log consent audit trail
+      await supabase.from('user_consents').insert([
+        { user_id: user.id, company_id: user.id, document_type: 'terms_of_service', document_version: '2026-05-07', accepted_at: now },
+        { user_id: user.id, company_id: user.id, document_type: 'privacy_policy',   document_version: '2026-05-07', accepted_at: now },
+      ])
 
       localStorage.setItem('dtb_selected_plan', selectedPlan)
       clearTimeout(timer)
@@ -311,8 +321,11 @@ export default function SignupPage() {
               <span style={{ fontSize: '13px', color: '#6b7280', lineHeight: 1.5 }}>
                 I agree to the{' '}
                 <Link href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#2d7a4f', textDecoration: 'underline' }}>Terms of Service</Link>
-                {' '}and{' '}
+                {', '}
                 <Link href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#2d7a4f', textDecoration: 'underline' }}>Privacy Policy</Link>
+                {', and '}
+                <Link href="/legal/acceptable-use" target="_blank" rel="noopener noreferrer" style={{ color: '#2d7a4f', textDecoration: 'underline' }}>Acceptable Use Policy</Link>
+                {'. I acknowledge that AI-extracted ticket data requires human review before use in invoices or payroll.'}
               </span>
             </label>
 
