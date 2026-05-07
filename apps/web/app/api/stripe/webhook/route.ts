@@ -10,6 +10,7 @@ function priceToPlan(priceId: string | null | undefined): string | null {
   const map: Record<string, string> = {
     [process.env.STRIPE_OWNER_PRICE_ID      ?? '__none__']: 'owner_operator',
     [process.env.STRIPE_FLEET_PRICE_ID      ?? '__none__']: 'fleet',
+    [process.env.STRIPE_GROWTH_PRICE_ID     ?? '__none__']: 'growth',
     [process.env.STRIPE_ENTERPRISE_PRICE_ID ?? '__none__']: 'growth',
   }
   return map[priceId] ?? null
@@ -63,6 +64,30 @@ export async function POST(request: Request) {
   }
 
   const admin = getAdmin()
+
+  // ── Idempotency: deduplicate Stripe retries ──────────────────────────────
+  // Insert the event_id — unique constraint prevents double-processing.
+  // If the insert returns a conflict, the event was already handled.
+  const { error: dedupError, count: dedupCount } = await admin
+    .from('webhook_events')
+    .insert({ event_id: event.id, event_type: event.type, status: 'processing' }, { count: 'exact' })
+    .select()
+
+  if (dedupError) {
+    // Code 23505 = unique_violation — already processed
+    if ((dedupError as { code?: string }).code === '23505') {
+      console.log(`[stripe-webhook] Duplicate event ${event.id} — skipping`)
+      return NextResponse.json({ received: true, duplicate: true })
+    }
+    // Table doesn't exist yet (42P01) — degrade gracefully and continue
+    if ((dedupError as { code?: string }).code !== '42P01') {
+      console.error('[stripe-webhook] webhook_events insert error:', dedupError)
+    }
+  } else if ((dedupCount ?? 0) === 0) {
+    // Insert returned no rows (conflict without error on some Supabase versions)
+    console.log(`[stripe-webhook] Duplicate event ${event.id} — skipping`)
+    return NextResponse.json({ received: true, duplicate: true })
+  }
 
   try {
     switch (event.type) {
@@ -290,7 +315,7 @@ export async function POST(request: Request) {
 
         const { data: existingCo } = await admin
           .from('companies')
-          .select('is_super_admin, subscription_override')
+          .select('id, name, is_super_admin, subscription_override')
           .eq('stripe_customer_id', invoice.customer as string)
           .maybeSingle()
         if (existingCo?.is_super_admin || existingCo?.subscription_override) {
@@ -307,6 +332,23 @@ export async function POST(request: Request) {
           console.error('[stripe-webhook] invoice.payment_failed DB error:', error)
           return NextResponse.json({ error: 'DB update failed' }, { status: 500 })
         }
+
+        // Send payment failed email via Resend
+        const customerEmail = (invoice as { customer_email?: string }).customer_email
+          ?? (await stripe.customers.retrieve(invoice.customer as string).then(c => ('email' in c ? c.email : null)).catch(() => null))
+
+        if (customerEmail && process.env.RESEND_API_KEY) {
+          const resend = new Resend(process.env.RESEND_API_KEY)
+          const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://dumptruckboss.com'
+          const amountDue = invoice.amount_due ? `$${(invoice.amount_due / 100).toFixed(2)}` : 'your subscription'
+          resend.emails.send({
+            from:    'DumpTruckBoss Billing <noreply@dumptruckboss.com>',
+            to:      customerEmail,
+            subject: 'Action Required: Payment failed for DumpTruckBoss',
+            html:    buildPaymentFailedEmail({ email: customerEmail, amountDue, billingUrl: `${siteUrl}/dashboard/settings` }),
+          }).catch(err => console.error('[stripe-webhook] payment_failed email error:', err))
+        }
+
         console.log(`[stripe-webhook] Payment failed for customer ${invoice.customer as string}`)
         break
       }
@@ -323,10 +365,66 @@ export async function POST(request: Request) {
     }
   } catch (err) {
     console.error(`[stripe-webhook] Error processing ${event.type}:`, err)
+    // Mark as failed so it can be inspected
+    await admin.from('webhook_events').update({ status: 'failed', processed_at: new Date().toISOString() })
+      .eq('event_id', event.id).catch(() => {})
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 
+  // Mark event as successfully processed
+  await admin.from('webhook_events').update({ status: 'processed', processed_at: new Date().toISOString() })
+    .eq('event_id', event.id).catch(() => {})
+
   return NextResponse.json({ received: true })
+}
+
+function buildPaymentFailedEmail({ email, amountDue, billingUrl }: { email: string; amountDue: string; billingUrl: string }): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1.0" /><title>Payment Failed</title></head>
+<body style="margin:0;padding:0;background:#f4f6f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f8;padding:32px 0;">
+  <tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+      <tr>
+        <td style="background:#7f1d1d;padding:28px 40px;text-align:center;">
+          <span style="font-size:22px;font-weight:800;color:#ffffff;">DumpTruckBoss — Payment Failed</span>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:40px 40px 32px;">
+          <h1 style="margin:0 0 8px;font-size:22px;font-weight:800;color:#111827;">We couldn't process your payment</h1>
+          <p style="margin:0 0 16px;font-size:15px;color:#6b7280;line-height:1.6;">
+            We were unable to charge <strong>${amountDue}</strong> for your DumpTruckBoss subscription. Your account remains active for the next <strong>3 days</strong> while we retry.
+          </p>
+          <p style="margin:0 0 24px;font-size:15px;color:#6b7280;line-height:1.6;">
+            Please update your payment method to avoid any interruption to your service.
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+            <tr>
+              <td align="center">
+                <a href="${billingUrl}" style="display:inline-block;background:#dc2626;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:14px 36px;border-radius:10px;">
+                  Update Payment Method →
+                </a>
+              </td>
+            </tr>
+          </table>
+          <p style="margin:0;font-size:13px;color:#9ca3af;line-height:1.5;">
+            If you believe this is an error, please contact us at support@dumptruckboss.com.<br />
+            Account email: <strong>${email}</strong>
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td style="background:#f9fafb;border-top:1px solid #f3f4f6;padding:20px 40px;text-align:center;">
+          <p style="margin:0;font-size:11px;color:#d1d5db;">© ${new Date().getFullYear()} DumpTruckBoss — operated by SALAO TRANSPORT INC</p>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>`
 }
 
 function buildSetupEmail({ email, companyName, setupUrl }: { email: string; companyName: string; setupUrl: string }): string {
