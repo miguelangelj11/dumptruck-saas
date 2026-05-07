@@ -221,14 +221,21 @@ export async function POST(request: Request) {
   const err = lastErr as { message?: string; status?: number; raw?: string }
   console.error('[extract-document] final error:', err?.message ?? lastErr)
 
-  const clientMessage = err?.message?.includes('parse')
-    ? 'Could not read the document structure — try a clearer image or PDF'
-    : err?.message?.includes('No data rows')
-    ? 'No ticket data found — make sure the document contains haul or load records'
-    : 'AI extraction failed — try again or use a clearer document'
+  const rawMsg = err?.message ?? ''
+
+  const clientMessage =
+    rawMsg.includes('credit balance') || rawMsg.includes('billing') || rawMsg.includes('credits')
+      ? 'Anthropic API credits exhausted — add credits at console.anthropic.com/settings/billing'
+      : rawMsg.includes('parse') || rawMsg.includes('JSON')
+      ? 'Could not read the document structure — try a clearer image or PDF'
+      : rawMsg.includes('No data rows')
+      ? 'No ticket data found — make sure the document contains haul or load records'
+      : rawMsg.includes('invalid_api_key') || rawMsg.includes('authentication')
+      ? 'AI service authentication failed — check ANTHROPIC_API_KEY in environment settings'
+      : 'AI extraction failed — try again or use a clearer document'
 
   return NextResponse.json(
-    { error: clientMessage, details: err?.message },
+    { error: clientMessage },
     { status: 500 }
   )
 }
