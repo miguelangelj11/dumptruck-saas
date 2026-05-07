@@ -17,6 +17,8 @@ function mapRateType(rt: string | null | undefined): string {
   return 'load'
 }
 
+type ImportRow = Record<string, unknown>
+
 export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -26,7 +28,7 @@ export async function POST(request: Request) {
   if (!companyId) return NextResponse.json({ error: 'Company not found' }, { status: 403 })
 
   let body: {
-    rows: Record<string, unknown>[]
+    rows: ImportRow[]
     sourceDocumentUrl?: string
     documentName?: string
     documentType?: string
@@ -43,14 +45,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No rows to import' }, { status: 400 })
   }
 
-  // Check plan + monthly import limit
+  // ── Plan monthly limit check ───────────────────────────────────────────
   const { data: co } = await supabase
     .from('companies')
     .select('plan, is_internal')
     .eq('id', companyId)
     .maybeSingle()
 
-  const plan = (co?.plan as string) ?? 'owner_operator'
+  const plan       = (co?.plan as string) ?? 'owner_operator'
   const isInternal = !!(co as Record<string, unknown> | null)?.is_internal
 
   if (!isInternal) {
@@ -75,16 +77,16 @@ export async function POST(request: Request) {
     }
   }
 
-  // Create import session record
+  // ── Create import session ─────────────────────────────────────────────
   const { data: importSession } = await supabase
     .from('ticket_imports')
     .insert({
-      company_id:    companyId,
-      document_url:  sourceDocumentUrl ?? null,
-      document_name: documentName ?? null,
-      document_type: documentType ?? null,
-      status:        'processing',
-      total_rows:    rows.length,
+      company_id:     companyId,
+      document_url:   sourceDocumentUrl ?? null,
+      document_name:  documentName ?? null,
+      document_type:  documentType ?? null,
+      status:         'processing',
+      total_rows:     rows.length,
       raw_extraction: rawExtraction ?? null,
     })
     .select('id')
@@ -92,45 +94,123 @@ export async function POST(request: Request) {
 
   const importId = importSession?.id
 
-  // Insert loads
-  const imported: string[] = []
+  // ── Fetch contractors for billed_to_us matching ───────────────────────
+  const { data: contractors } = await supabase
+    .from('contractors')
+    .select('id, name')
+    .eq('company_id', companyId)
+    .eq('status', 'active')
+
+  const contractorMap = new Map<string, string>() // name.toLowerCase() → id
+  for (const c of contractors ?? []) {
+    contractorMap.set(c.name.toLowerCase().trim(), c.id)
+  }
+
+  // ── Process rows ──────────────────────────────────────────────────────
+  const paidIds:   string[] = []
+  const billedIds: string[] = []
   const failed:   Array<{ row: number; error: string }> = []
 
+  let paidTotal   = 0
+  let billedTotal = 0
+
   for (let i = 0; i < rows.length; i++) {
-    const row = rows[i]!
+    const row      = rows[i]!
+    const billing  = String(row.billing_direction ?? 'paid_to_us')
+    const rateVal  = parseFloat(String(row.rate ?? 0)) || 0
+    const amount   = parseFloat(String(row.estimated_amount ?? 0)) || 0
+    const timeIn   = String(row.start_time ?? '')
+    const timeOut  = String(row.end_time   ?? '')
+    const jobName  = String(row.job_name   || 'Imported Job')
+    const driver   = String(row.driver_name || 'Unknown Driver')
+    const rowDate  = String(row.date || new Date().toISOString().slice(0, 10))
+    const brokerName = row.broker_name ? String(row.broker_name) : null
 
-    const rateVal = parseFloat(String(row.rate ?? row.estimated_amount ?? 0)) || 0
-    const timeIn  = String(row.start_time ?? '')
-    const timeOut = String(row.end_time ?? '')
+    // ── billed_to_us: try contractor_tickets first ────────────────────
+    if (billing === 'billed_to_us') {
+      const brokerKey = brokerName?.toLowerCase().trim() ?? ''
+      const contractorId = brokerKey ? contractorMap.get(brokerKey) : undefined
 
-    const payload: Record<string, unknown> = {
+      if (contractorId) {
+        // Insert into contractor_tickets
+        const { data: ct, error } = await supabase
+          .from('contractor_tickets')
+          .insert({
+            company_id:    companyId,
+            contractor_id: contractorId,
+            job_name:      jobName,
+            client_company: null,
+            date:          rowDate,
+            truck_number:  row.truck_number ? String(row.truck_number) : null,
+            ticket_number: row.ticket_number ? String(row.ticket_number) : null,
+            material:      row.material ? String(row.material) : null,
+            rate:          rateVal,
+            rate_type:     mapRateType(row.rate_type as string | undefined),
+            hours_worked:  timeIn && timeOut ? `${timeIn}–${timeOut}` : (row.hours ? String(row.hours) : null),
+            status:        'pending',
+            notes:         `AI imported${brokerName ? ` · ${brokerName}` : ''}`,
+          })
+          .select('id')
+          .maybeSingle()
+
+        if (error || !ct) {
+          failed.push({ row: i, error: error?.message ?? 'contractor_ticket insert failed' })
+          continue
+        }
+
+        billedIds.push(ct.id)
+        billedTotal += amount
+
+        // Add tonnage slip if available
+        const tonnage = row.tons != null ? parseFloat(String(row.tons)) : null
+        if ((row.ticket_number || tonnage) && tonnage) {
+          await supabase.from('contractor_ticket_slips').insert({
+            ticket_id:     ct.id,
+            company_id:    companyId,
+            tonnage:       tonnage || null,
+            image_url:     null,
+          })
+        }
+        continue
+      }
+      // No contractor match → fall through and insert into loads with billing_direction flag
+    }
+
+    // ── paid_to_us (and unmatched billed_to_us fallback) → loads ──────
+    const loadPayload: Record<string, unknown> = {
       company_id:          companyId,
-      job_name:            String(row.job_name || 'Imported Job'),
+      job_name:            jobName,
       material:            row.material ? String(row.material) : null,
       load_type:           row.material ? String(row.material) : null,
-      driver_name:         String(row.driver_name || 'Unknown Driver'),
+      driver_name:         driver,
       truck_number:        row.truck_number ? String(row.truck_number) : null,
-      date:                String(row.date || new Date().toISOString().slice(0, 10)),
+      date:                rowDate,
       rate:                rateVal,
       rate_type:           mapRateType(row.rate_type as string | undefined),
       time_in:             timeIn || null,
       time_out:            timeOut || null,
       hours_worked:        timeIn && timeOut ? `${timeIn}–${timeOut}` : (row.hours ? String(row.hours) : null),
-      client_company:      row.broker_name ? String(row.broker_name) : null,
+      client_company:      brokerName,
       status:              'pending',
       source:              'office',
       generated_by_ai:     true,
       source_document_url: sourceDocumentUrl ?? null,
       ai_confidence:       row.confidence != null ? Number(row.confidence) : null,
-      shift:               row.shift ? String(row.shift) : null,
-      phase:               row.phase ? String(row.phase) : null,
-      broker_name:         row.broker_name ? String(row.broker_name) : null,
+      shift:               row.shift          ? String(row.shift)          : null,
+      phase:               row.phase          ? String(row.phase)          : null,
+      broker_name:         brokerName,
       project_number:      row.project_number ? String(row.project_number) : null,
+      billing_direction:   billing,
+      notes:               billing === 'billed_to_us' && !brokerName
+        ? 'Billed to us — assign contractor manually'
+        : billing === 'billed_to_us'
+        ? `Billed to us by ${brokerName} — no contractor match found`
+        : null,
     }
 
     const { data: newLoad, error } = await supabase
       .from('loads')
-      .insert(payload)
+      .insert(loadPayload)
       .select('id')
       .maybeSingle()
 
@@ -139,12 +219,17 @@ export async function POST(request: Request) {
       continue
     }
 
-    imported.push(newLoad.id)
+    if (billing === 'billed_to_us') {
+      billedIds.push(newLoad.id)
+      billedTotal += amount
+    } else {
+      paidIds.push(newLoad.id)
+      paidTotal += amount
+    }
 
-    // Create load_ticket if we have ticket number or tonnage
+    // Create load_ticket for tonnage / ticket number
     const ticketNumber = row.ticket_number ? String(row.ticket_number) : null
     const tonnage      = row.tons != null ? parseFloat(String(row.tons)) : null
-
     if (ticketNumber || (tonnage && tonnage > 0)) {
       await supabase.from('load_tickets').insert({
         load_id:       newLoad.id,
@@ -156,13 +241,14 @@ export async function POST(request: Request) {
     }
   }
 
-  // Update import session
+  // ── Update import session ─────────────────────────────────────────────
+  const totalImported = paidIds.length + billedIds.length
   if (importId) {
     await supabase
       .from('ticket_imports')
       .update({
         status:        failed.length === rows.length ? 'failed' : 'completed',
-        imported_rows: imported.length,
+        imported_rows: totalImported,
         skipped_rows:  failed.length,
         completed_at:  new Date().toISOString(),
       })
@@ -170,9 +256,14 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({
-    imported: imported.length,
+    success: true,
+    paid_to_us:   { count: paidIds.length,   total: paidTotal,   ids: paidIds },
+    billed_to_us: { count: billedIds.length, total: billedTotal, ids: billedIds },
+    total_imported: totalImported,
     failed,
-    ids: imported,
     importId,
+    // legacy field for backward compat
+    imported: totalImported,
+    ids: [...paidIds, ...billedIds],
   })
 }

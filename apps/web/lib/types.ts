@@ -49,6 +49,7 @@ export type Load = {
   phase?: string | null
   broker_name?: string | null
   project_number?: string | null
+  billing_direction?: 'paid_to_us' | 'billed_to_us' | null
 }
 
 export type Driver = {
