@@ -228,12 +228,14 @@ export default function SettingsPage() {
   const [deletingAccount, setDeletingAccount] = useState(false)
 
   // ── Subscription state ───────────────────────────────────────────────────
-  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null)
-  const [subscriptionPlan,   setSubscriptionPlan]   = useState<string | null>(null)
-  const [trialEndsAtSub,     setTrialEndsAtSub]     = useState<string | null>(null)
-  const [stripeCustomerId,   setStripeCustomerId]   = useState<string | null>(null)
-  const [portalLoading,      setPortalLoading]      = useState(false)
-  const [upgradePlanLoading, setUpgradePlanLoading] = useState(false)
+  const [subscriptionStatus,   setSubscriptionStatus]   = useState<string | null>(null)
+  const [subscriptionPlan,     setSubscriptionPlan]     = useState<string | null>(null)
+  const [subscriptionOverride, setSubscriptionOverride] = useState<string | null>(null)
+  const [isSuperAdmin,         setIsSuperAdmin]         = useState(false)
+  const [trialEndsAtSub,       setTrialEndsAtSub]       = useState<string | null>(null)
+  const [stripeCustomerId,     setStripeCustomerId]     = useState<string | null>(null)
+  const [portalLoading,        setPortalLoading]        = useState(false)
+  const [upgradePlanLoading,   setUpgradePlanLoading]   = useState(false)
 
   // ── Export state ─────────────────────────────────────────────────────────
   const today      = new Date().toISOString().split('T')[0]!
@@ -376,13 +378,15 @@ export default function SettingsPage() {
         // Subscription data
         const { data: subData } = await supabase
           .from('companies')
-          .select('subscription_status, plan, trial_ends_at, stripe_customer_id')
+          .select('subscription_status, plan, trial_ends_at, stripe_customer_id, is_super_admin, subscription_override')
           .eq('id', c.id)
           .maybeSingle()
         if (subData) {
           const s = subData as Record<string, unknown>
           setSubscriptionStatus(s.subscription_status as string | null ?? null)
           setSubscriptionPlan(s.plan as string | null ?? null)
+          setSubscriptionOverride(s.subscription_override as string | null ?? null)
+          setIsSuperAdmin(!!(s.is_super_admin))
           setTrialEndsAtSub(s.trial_ends_at as string | null ?? null)
           setStripeCustomerId(s.stripe_customer_id as string | null ?? null)
         }
@@ -1751,6 +1755,19 @@ export default function SettingsPage() {
 
           {/* Plan + status badge */}
           {(() => {
+            // Super admin — owner account with lifetime full access
+            if (isSuperAdmin || subscriptionOverride) {
+              return (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900">👑 Owner — Growth Plan</div>
+                    <div className="text-xs text-gray-400 mt-0.5">Lifetime free access — all features unlocked</div>
+                  </div>
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-700">Owner</span>
+                </div>
+              )
+            }
+
             const isTrial = subscriptionStatus === 'trial' || (!subscriptionStatus && !!trialEndsAtSub)
             const msLeft  = trialEndsAtSub ? new Date(trialEndsAtSub).getTime() - Date.now() : null
             const daysLeft = msLeft !== null ? Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24))) : null
@@ -1800,8 +1817,8 @@ export default function SettingsPage() {
             )
           })()}
 
-          {/* Trial progress bar — shows whenever trial_ends_at is set */}
-          {trialEndsAtSub && (() => {
+          {/* Trial progress bar — hidden for super admin */}
+          {!isSuperAdmin && !subscriptionOverride && trialEndsAtSub && (() => {
             const totalMs  = 14 * 24 * 60 * 60 * 1000
             const msLeft   = new Date(trialEndsAtSub).getTime() - Date.now()
             const daysLeft = Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24)))
@@ -1830,8 +1847,8 @@ export default function SettingsPage() {
             )
           })()}
 
-          {/* Next-tier upsell card */}
-          {(() => {
+          {/* Next-tier upsell card — hidden for super admin */}
+          {!isSuperAdmin && !subscriptionOverride && (() => {
             // Normalize plan key — handles null, '', 'owner' (Stripe metadata key), unknown values
             const normalizePlan = (p: string | null): 'owner_operator' | 'fleet' | 'enterprise' => {
               if (p === 'fleet')      return 'fleet'
@@ -1933,8 +1950,8 @@ export default function SettingsPage() {
             )
           })()}
 
-          {/* Billing portal / manage subscription */}
-          {(stripeCustomerId || (!subscriptionPlan && !stripeCustomerId)) && (
+          {/* Billing portal / manage subscription — hidden for super admin */}
+          {!isSuperAdmin && !subscriptionOverride && (stripeCustomerId || (!subscriptionPlan && !stripeCustomerId)) && (
             <div className="flex flex-wrap gap-2">
               {stripeCustomerId && (
                 <button

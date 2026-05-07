@@ -45,7 +45,9 @@ export default function ContractorsPage() {
   const [userId, setUserId] = useState('')
   const [contractors, setContractors] = useState<Contractor[]>([])
   const [loading, setLoading] = useState(true)
-  const [companyPlan, setCompanyPlan] = useState<string | null>(null)
+  const [companyPlan,          setCompanyPlan]          = useState<string | null>(null)
+  const [companyIsSuperAdmin,  setCompanyIsSuperAdmin]  = useState(false)
+  const [companySubOverride,   setCompanySubOverride]   = useState<string | null>(null)
   const [selected, setSelected] = useState<Contractor | null>(null)
   const [clientCompanies, setClientCompanies] = useState<ClientCompany[]>([])
 
@@ -93,13 +95,16 @@ export default function ContractorsPage() {
       supabase.from('contractors').select('*').eq('company_id', orgId).order('name'),
       supabase.from('client_companies').select('*').eq('company_id', orgId).order('name'),
       supabase.from('trucks').select('id,truck_number').eq('company_id', orgId).order('truck_number'),
-      supabase.from('companies').select('plan').eq('id', orgId).maybeSingle(),
+      supabase.from('companies').select('plan, is_super_admin, subscription_override').eq('id', orgId).maybeSingle(),
     ])
     if (contractorsRes.error) toast.error('Failed to load subcontractors: ' + contractorsRes.error.message)
     setContractors(contractorsRes.data ?? [])
     setClientCompanies(companiesRes.data ?? [])
     setTrucks((trucksRes.data ?? []) as { id: string; truck_number: string }[])
-    setCompanyPlan((planRes.data as { plan?: string | null } | null)?.plan ?? null)
+    const planCoData = planRes.data as Record<string, unknown> | null
+    setCompanyPlan(planCoData?.plan as string | null ?? null)
+    setCompanyIsSuperAdmin(!!(planCoData?.is_super_admin))
+    setCompanySubOverride(planCoData?.subscription_override as string | null ?? null)
     setLoading(false)
   }
 
@@ -649,8 +654,8 @@ export default function ContractorsPage() {
     )
   }
 
-  // Fleet plan gate — owner_operator cannot access subcontractors
-  if (!loading && companyPlan === 'owner_operator') {
+  // Fleet plan gate — owner_operator cannot access subcontractors (super admin bypasses)
+  if (!loading && companyPlan === 'owner_operator' && !companyIsSuperAdmin && !companySubOverride) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-8">
         <span className="text-6xl mb-4">🔒</span>

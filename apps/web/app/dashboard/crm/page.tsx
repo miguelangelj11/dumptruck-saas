@@ -81,7 +81,9 @@ export default function CRMPage() {
   const [leads,       setLeads]       = useState<Lead[]>([])
   const [loading,     setLoading]     = useState(true)
   const [companyId,   setCompanyId]   = useState<string | null>(null)
-  const [plan,        setPlan]        = useState<string | null>(null)
+  const [plan,               setPlan]               = useState<string | null>(null)
+  const [isSuperAdmin,       setIsSuperAdmin]       = useState(false)
+  const [subscriptionOverride, setSubscriptionOverride] = useState<string | null>(null)
 
   // Lead form
   const [showLeadForm, setShowLeadForm] = useState(false)
@@ -111,12 +113,14 @@ export default function CRMPage() {
 
     const [leadsRes, companyRes, quotesRes] = await Promise.all([
       supabase.from('leads').select('*').eq('company_id', cid).order('created_at', { ascending: false }),
-      supabase.from('companies').select('plan').eq('id', cid).maybeSingle(),
+      supabase.from('companies').select('plan, is_super_admin, subscription_override').eq('id', cid).maybeSingle(),
       supabase.from('quotes').select('*').eq('company_id', cid).order('created_at', { ascending: false }),
     ])
 
     const co = companyRes.data as Record<string, unknown> | null
     setPlan(co?.plan as string | null ?? null)
+    setIsSuperAdmin(!!(co?.is_super_admin))
+    setSubscriptionOverride(co?.subscription_override as string | null ?? null)
 
     const quotes = (quotesRes.data ?? []) as Quote[]
     const rawLeads = (leadsRes.data ?? []) as Lead[]
@@ -129,7 +133,7 @@ export default function CRMPage() {
   // ── Plan gate ────────────────────────────────────────────────────────────────
 
   if (!loading) {
-    const gate = getPlanGate({ plan })
+    const gate = getPlanGate({ plan, is_super_admin: isSuperAdmin, subscription_override: subscriptionOverride })
     if (!gate.can('crm_pipeline')) {
       return (
         <LockedFeature
