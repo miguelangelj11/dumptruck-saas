@@ -369,11 +369,6 @@ export default function SignupPage() {
           </p>
         </div>
 
-        <p style={{ textAlign: 'center', fontSize: '13px', color: 'rgba(255,255,255,0.3)', marginTop: '20px' }}>
-          Need 15+ trucks?{' '}
-          <Link href="/schedule-demo" style={{ color: '#f59e0b', textDecoration: 'none' }}>Schedule a demo</Link>
-          {' '}for our Enterprise Plan.
-        </p>
       </div>
     </div>
   )
