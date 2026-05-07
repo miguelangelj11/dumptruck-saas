@@ -7,7 +7,7 @@ export const runtime = 'nodejs'
 const MONTHLY_LIMITS: Record<string, number> = {
   owner_operator: 10,
   fleet:          50,
-  growth:         Infinity,
+  growth:         200,
   enterprise:     Infinity,
 }
 

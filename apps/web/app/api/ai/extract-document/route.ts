@@ -119,7 +119,7 @@ async function callClaude(
     : { type: 'image',    source: { type: 'base64', media_type: mimeType,          data: documentBase64 } }
 
   const response = await anthropic.messages.create({
-    model:      'claude-sonnet-4-6',
+    model:      'claude-haiku-4-5-20251001',
     max_tokens: 4096,
     messages: [{
       role:    'user',
@@ -186,10 +186,47 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'File too large — please upload a document under 4 MB' }, { status: 413 })
   }
 
-  // Verify company ownership
+  // Verify company + check monthly import limit before spending AI credits
+  const MONTHLY_LIMITS: Record<string, number> = {
+    owner_operator: 10,
+    fleet:          50,
+    growth:         200,
+    enterprise:     Infinity,
+  }
+
   if (companyId) {
-    const { data: co } = await supabase.from('companies').select('id').eq('id', companyId).maybeSingle()
+    const { data: co } = await supabase
+      .from('companies')
+      .select('id, plan, is_internal')
+      .eq('id', companyId)
+      .maybeSingle()
+
     if (!co) return NextResponse.json({ error: 'Company not found' }, { status: 403 })
+
+    const isInternal = !!(co as Record<string, unknown>).is_internal
+    if (!isInternal) {
+      const plan  = String((co as Record<string, unknown>).plan ?? 'owner_operator')
+      const limit = MONTHLY_LIMITS[plan] ?? 10
+
+      if (isFinite(limit)) {
+        const monthStart = new Date()
+        monthStart.setDate(1)
+        monthStart.setHours(0, 0, 0, 0)
+
+        const { count } = await supabase
+          .from('ticket_imports')
+          .select('id', { count: 'exact', head: true })
+          .eq('company_id', companyId)
+          .gte('created_at', monthStart.toISOString())
+
+        if ((count ?? 0) >= limit) {
+          return NextResponse.json(
+            { error: `Monthly limit reached — your ${plan} plan allows ${limit} AI imports per month. Upgrade to import more.` },
+            { status: 429 }
+          )
+        }
+      }
+    }
   }
 
   console.log('[extract-document] starting extraction — mimeType:', mimeType, 'base64 length:', documentBase64.length)
