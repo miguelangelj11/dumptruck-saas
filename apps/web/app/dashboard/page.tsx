@@ -4,8 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import {
   TrendingUp, Truck, Receipt, Radio,
   Send, Plus, Users, FileText,
-  AlertTriangle, Clock, Activity,
+  AlertTriangle, Clock, Activity, FolderOpen,
 } from 'lucide-react'
+import RecentDocuments from '@/components/dashboard/recent-documents'
 import LoadsChart from '@/components/dashboard/loads-chart'
 import { ProfitAlerts } from '@/components/dashboard/profit-alerts'
 import { DriverProfitTable } from '@/components/dashboard/driver-profit-table'
@@ -634,6 +635,13 @@ export default async function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Recent Documents */}
+      {companyId && (
+        <div className="mb-6">
+          <RecentDocuments />
+        </div>
+      )}
 
       {/* Activity Feed */}
       {activityFeed.length > 0 && (
