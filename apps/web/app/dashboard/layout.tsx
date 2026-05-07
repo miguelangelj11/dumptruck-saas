@@ -44,7 +44,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (organizationId) {
     const { data } = await admin
       .from('companies')
-      .select('name, logo_url, primary_color, accent_color, onboarding_completed, trial_ends_at, subscription_status, plan, owner_id, is_internal, is_super_admin, subscription_override')
+      .select('name, logo_url, primary_color, accent_color, onboarding_completed, trial_ends_at, subscription_status, plan, owner_id, is_internal, is_super_admin, subscription_override, nav_order')
       .eq('id', organizationId)
       .maybeSingle()
     coData = data as Record<string, unknown> | null
@@ -183,6 +183,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           profileName={(profile as { full_name?: string | null } | null)?.full_name ?? null}
           plan={plan}
           isSuperAdmin={isSuperAdmin}
+          navOrder={(co?.nav_order as string[] | null | undefined) ?? null}
         />
         <main className="flex-1 overflow-y-auto pt-14 md:pt-0 flex flex-col">
           <Suspense fallback={null}>

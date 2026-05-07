@@ -2205,6 +2205,33 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {/* Sidebar Preferences */}
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+          <Hash className="h-4 w-4 text-gray-500" />
+          <h2 className="font-semibold text-sm text-gray-900">Sidebar Preferences</h2>
+        </div>
+        <div className="p-6 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-gray-900">Navigation Order</p>
+            <p className="text-xs text-gray-500 mt-0.5">Drag sidebar items to reorder them. Use this button to restore the default order.</p>
+          </div>
+          <button
+            onClick={async () => {
+              await fetch('/api/company/nav-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nav_order: null }),
+              })
+              window.location.reload()
+            }}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors shrink-0"
+          >
+            Reset to default order
+          </button>
+        </div>
+      </div>
+
       {/* Legal & Compliance */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
