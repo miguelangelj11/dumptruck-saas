@@ -119,45 +119,45 @@ const table: { section: string; rows: { label: string; vals: [V, V, V] }[] }[] =
       { label: 'Ticket photo upload',    vals: [true, true, true] },
       { label: 'Load tracking',          vals: ['Basic', 'Full', 'Full'] },
       { label: 'Full dispatch board',    vals: [false, true, true] },
-      { label: 'Driver mobile app',      vals: [false, false, true] },
-      { label: 'AI ticket photo reader', vals: [false, false, true] },
+      { label: 'AI document reader',     vals: [false, '50/mo', '400/mo'] },
+      { label: 'Documents hub',          vals: [false, false, true] },
     ],
   },
   {
     section: 'Team & Fleet',
     rows: [
-      { label: 'Drivers',            vals: ['Up to 3', 'Up to 15', 'Unlimited'] },
-      { label: 'Team logins',        vals: ['1 (owner)', '3', 'Unlimited'] },
-      { label: 'Role-based access',  vals: [false, false, true] },
-      { label: 'Subcontractor mgmt', vals: [false, true, true] },
+      { label: 'Trucks & drivers',       vals: ['Up to 5', 'Unlimited', 'Unlimited'] },
+      { label: 'Team logins',            vals: ['1 (owner)', 'Unlimited', 'Unlimited'] },
+      { label: 'Subcontractor mgmt',     vals: [false, true, true] },
+      { label: 'Client portal',          vals: [false, true, true] },
     ],
   },
   {
-    section: 'Invoicing',
+    section: 'Invoicing & Automation',
     rows: [
-      { label: 'Invoice types',           vals: ['Client only', 'All 3 types', 'All 3 types'] },
-      { label: 'PDF download',            vals: [true, true, true] },
-      { label: 'Send by email',           vals: [false, true, true] },
-      { label: 'Send by SMS',             vals: [false, false, true] },
-      { label: 'Weekly auto-invoice',     vals: [false, true, true] },
-      { label: 'QuickBooks export (CSV)', vals: [false, false, true] },
+      { label: 'Invoice types',              vals: ['Client only', 'All 3 types', 'All 3 types'] },
+      { label: 'Send by email',              vals: [false, true, true] },
+      { label: 'Missing ticket detection',   vals: [false, true, true] },
+      { label: 'Follow-up automation',       vals: [false, true, true] },
+      { label: 'Overdue invoice automation', vals: [false, true, true] },
+      { label: 'Weekly performance reports', vals: [false, true, true] },
     ],
   },
   {
-    section: 'Reporting',
+    section: 'Growth & CRM',
     rows: [
-      { label: 'Basic revenue dashboard',    vals: [true, true, true] },
-      { label: 'Revenue by driver / job',    vals: [false, true, true] },
-      { label: 'Advanced aging reports',     vals: [false, false, true] },
-      { label: 'Charts & contractor reports', vals: [false, false, true] },
+      { label: 'CRM Growth Pipeline',        vals: [false, false, true] },
+      { label: 'Quote builder',              vals: [false, false, true] },
+      { label: 'Advanced job profitability', vals: [false, false, true] },
+      { label: 'Mobile ticket + signature',  vals: [false, false, true] },
+      { label: 'Revenue per driver & truck', vals: [false, false, true] },
     ],
   },
   {
     section: 'Support',
     rows: [
-      { label: 'Support tier',             vals: ['Email', 'Priority email', 'Priority phone'] },
-      { label: 'Dedicated account manager', vals: [false, false, true] },
-      { label: 'Custom onboarding',         vals: [false, false, true] },
+      { label: 'Support tier',   vals: ['Email', 'Priority email', 'Priority phone'] },
+      { label: 'Free trial',     vals: ['7 days', '7 days', '7 days'] },
     ],
   },
 ]
@@ -165,12 +165,12 @@ const table: { section: string; rows: { label: string; vals: [V, V, V] }[] }[] =
 // ─── FAQ ─────────────────────────────────────────────────────────────────────
 
 const faq = [
-  { q: 'Is there a free trial?', a: 'Yes — Owner Operator and Fleet plans include a 7-day free trial. No credit card required. Full access from day one.' },
+  { q: 'Is there a free trial?', a: 'Yes — all plans include a 7-day free trial. No credit card required. Full access from day one.' },
   { q: 'Can I change plans later?', a: 'Absolutely. Upgrade or downgrade any time. Changes take effect at the next billing cycle.' },
   { q: 'What happens to my data if I cancel?', a: 'Your data stays in the system for 30 days after cancellation. You can export everything before then.' },
-  { q: 'Is there a limit on load tickets?', a: 'Owner Operator is capped at 200 tickets/month. Fleet and Enterprise include unlimited tickets.' },
-  { q: 'How does annual billing work?', a: 'Pay for 12 months upfront and save around 20%. You can switch from monthly to annual at any time from your account settings.' },
-  { q: 'Do you offer custom pricing for large fleets?', a: 'Yes. Enterprise pricing is custom and based on your fleet size, locations, and needs. Schedule a demo to get a quote.' },
+  { q: 'Is there a limit on load tickets?', a: 'No. All plans include unlimited ticket tracking.' },
+  { q: 'What is the Growth plan?', a: 'Growth adds the full CRM Pipeline, quote builder, advanced profitability reports, mobile ticket capture with signature, and 400 AI document reads per month — everything you need to win more jobs and scale revenue.' },
+  { q: 'Can I use DumpTruckBoss for subcontractors?', a: 'Yes. Fleet and Growth plans include full subcontractor management — track their loads, generate pay stubs, and settle up with one click.' },
 ]
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -193,7 +193,6 @@ function Cell({ v, highlighted }: { v: V; highlighted: boolean }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function PricingPage() {
-  const [annual, setAnnual] = useState(false)
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
   const router = useRouter()
 
@@ -251,59 +250,9 @@ export default function PricingPage() {
           Stop losing money on every load.<br />
           <span style={{ color: '#F5B731' }}>Run your dump truck business the right way.</span>
         </h1>
-        <p style={{ fontSize: '17px', color: 'rgba(255,255,255,0.45)', marginBottom: '36px', lineHeight: 1.6 }}>
-          Owner Operator and Fleet plans include a free 7-day trial. No credit card required.
+        <p style={{ fontSize: '17px', color: 'rgba(255,255,255,0.45)', marginBottom: '56px', lineHeight: 1.6 }}>
+          All plans include a free 7-day trial. No credit card required.
         </p>
-
-        {/* Billing toggle */}
-        <div style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '12px',
-          background: 'rgba(255,255,255,0.05)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: '100px',
-          padding: '8px 18px',
-          marginBottom: '56px',
-        }}>
-          <span style={{ fontSize: '13px', fontWeight: 600, color: annual ? 'rgba(255,255,255,0.35)' : '#fff', transition: 'color 0.2s' }}>
-            Monthly
-          </span>
-          <button
-            onClick={() => setAnnual(a => !a)}
-            aria-label="Toggle annual billing"
-            style={{
-              position: 'relative',
-              width: '44px',
-              height: '24px',
-              borderRadius: '100px',
-              border: 'none',
-              background: annual ? GREEN : 'rgba(255,255,255,0.2)',
-              cursor: 'pointer',
-              transition: 'background 0.2s',
-              outline: 'none',
-            }}
-          >
-            <span style={{
-              position: 'absolute',
-              top: '3px',
-              left: annual ? '23px' : '3px',
-              width: '18px',
-              height: '18px',
-              borderRadius: '50%',
-              background: '#fff',
-              transition: 'left 0.2s',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
-              display: 'block',
-            }} />
-          </button>
-          <span style={{ fontSize: '13px', fontWeight: 600, color: annual ? '#fff' : 'rgba(255,255,255,0.35)', transition: 'color 0.2s' }}>
-            Annual
-          </span>
-          <span style={{ fontSize: '11px', fontWeight: 700, background: GREEN, color: '#fff', padding: '3px 9px', borderRadius: '100px', lineHeight: 1.4 }}>
-            Save ~20%
-          </span>
-        </div>
       </div>
 
       {/* ── Pricing cards ─────────────────────────────────────────────────────── */}
@@ -311,9 +260,6 @@ export default function PricingPage() {
         <div className="plans-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', alignItems: 'stretch' }}>
           {plans.map((plan) => {
             const hl = plan.popular
-            const price = annual
-              ? (plan.annualPrice ?? plan.monthlyPrice)
-              : plan.monthlyPrice
 
             return (
               <div
@@ -358,14 +304,9 @@ export default function PricingPage() {
 
                 {/* Price block */}
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '44px', fontWeight: 800, color: '#fff', lineHeight: 1 }}>{price}</span>
+                  <span style={{ fontSize: '44px', fontWeight: 800, color: '#fff', lineHeight: 1 }}>{plan.monthlyPrice}</span>
                   <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.35)' }}>/mo</span>
                 </div>
-
-                {/* Annual savings note */}
-                <p style={{ fontSize: '12px', color: hl ? GREEN_LIGHT : 'rgba(255,255,255,0.35)', marginBottom: '6px', minHeight: '18px' }}>
-                  {annual && plan.annualSavings ? `${plan.annualSavings} · billed annually` : ''}
-                </p>
 
                 {/* Tagline */}
                 <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.5, marginBottom: '24px' }}>
@@ -582,23 +523,6 @@ export default function PricingPage() {
               }}
             >
               Start Free Trial →
-            </Link>
-            <Link
-              href="/schedule-demo"
-              style={{
-                display: 'inline-block',
-                padding: '14px 36px',
-                borderRadius: '12px',
-                background: 'transparent',
-                color: 'rgba(255,255,255,0.8)',
-                fontSize: '15px',
-                fontWeight: 600,
-                textDecoration: 'none',
-                border: '1px solid rgba(255,255,255,0.18)',
-                transition: 'border-color 0.15s',
-              }}
-            >
-              Schedule a Demo
             </Link>
           </div>
         </div>
