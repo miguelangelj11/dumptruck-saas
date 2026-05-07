@@ -43,6 +43,39 @@ type TicketRow = {
   imagePreview: string | null
 }
 
+// Controlled AM/PM time input — derives display state from the `value` prop string ("8:00 AM")
+function TimeInput({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const hasPM   = /PM/i.test(value)
+  const period  = hasPM ? 'PM' : 'AM'
+  const timeStr = value.replace(/\s*(AM|PM)\s*/i, '').trim()
+  const active  = timeStr.length > 0
+
+  return (
+    <div>
+      <label className="block text-xs font-medium text-gray-700 mb-1">{label}</label>
+      <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/20 focus-within:border-[var(--brand-primary)]">
+        <input
+          type="text"
+          value={timeStr}
+          onChange={e => onChange(e.target.value ? `${e.target.value} ${period}` : '')}
+          placeholder="8:00"
+          className="flex-1 px-3 py-2.5 text-sm focus:outline-none bg-white min-w-0"
+        />
+        <button
+          type="button"
+          onClick={() => onChange(timeStr ? `${timeStr} AM` : '')}
+          className={`px-2.5 py-2 text-xs font-semibold border-l border-gray-200 transition-colors ${active && period === 'AM' ? 'bg-[var(--brand-primary)] text-white' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
+        >AM</button>
+        <button
+          type="button"
+          onClick={() => onChange(timeStr ? `${timeStr} PM` : '')}
+          className={`px-2.5 py-2 text-xs font-semibold border-l border-gray-200 transition-colors ${active && period === 'PM' ? 'bg-[var(--brand-primary)] text-white' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
+        >PM</button>
+      </div>
+    </div>
+  )
+}
+
 const EMPTY_FORM = {
   job_name: '',
   client_company: '',
@@ -56,6 +89,8 @@ const EMPTY_FORM = {
   time_out: '',
   rate: '',
   rate_type: 'load',
+  rate_quantity: '',
+  total_pay: '',
   status: 'pending',
   notes: '',
 }
@@ -80,6 +115,9 @@ export default function TicketsPage() {
   const [clientCompanies, setClientCompanies] = useState<{ id: string; name: string }[]>([])
   const [driversList, setDriversList] = useState<{ id: string; name: string }[]>([])
   const [driverMode, setDriverMode] = useState<'dropdown' | 'manual'>('dropdown')
+  const [activeJobs, setActiveJobs] = useState<{ id: string; job_name: string; rate: number | null; rate_type: string | null; material: string | null }[]>([])
+  const [jobMode, setJobMode] = useState<'dropdown' | 'manual'>('dropdown')
+  const [autoFilledFromJob, setAutoFilledFromJob] = useState(false)
   const [companyPlan,          setCompanyPlan]          = useState<string | null>(null)
   const [isInternal,           setIsInternal]           = useState(false)
 
@@ -257,25 +295,47 @@ export default function TicketsPage() {
     return supabase.storage.from('ticket-photos').getPublicUrl(path).data.publicUrl
   }
 
-  function openAdd() {
-    setEditing(null); setForm(EMPTY_FORM); setTicketRows([makeEmptyRow()])
+  async function fetchActiveJobs() {
+    const orgId = await getCompanyId()
+    if (!orgId) return
+    const { data } = await supabase
+      .from('jobs')
+      .select('id, job_name, rate, rate_type, material')
+      .eq('company_id', orgId)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+    setActiveJobs((data ?? []) as typeof activeJobs)
+  }
+
+  async function openAdd() {
+    setEditing(null)
+    setForm({ ...EMPTY_FORM, date: new Date().toISOString().slice(0, 10) })
+    setTicketRows([makeEmptyRow()])
     setDriverMode('dropdown')
+    setJobMode('dropdown')
+    setAutoFilledFromJob(false)
+    await fetchActiveJobs()
     setShowForm(true)
   }
 
-  function openEdit(l: Load) {
+  async function openEdit(l: Load) {
     setEditing(l)
+    const lAny = l as Record<string, unknown>
     setForm({
       job_name: l.job_name, client_company: l.client_company ?? '',
       load_type: l.load_type ?? '', origin: l.origin ?? '', destination: l.destination ?? '',
       driver_name: l.driver_name, truck_number: l.truck_number ?? '',
       date: l.date, time_in: l.time_in ?? '', time_out: l.time_out ?? '',
       rate: String(l.rate), rate_type: l.rate_type ?? 'load',
+      rate_quantity: lAny.rate_quantity ? String(lAny.rate_quantity) : '',
+      total_pay: lAny.total_pay ? String(lAny.total_pay) : '',
       status: l.status, notes: l.notes ?? '',
     })
     setTicketRows([makeEmptyRow()])
-    // Keep dropdown mode if the driver exists in the list, otherwise manual
     setDriverMode(driversList.some(d => d.name === l.driver_name) ? 'dropdown' : 'manual')
+    setAutoFilledFromJob(false)
+    await fetchActiveJobs()
+    setJobMode('dropdown')
     setShowForm(true)
   }
 
@@ -287,13 +347,18 @@ export default function TicketsPage() {
     const orgId = await getCompanyId()
     if (!uid || !orgId) { toast.error('Not authenticated'); setSaving(false); return }
 
+    const jobRate  = parseFloat(form.rate) || 0
+    const totalPay = parseFloat(form.total_pay) || null
+    const rateQty  = parseFloat(form.rate_quantity) || null
     const payload = {
       job_name: form.job_name, client_company: form.client_company || null,
       load_type: form.load_type || null, origin: form.origin || null,
       destination: form.destination || null, driver_name: form.driver_name,
       truck_number: form.truck_number || null, date: form.date,
       time_in: form.time_in || null, time_out: form.time_out || null,
-      rate: parseFloat(form.rate) || 0, rate_type: form.rate_type,
+      rate: jobRate, rate_type: form.rate_type,
+      total_pay: totalPay,
+      rate_quantity: rateQty,
       status: form.status as Load['status'], notes: form.notes || null,
       company_id: orgId,
     }
@@ -826,8 +891,38 @@ export default function TicketsPage() {
               {/* Row 1: Job + Company */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Job Name *</label>
-                  <input required value={form.job_name} onChange={e => setForm(p => ({ ...p, job_name: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="Ironclad Grade Site" />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-medium text-gray-700">Job Name *</label>
+                    <button type="button" onClick={() => { setJobMode(m => m === 'dropdown' ? 'manual' : 'dropdown'); setAutoFilledFromJob(false) }} className="text-xs text-[var(--brand-primary)] hover:underline">
+                      {jobMode === 'dropdown' ? '✏️ Enter manually' : '← Back to list'}
+                    </button>
+                  </div>
+                  {jobMode === 'dropdown' && activeJobs.length > 0 ? (
+                    <select
+                      required
+                      value={activeJobs.find(j => j.job_name === form.job_name)?.id ?? ''}
+                      onChange={e => {
+                        const job = activeJobs.find(j => j.id === e.target.value)
+                        if (!job) { setForm(p => ({ ...p, job_name: '' })); setAutoFilledFromJob(false); return }
+                        const updates: Partial<typeof form> = { job_name: job.job_name }
+                        if (job.rate != null) { updates.rate = String(job.rate); setAutoFilledFromJob(true) } else { setAutoFilledFromJob(false) }
+                        if (job.rate_type) updates.rate_type = job.rate_type
+                        if (job.material) updates.load_type = job.material
+                        setForm(p => ({ ...p, ...updates }))
+                      }}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white"
+                    >
+                      <option value="">— Select a job —</option>
+                      {activeJobs.map(j => <option key={j.id} value={j.id}>{j.job_name}</option>)}
+                    </select>
+                  ) : jobMode === 'dropdown' ? (
+                    <div className="w-full rounded-lg border border-dashed border-gray-200 px-3 py-2.5 text-sm text-gray-400 flex items-center justify-between">
+                      <span>No active jobs</span>
+                      <button type="button" onClick={() => setJobMode('manual')} className="text-xs text-[var(--brand-primary)] shrink-0">Enter manually →</button>
+                    </div>
+                  ) : (
+                    <input required value={form.job_name} onChange={e => { setForm(p => ({ ...p, job_name: e.target.value })); setAutoFilledFromJob(false) }} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="Ironclad Grade Site" />
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Working Under (Company)</label>
@@ -915,40 +1010,82 @@ export default function TicketsPage() {
 
                 {/* Row 5: Time in + Time out */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Time In</label>
-                  <input
-                    type="text"
-                    value={form.time_in}
-                    onChange={e => setForm(p => ({ ...p, time_in: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
-                    placeholder="e.g. 7:00AM"
-                  />
+                  <TimeInput label="Time In" value={form.time_in} onChange={v => setForm(p => ({ ...p, time_in: v }))} />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Time Out</label>
-                  <input
-                    type="text"
-                    value={form.time_out}
-                    onChange={e => setForm(p => ({ ...p, time_out: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
-                    placeholder="e.g. 5:00PM"
-                  />
+                  <TimeInput label="Time Out" value={form.time_out} onChange={v => setForm(p => ({ ...p, time_out: v }))} />
                 </div>
 
-                {/* Row 6: Rate + Status */}
+                {/* Row 6: Job Rate + Qty */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Rate ($) *</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Job Rate</label>
                   <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/20 focus-within:border-[var(--brand-primary)]">
                     <span className="flex items-center px-3 bg-gray-50 text-sm text-gray-500 border-r border-gray-200">$</span>
-                    <input required type="number" min="0" step="0.01" value={form.rate} onChange={e => setForm(p => ({ ...p, rate: e.target.value }))} className="flex-1 px-3 py-2.5 text-sm focus:outline-none bg-white" placeholder="450.00" />
+                    <input
+                      type="number" min="0" step="0.01"
+                      value={form.rate}
+                      onChange={e => {
+                        const r = e.target.value
+                        setAutoFilledFromJob(false)
+                        const qty = parseFloat(form.rate_quantity)
+                        const rNum = parseFloat(r)
+                        setForm(p => ({ ...p, rate: r, total_pay: (!isNaN(rNum) && !isNaN(qty) && qty > 0) ? String((rNum * qty).toFixed(2)) : p.total_pay }))
+                      }}
+                      className="flex-1 px-3 py-2.5 text-sm focus:outline-none bg-white"
+                      placeholder="0.00"
+                    />
                     <select value={form.rate_type} onChange={e => setForm(p => ({ ...p, rate_type: e.target.value }))} className="px-2 text-xs font-medium text-gray-600 bg-gray-50 border-l border-gray-200 focus:outline-none">
                       <option value="load">/ load</option>
                       <option value="ton">/ ton</option>
                       <option value="hr">/ hr</option>
                     </select>
                   </div>
+                  {autoFilledFromJob && <p className="text-xs text-green-600 mt-1">✓ Rate auto-filled from job settings</p>}
                 </div>
                 <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Qty / Tons</label>
+                  <input
+                    type="number" min="0" step="0.01"
+                    value={form.rate_quantity}
+                    onChange={e => {
+                      const qty = e.target.value
+                      const rNum = parseFloat(form.rate)
+                      const qNum = parseFloat(qty)
+                      setForm(p => ({ ...p, rate_quantity: qty, total_pay: (!isNaN(rNum) && rNum > 0 && !isNaN(qNum) && qNum > 0) ? String((rNum * qNum).toFixed(2)) : p.total_pay }))
+                    }}
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
+                    placeholder="0"
+                  />
+                </div>
+
+                {/* Auto-calc helper */}
+                {parseFloat(form.rate) > 0 && parseFloat(form.rate_quantity) > 0 && (
+                  <div className="col-span-2 -mt-2">
+                    <p className="text-xs text-gray-400">
+                      ${parseFloat(form.rate).toFixed(2)}/{form.rate_type} × {form.rate_quantity} ={' '}
+                      <span className="font-semibold text-gray-600">${(parseFloat(form.rate) * parseFloat(form.rate_quantity)).toFixed(2)}</span>
+                    </p>
+                  </div>
+                )}
+
+                {/* Total Pay */}
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Total Pay ($) *</label>
+                  <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/20 focus-within:border-[var(--brand-primary)]">
+                    <span className="flex items-center px-3 bg-gray-50 text-sm text-gray-500 border-r border-gray-200">$</span>
+                    <input
+                      required type="number" min="0" step="0.01"
+                      value={form.total_pay}
+                      onChange={e => setForm(p => ({ ...p, total_pay: e.target.value }))}
+                      className="flex-1 px-3 py-2.5 text-sm focus:outline-none bg-white"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">Auto-calculated from job rate × qty, or enter manually</p>
+                </div>
+
+                {/* Status */}
+                <div className="col-span-2">
                   <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
                   <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white">
                     <option value="pending">Pending</option>
