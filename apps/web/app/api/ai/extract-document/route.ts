@@ -181,6 +181,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'documentBase64 and mimeType are required' }, { status: 400 })
   }
 
+  const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf']
+  if (!ALLOWED_MIME.includes(mimeType)) {
+    return NextResponse.json({ error: 'File type not allowed.' }, { status: 400 })
+  }
+
+  // Guard against absurdly large base64 payloads (≈10 MB decoded)
+  if (documentBase64.length > 14_000_000) {
+    return NextResponse.json({ error: 'File too large. Maximum size is 10 MB.' }, { status: 400 })
+  }
+
   // ~5 MB base64 guard (~3.75 MB raw)
   if (documentBase64.length > 5_500_000) {
     return NextResponse.json({ error: 'File too large — please upload a document under 4 MB' }, { status: 413 })
