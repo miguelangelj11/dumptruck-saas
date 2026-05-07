@@ -46,6 +46,16 @@ export async function POST(request: Request) {
   if (!company) return NextResponse.json({ error: 'Invalid company link' }, { status: 400 })
 
   // Upload photo via service key if provided
+  const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  const MAX_PHOTO_SIZE = 10 * 1024 * 1024 // 10 MB
+  if (photo && photo.size > 0) {
+    if (!ALLOWED_PHOTO_TYPES.includes(photo.type)) {
+      return NextResponse.json({ error: 'Photo must be a JPEG, PNG, or WebP image.' }, { status: 400 })
+    }
+    if (photo.size > MAX_PHOTO_SIZE) {
+      return NextResponse.json({ error: 'Photo too large. Maximum size is 10 MB.' }, { status: 400 })
+    }
+  }
   let imageUrl: string | null = null
   if (photo && photo.size > 0) {
     const ext = photo.name.split('.').pop()?.toLowerCase() ?? 'jpg'
