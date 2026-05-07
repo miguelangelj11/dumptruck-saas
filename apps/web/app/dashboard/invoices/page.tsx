@@ -277,6 +277,7 @@ export default function InvoicesPage() {
   const [selectedContractorId, setSelectedContractorId] = useState('')
   const [contractorTickets, setContractorTickets] = useState<CTWithSlips[]>([])
   const [selectedCTIds, setSelectedCTIds] = useState<Set<string>>(new Set())
+  const [taxRate, setTaxRate] = useState('')
   const [saving, setSaving] = useState(false)
   const [companyPlan, setCompanyPlan] = useState<string | null>(null)
 
@@ -517,7 +518,10 @@ export default function InvoicesPage() {
         parseFloat(driverTotalHours) || 0,
       )
     : buildLineItems(selectedLoads, 0)
-  const subtotal = previewItems.reduce((s, i) => s + i.amount, 0)
+  const subtotal        = previewItems.reduce((s, i) => s + i.amount, 0)
+  const taxRateNum      = invoiceType === 'client' ? (parseFloat(taxRate) || 0) : 0
+  const taxAmountCalc   = subtotal * taxRateNum / 100
+  const invoiceTotal    = subtotal + taxAmountCalc
   const activeSelectionSize = invoiceType === 'contractor' ? selectedCTIds.size : selectedLoadIds.size
 
   // Approved loads not yet selected — used for the "you're leaving money behind" warning
@@ -669,7 +673,8 @@ export default function InvoicesPage() {
       client_address: createForm.client_address || null,
       client_phone: createForm.client_phone || null,
       client_email: createForm.client_email || null,
-      total: subtotal,
+      total: invoiceTotal,
+      tax_rate: taxRateNum > 0 ? taxRateNum : null,
       status: 'draft',
       due_date: createForm.due_date || null,
       date_paid: createForm.date_paid || null,
@@ -742,6 +747,7 @@ export default function InvoicesPage() {
     setCreateForm({ client_name: '', client_address: '', client_phone: '', client_email: '', date_from: '', date_to: '', notes: '', due_date: localDatePlus(30), date_paid: '', payment_method: 'check' })
     setClientNameMode('dropdown')
     setDeductionPct('')
+    setTaxRate('')
     setDriverPayType('percentage')
     setDriverPayPct('')
     setDriverHourlyRate('')
@@ -1475,6 +1481,33 @@ export default function InvoicesPage() {
                   <p className="text-xs text-gray-400 mt-1">Deduction from contractor total</p>
                 </div>
               )}
+              {/* Client Invoice — tax rate (Growth plan) */}
+              {invoiceType === 'client' && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
+                    Tax Rate
+                    {companyPlan !== 'growth' && companyPlan !== 'enterprise' && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#F5B731]/15 text-[#b45309]">
+                        <Lock className="h-2.5 w-2.5" /> Growth
+                      </span>
+                    )}
+                  </label>
+                  {companyPlan === 'growth' || companyPlan === 'enterprise' ? (
+                    <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/20 focus-within:border-[var(--brand-primary)]">
+                      <input
+                        type="number" min="0" max="100" step="0.01"
+                        value={taxRate} onChange={e => setTaxRate(e.target.value)}
+                        className="flex-1 px-3 py-2.5 text-sm focus:outline-none bg-white" placeholder="0"
+                      />
+                      <span className="flex items-center px-3 bg-gray-50 text-sm text-gray-500 border-l border-gray-200">%</span>
+                    </div>
+                  ) : (
+                    <a href="/dashboard/settings?tab=billing" className="flex items-center gap-2 rounded-lg border border-dashed border-[#F5B731]/50 bg-[#F5B731]/5 px-3 py-2 text-xs text-[#b45309] hover:bg-[#F5B731]/10 transition-colors">
+                      <Lock className="h-3 w-3" /> Upgrade to Growth to add tax to invoices
+                    </a>
+                  )}
+                </div>
+              )}
               <div className={invoiceType === 'client' ? 'col-span-2' : ''}>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
                 <textarea
@@ -1679,6 +1712,7 @@ export default function InvoicesPage() {
                 </table>
               </div>
               <div className="px-5 py-4 border-t border-gray-100 flex flex-col items-end gap-1.5">
+                {/* Deduction rows (contractor) */}
                 {parseFloat(deductionPct) > 0 && (() => {
                   const pct = parseFloat(deductionPct)
                   const gross = previewItems.reduce((s, i) => s + i.amount / (1 - pct / 100), 0)
@@ -1696,11 +1730,24 @@ export default function InvoicesPage() {
                     </>
                   )
                 })()}
+                {/* Tax row (client, Growth plan) */}
+                {invoiceType === 'client' && taxRateNum > 0 && (
+                  <>
+                    <div className="flex items-center gap-8 text-sm text-gray-500">
+                      <span className="w-32 text-right">Subtotal</span>
+                      <span className="w-24 text-right tabular-nums">${fmt(subtotal)}</span>
+                    </div>
+                    <div className="flex items-center gap-8 text-sm text-gray-500">
+                      <span className="w-32 text-right">Tax ({taxRate}%)</span>
+                      <span className="w-24 text-right tabular-nums">+${fmt(taxAmountCalc)}</span>
+                    </div>
+                  </>
+                )}
                 <div className="flex items-center gap-8 pt-1.5 border-t border-gray-100 mt-0.5">
                   <span className="w-32 text-right text-sm font-bold text-gray-900">
                     {invoiceType === 'contractor' ? 'Net Pay' : 'Total Due'}
                   </span>
-                  <span className="w-24 text-right text-base font-bold text-[var(--brand-primary)] tabular-nums">${fmt(subtotal)}</span>
+                  <span className="w-24 text-right text-base font-bold text-[var(--brand-primary)] tabular-nums">${fmt(invoiceTotal)}</span>
                 </div>
               </div>
             </div>
@@ -1739,6 +1786,9 @@ export default function InvoicesPage() {
     const grossTotal = firstDeduction > 0
       ? lineItems.reduce((s, i) => s + i.amount / (1 - firstDeduction / 100), 0)
       : total
+    const detailTaxRate   = (!isPaystub && (inv.tax_rate ?? 0) > 0) ? (inv.tax_rate ?? 0) : 0
+    const detailTaxAmount = total * detailTaxRate / 100
+    const detailGrandTotal = total + detailTaxAmount
     const initials = (companyName || 'MY').slice(0, 2).toUpperCase()
     const invoiceDate = new Date(inv.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
@@ -1977,9 +2027,15 @@ export default function InvoicesPage() {
                     <span>−${fmt(grossTotal - total)}</span>
                   </div>
                 )}
+                {detailTaxRate > 0 && (
+                  <div style={{display:'flex', justifyContent:'space-between', fontSize:14, color:'#6b7280', padding:'10px 0', borderBottom:'1px solid #f3f4f6'}}>
+                    <span>Tax ({detailTaxRate}%)</span>
+                    <span style={{fontVariantNumeric:'tabular-nums'}}>${fmt(detailTaxAmount)}</span>
+                  </div>
+                )}
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'baseline', paddingTop:14}}>
                   <span style={{fontSize:14, fontWeight:700, color:'#111827'}}>{isPaystub ? 'Net Pay' : 'Total Due'}</span>
-                  <span style={{fontSize:22, fontWeight:800, color:'var(--brand-primary)', fontVariantNumeric:'tabular-nums'}}>${fmt(total)}</span>
+                  <span style={{fontSize:22, fontWeight:800, color:'var(--brand-primary)', fontVariantNumeric:'tabular-nums'}}>${fmt(detailTaxRate > 0 ? detailGrandTotal : total)}</span>
                 </div>
               </div>
             </div>

@@ -96,6 +96,9 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
     ? lineItems.reduce((s, i) => s + i.amount / (1 - firstDeduction / 100), 0)
     : netTotal
   const isPaystub  = invoice.invoice_type === 'paystub' || invoice.invoice_type === 'contractor'
+  const taxRate    = (!isPaystub && (invoice.tax_rate ?? 0) > 0) ? (invoice.tax_rate ?? 0) : 0
+  const taxAmount  = netTotal * taxRate / 100
+  const grandTotal = netTotal + taxAmount
 
   return (
     <Document title={`Invoice ${invoice.invoice_number}`}>
@@ -185,11 +188,17 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
               <Text style={[s.totalValue, { color: '#ef4444' }]}>−{fmt(grossTotal - netTotal)}</Text>
             </View>
           )}
+          {taxRate > 0 && (
+            <View style={s.totalRow}>
+              <Text style={s.totalLabel}>Tax ({taxRate}%)</Text>
+              <Text style={s.totalValue}>{fmt(taxAmount)}</Text>
+            </View>
+          )}
           <View style={[s.totalRow, { borderTopWidth: 1.5, borderTopColor: '#1e3a2a', paddingTop: 4 }]}>
             <Text style={[s.totalLabel, s.bold]}>
               {isPaystub ? 'Net Pay' : 'Total Due'}
             </Text>
-            <Text style={[s.totalValue, s.bold, { color: '#1e3a2a', fontSize: 12 }]}>{fmt(netTotal)}</Text>
+            <Text style={[s.totalValue, s.bold, { color: '#1e3a2a', fontSize: 12 }]}>{fmt(taxRate > 0 ? grandTotal : netTotal)}</Text>
           </View>
         </View>
 

@@ -75,6 +75,7 @@ export type Invoice = {
   client_phone: string | null
   client_email: string | null
   total: number
+  tax_rate: number | null
   status: "draft" | "sent" | "partially_paid" | "paid" | "overdue"
   due_date: string | null
   date_paid: string | null
