@@ -9,7 +9,8 @@
     "revenue": "Revenue",
     "settings": "Settings",
     "signOut": "Sign out",
-    "signingOut": "Signing out…"
+    "signingOut": "Signing out…",
+    "crm": "CRM Pipeline"
   },
   "auth": {
     "welcomeBack": "Welcome back",

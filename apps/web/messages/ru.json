@@ -9,7 +9,8 @@
     "revenue": "Выручка",
     "settings": "Настройки",
     "signOut": "Выйти",
-    "signingOut": "Выход…"
+    "signingOut": "Выход…",
+    "crm": "CRM Pipeline"
   },
   "auth": {
     "welcomeBack": "С возвращением",

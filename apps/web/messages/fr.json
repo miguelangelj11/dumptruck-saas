@@ -9,7 +9,8 @@
     "revenue": "Revenus",
     "settings": "Paramètres",
     "signOut": "Se déconnecter",
-    "signingOut": "Déconnexion…"
+    "signingOut": "Déconnexion…",
+    "crm": "CRM Pipeline"
   },
   "auth": {
     "welcomeBack": "Bon retour",

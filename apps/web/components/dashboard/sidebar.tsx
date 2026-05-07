@@ -15,6 +15,7 @@ import {
   X,
   Clipboard,
   Lock,
+  Kanban,
 } from 'lucide-react'
 import { useState } from 'react'
 import Image from 'next/image'
@@ -48,6 +49,7 @@ export default function Sidebar({ user, logoUrl, companyName: companyNameProp, p
     { href: '/dashboard/drivers', icon: Users, label: t('drivers'), locked: false },
     { href: '/dashboard/invoices', icon: Receipt, label: t('invoices'), locked: false },
     { href: '/dashboard/revenue', icon: TrendingUp, label: t('revenue'), locked: false },
+    { href: '/dashboard/crm', icon: Kanban, label: t('crm'), locked: plan !== 'growth' && plan !== 'enterprise' },
     { href: '/dashboard/settings', icon: Settings, label: t('settings'), locked: false },
   ]
 

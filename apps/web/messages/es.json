@@ -9,7 +9,8 @@
     "revenue": "Ingresos",
     "settings": "Configuración",
     "signOut": "Cerrar sesión",
-    "signingOut": "Cerrando sesión…"
+    "signingOut": "Cerrando sesión…",
+    "crm": "CRM Pipeline"
   },
   "auth": {
     "welcomeBack": "Bienvenido de vuelta",
