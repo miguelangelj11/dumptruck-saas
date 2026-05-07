@@ -83,19 +83,35 @@ export default function ImportPage() {
   async function runExtraction(f: File) {
     setExtracting(true)
     try {
-      const bytes   = await f.arrayBuffer()
-      const base64  = Buffer.from(bytes).toString('base64')
+      // Use FileReader (browser-native) — Buffer is Node-only and not reliably polyfilled
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+          const result = reader.result as string
+          // result = "data:<mime>;base64,<data>" — strip the prefix
+          resolve(result.split(',')[1] ?? '')
+        }
+        reader.onerror = () => reject(new Error('Failed to read file'))
+        reader.readAsDataURL(f)
+      })
+
+      if (!base64) { toast.error('Could not read file — try again'); setExtracting(false); return }
+
+      // Detect MIME type; fallback to extension if browser leaves it empty
+      const mimeType = f.type || (f.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg')
       const companyId = await getCompanyId()
 
       const res = await fetch('/api/ai/extract-document', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ documentBase64: base64, mimeType: f.type, companyId }),
+        body:    JSON.stringify({ documentBase64: base64, mimeType, companyId }),
       })
 
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        toast.error((err as { error?: string }).error ?? 'AI extraction failed — try again')
+        const err = await res.json().catch(() => ({})) as { error?: string; details?: string }
+        const msg = err.error ?? 'AI extraction failed'
+        const detail = err.details ? ` — ${err.details}` : ''
+        toast.error(msg + detail, { duration: 6000 })
         setExtracting(false)
         return
       }

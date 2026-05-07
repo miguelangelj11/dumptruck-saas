@@ -84,6 +84,71 @@ Return ONLY valid JSON — no markdown, no explanation, just the JSON object:
   ]
 }`
 
+// ── JSON extraction with multiple fallback strategies ──────────────────────
+
+function extractJSON(text: string): Record<string, unknown> | null {
+  const attempts = [
+    // 1. Direct parse
+    () => JSON.parse(text),
+    // 2. Strip markdown fences then parse
+    () => JSON.parse(text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim()),
+    // 3. Grab first {...} block (greedy)
+    () => { const m = text.match(/\{[\s\S]*\}/); if (!m) throw new Error('no match'); return JSON.parse(m[0]) },
+    // 4. Grab JSON inside a code fence
+    () => { const m = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i); if (!m?.[1]) throw new Error('no match'); return JSON.parse(m[1]) },
+  ]
+  for (const fn of attempts) {
+    try { return fn() } catch { /* try next */ }
+  }
+  return null
+}
+
+// ── Single Claude call ─────────────────────────────────────────────────────
+
+async function callClaude(
+  anthropic: Anthropic,
+  documentBase64: string,
+  mimeType: string,
+): Promise<Record<string, unknown>> {
+  const isPdf = mimeType === 'application/pdf'
+
+  // Build content blocks typed to satisfy the SDK
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const docBlock: any = isPdf
+    ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: documentBase64 } }
+    : { type: 'image',    source: { type: 'base64', media_type: mimeType,          data: documentBase64 } }
+
+  const response = await anthropic.messages.create({
+    model:      'claude-sonnet-4-6',
+    max_tokens: 4096,
+    messages: [{
+      role:    'user',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      content: [docBlock, { type: 'text', text: EXTRACTION_PROMPT }] as any,
+    }],
+  })
+
+  const firstBlock = response.content[0]
+  const text = firstBlock?.type === 'text' ? firstBlock.text : ''
+
+  console.log('[extract-document] raw response preview:', text.slice(0, 300))
+
+  const extracted = extractJSON(text)
+  if (!extracted) {
+    console.error('[extract-document] JSON parse failed. Full response:', text)
+    throw Object.assign(new Error('Failed to parse AI response as JSON'), { raw: text })
+  }
+
+  if (!extracted.rows || !Array.isArray(extracted.rows)) {
+    console.error('[extract-document] No rows array in response:', JSON.stringify(extracted).slice(0, 300))
+    throw new Error('No data rows found in document')
+  }
+
+  return extracted
+}
+
+// ── Route handler ─────────────────────────────────────────────────────────
+
 export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -99,6 +164,7 @@ export async function POST(request: Request) {
 
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
+    console.error('[extract-document] ANTHROPIC_API_KEY not set')
     return NextResponse.json({ error: 'AI service not configured' }, { status: 503 })
   }
 
@@ -110,8 +176,14 @@ export async function POST(request: Request) {
   }
 
   const { documentBase64, mimeType, companyId } = body
+
   if (!documentBase64 || !mimeType) {
     return NextResponse.json({ error: 'documentBase64 and mimeType are required' }, { status: 400 })
+  }
+
+  // ~5 MB base64 guard (~3.75 MB raw)
+  if (documentBase64.length > 5_500_000) {
+    return NextResponse.json({ error: 'File too large — please upload a document under 4 MB' }, { status: 413 })
   }
 
   // Verify company ownership
@@ -120,48 +192,43 @@ export async function POST(request: Request) {
     if (!co) return NextResponse.json({ error: 'Company not found' }, { status: 403 })
   }
 
-  try {
-    const anthropic = new Anthropic({ apiKey })
-    const isPdf = mimeType === 'application/pdf'
+  console.log('[extract-document] starting extraction — mimeType:', mimeType, 'base64 length:', documentBase64.length)
 
-    type ContentBlock =
-      | { type: 'image'; source: { type: 'base64'; media_type: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'; data: string } }
-      | { type: 'document'; source: { type: 'base64'; media_type: 'application/pdf'; data: string } }
-      | { type: 'text'; text: string }
+  const anthropic = new Anthropic({ apiKey })
 
-    const docBlock: ContentBlock = isPdf
-      ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: documentBase64 } }
-      : { type: 'image', source: { type: 'base64', media_type: mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp', data: documentBase64 } }
-
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
-      messages: [{
-        role: 'user',
-        content: [docBlock, { type: 'text', text: EXTRACTION_PROMPT }],
-      }],
-    })
-
-    const firstBlock = response.content[0]
-    const text = firstBlock?.type === 'text' ? firstBlock.text : ''
-    // Strip markdown code fences if present
-    const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim()
-    const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
-
-    let extracted: Record<string, unknown>
+  // Retry once on transient failure
+  let lastErr: unknown
+  for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      extracted = JSON.parse(jsonMatch?.[0] ?? cleaned)
-    } catch {
-      return NextResponse.json({ error: 'Failed to parse AI response', raw: text }, { status: 422 })
+      const extracted = await callClaude(anthropic, documentBase64, mimeType)
+      console.log('[extract-document] success — rows:', (extracted.rows as unknown[]).length)
+      return NextResponse.json({ success: true, data: extracted })
+    } catch (err: unknown) {
+      lastErr = err
+      const isTransient = (err as { status?: number })?.status === 529 ||
+                          (err as { status?: number })?.status === 503 ||
+                          (err instanceof Error && err.message.includes('overloaded'))
+      if (attempt < 2 && isTransient) {
+        console.warn('[extract-document] transient error on attempt', attempt, '— retrying in 2s')
+        await new Promise(r => setTimeout(r, 2000))
+        continue
+      }
+      break
     }
-
-    if (!extracted.rows || !Array.isArray(extracted.rows)) {
-      return NextResponse.json({ error: 'No data rows found in document' }, { status: 422 })
-    }
-
-    return NextResponse.json({ success: true, data: extracted })
-  } catch (err) {
-    console.error('[extract-document] error:', err)
-    return NextResponse.json({ error: 'AI extraction failed' }, { status: 500 })
   }
+
+  // Surface the real error
+  const err = lastErr as { message?: string; status?: number; raw?: string }
+  console.error('[extract-document] final error:', err?.message ?? lastErr)
+
+  const clientMessage = err?.message?.includes('parse')
+    ? 'Could not read the document structure — try a clearer image or PDF'
+    : err?.message?.includes('No data rows')
+    ? 'No ticket data found — make sure the document contains haul or load records'
+    : 'AI extraction failed — try again or use a clearer document'
+
+  return NextResponse.json(
+    { error: clientMessage, details: err?.message },
+    { status: 500 }
+  )
 }
