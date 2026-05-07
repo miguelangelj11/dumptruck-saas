@@ -226,6 +226,7 @@ export default function SettingsPage() {
   const [delAccInput,     setDelAccInput]     = useState('')
   const [deletingData,    setDeletingData]    = useState(false)
   const [deletingAccount, setDeletingAccount] = useState(false)
+  const [exportingMyData, setExportingMyData] = useState(false)
 
   // ── Subscription state ───────────────────────────────────────────────────
   const [subscriptionStatus,   setSubscriptionStatus]   = useState<string | null>(null)
@@ -773,6 +774,31 @@ export default function SettingsPage() {
     setMfaStep('idle')
     toast.success('Two-factor authentication disabled')
     setMfaLoading(false)
+  }
+
+  async function handleExportMyData() {
+    setExportingMyData(true)
+    try {
+      const res = await fetch('/api/user/export')
+      if (!res.ok) {
+        const json = await res.json()
+        toast.error(json.error ?? 'Export failed')
+        return
+      }
+      const blob = await res.blob()
+      const cd = res.headers.get('Content-Disposition') ?? ''
+      const match = cd.match(/filename="([^"]+)"/)
+      const filename = match?.[1] ?? 'dumptruckboss-export.json'
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = filename; a.click()
+      URL.revokeObjectURL(url)
+      toast.success('Data exported successfully')
+    } catch {
+      toast.error('Export failed — check your connection')
+    } finally {
+      setExportingMyData(false)
+    }
   }
 
   async function handleDeleteData() {
@@ -2176,6 +2202,52 @@ export default function SettingsPage() {
               </form>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Legal & Compliance */}
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+          <Shield className="h-4 w-4 text-gray-500" />
+          <h2 className="font-semibold text-sm text-gray-900">Legal &amp; Compliance</h2>
+        </div>
+        <div className="p-6 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-gray-900">Export My Data</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Download a JSON copy of all your company data — tickets, invoices, drivers, dispatches, contractors, and leads.
+              </p>
+            </div>
+            <button
+              onClick={handleExportMyData}
+              disabled={exportingMyData}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors shrink-0"
+            >
+              {exportingMyData ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              {exportingMyData ? 'Exporting…' : 'Export Data'}
+            </button>
+          </div>
+
+          <div className="border-t border-gray-100" />
+
+          <div>
+            <p className="text-sm font-semibold text-gray-900 mb-2">Legal Documents</p>
+            <div className="flex flex-wrap gap-3">
+              <a href="/terms" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 hover:underline">
+                <FileText className="h-3.5 w-3.5" /> Terms of Service
+              </a>
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 hover:underline">
+                <FileText className="h-3.5 w-3.5" /> Privacy Policy
+              </a>
+              <a href="/legal/acceptable-use" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 hover:underline">
+                <FileText className="h-3.5 w-3.5" /> Acceptable Use
+              </a>
+              <a href="/legal/ai-disclaimer" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 hover:underline">
+                <FileText className="h-3.5 w-3.5" /> AI Disclaimer
+              </a>
+            </div>
+          </div>
         </div>
       </div>
 
