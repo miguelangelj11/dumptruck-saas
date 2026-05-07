@@ -3,13 +3,15 @@ import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
 
-type PlanKey = 'owner' | 'fleet' | 'growth' | 'enterprise'
+type PlanKey = 'solo' | 'owner_operator' | 'owner' | 'fleet' | 'growth' | 'enterprise'
 
 const PRICE_IDS: Record<PlanKey, string | undefined> = {
-  owner:      process.env.STRIPE_OWNER_PRICE_ID,
-  fleet:      process.env.STRIPE_FLEET_PRICE_ID,
-  growth:     process.env.STRIPE_GROWTH_PRICE_ID || process.env.STRIPE_ENTERPRISE_PRICE_ID,
-  enterprise: process.env.STRIPE_ENTERPRISE_PRICE_ID,
+  solo:           process.env.STRIPE_SOLO_PRICE_ID,
+  owner_operator: process.env.STRIPE_OWNER_PRICE_ID,
+  owner:          process.env.STRIPE_OWNER_PRICE_ID,
+  fleet:          process.env.STRIPE_FLEET_PRICE_ID,
+  growth:         process.env.STRIPE_GROWTH_PRICE_ID || process.env.STRIPE_ENTERPRISE_PRICE_ID,
+  enterprise:     process.env.STRIPE_ENTERPRISE_PRICE_ID,
 }
 
 function getAdmin() {

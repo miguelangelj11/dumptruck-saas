@@ -7,10 +7,11 @@ import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
-type Plan = 'owner_operator' | 'fleet' | 'growth'
+type Plan = 'solo' | 'owner_operator' | 'fleet' | 'growth'
 
 const PLANS: { id: Plan; name: string; price: string; desc: string; color: string; badge?: string; subtext?: string }[] = [
-  { id: 'owner_operator', name: 'Owner Operator', price: '$80/mo',  desc: 'Up to 5 trucks, solo operator',           color: '#1a1a1a' },
+  { id: 'solo',           name: 'Solo',           price: '$25/mo',  desc: '1 truck & 1 driver, basic tickets',        color: '#1a1a1a' },
+  { id: 'owner_operator', name: 'Owner Operator', price: '$80/mo',  desc: 'Up to 5 trucks, dispatch & jobs',          color: '#1a1a1a' },
   { id: 'fleet',          name: 'Fleet',          price: '$200/mo', desc: 'Unlimited trucks & drivers',               color: '#F5B731', badge: 'Most Popular', subtext: 'Includes missing ticket detection + auto follow-ups' },
   { id: 'growth',         name: 'Growth',         price: '$350/mo', desc: 'CRM + quotes + advanced analytics',        color: '#8B5CF6' },
 ]
@@ -32,7 +33,8 @@ export default function SignupPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const p = params.get('plan')
-    if (p === 'fleet') setSelectedPlan('fleet')
+    if (p === 'solo') setSelectedPlan('solo')
+    else if (p === 'fleet') setSelectedPlan('fleet')
     else if (p === 'growth') setSelectedPlan('growth')
     else if (p === 'owner_operator' || p === 'owner') setSelectedPlan('owner_operator')
     if (params.get('subscribe') === 'true') setSubscribeMode(true)
@@ -224,60 +226,35 @@ export default function SignupPage() {
         {/* Plan selector */}
         <div style={{ marginBottom: '24px' }}>
           <p style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: '16px' }}>Which plan are you signing up for?</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-
-            {/* Owner Operator */}
-            <button
-              type="button"
-              onClick={() => setSelectedPlan('owner_operator')}
-              style={{
-                padding: '16px', borderRadius: '12px', textAlign: 'left', cursor: 'pointer', outline: 'none', transition: 'all 0.15s',
-                border: `2px solid ${selectedPlan === 'owner_operator' ? '#F5B731' : 'rgba(255,255,255,0.12)'}`,
-                background: selectedPlan === 'owner_operator' ? 'rgba(245,183,49,0.12)' : 'rgba(255,255,255,0.04)',
-              }}
-            >
-              <p style={{ fontWeight: 700, fontSize: '13px', color: '#fff', marginBottom: '4px' }}>Owner Operator</p>
-              <p style={{ fontSize: '20px', fontWeight: 800, color: '#F5B731', marginBottom: '4px' }}>$80/mo</p>
-              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)' }}>Up to 5 trucks, solo operator</p>
-            </button>
-
-            {/* Fleet — Most Popular */}
-            <div style={{ position: 'relative' }}>
-              <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', zIndex: 10 }}>
-                <span style={{ background: '#F5B731', color: '#1a1a1a', fontSize: '10px', fontWeight: 800, padding: '3px 10px', borderRadius: '100px', whiteSpace: 'nowrap' }}>
-                  Most Popular
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedPlan('fleet')}
-                style={{
-                  width: '100%', padding: '16px', borderRadius: '12px', textAlign: 'left', cursor: 'pointer', outline: 'none', transition: 'all 0.15s',
-                  border: `2px solid ${selectedPlan === 'fleet' ? '#F5B731' : 'rgba(245,183,49,0.5)'}`,
-                  background: selectedPlan === 'fleet' ? 'rgba(245,183,49,0.12)' : 'rgba(245,183,49,0.05)',
-                }}
-              >
-                <p style={{ fontWeight: 700, fontSize: '13px', color: '#fff', marginBottom: '4px' }}>Fleet</p>
-                <p style={{ fontSize: '20px', fontWeight: 800, color: '#F5B731', marginBottom: '4px' }}>$200/mo</p>
-                <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)' }}>Unlimited trucks + automation</p>
-              </button>
-            </div>
-
-            {/* Growth */}
-            <button
-              type="button"
-              onClick={() => setSelectedPlan('growth')}
-              style={{
-                padding: '16px', borderRadius: '12px', textAlign: 'left', cursor: 'pointer', outline: 'none', transition: 'all 0.15s',
-                border: `2px solid ${selectedPlan === 'growth' ? '#F5B731' : 'rgba(255,255,255,0.12)'}`,
-                background: selectedPlan === 'growth' ? 'rgba(245,183,49,0.12)' : 'rgba(255,255,255,0.04)',
-              }}
-            >
-              <p style={{ fontWeight: 700, fontSize: '13px', color: '#fff', marginBottom: '4px' }}>Growth</p>
-              <p style={{ fontSize: '20px', fontWeight: 800, color: '#F5B731', marginBottom: '4px' }}>$350/mo</p>
-              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)' }}>CRM + quotes + AI tools</p>
-            </button>
-
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+            {PLANS.map((plan) => {
+              const isSelected = selectedPlan === plan.id
+              const isPopular = !!plan.badge
+              return (
+                <div key={plan.id} style={{ position: 'relative' }}>
+                  {isPopular && (
+                    <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', zIndex: 10 }}>
+                      <span style={{ background: '#F5B731', color: '#1a1a1a', fontSize: '10px', fontWeight: 800, padding: '3px 10px', borderRadius: '100px', whiteSpace: 'nowrap' }}>
+                        Most Popular
+                      </span>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPlan(plan.id)}
+                    style={{
+                      width: '100%', padding: '14px', borderRadius: '12px', textAlign: 'left', cursor: 'pointer', outline: 'none', transition: 'all 0.15s',
+                      border: `2px solid ${isSelected ? '#F5B731' : isPopular ? 'rgba(245,183,49,0.5)' : 'rgba(255,255,255,0.12)'}`,
+                      background: isSelected ? 'rgba(245,183,49,0.12)' : isPopular ? 'rgba(245,183,49,0.05)' : 'rgba(255,255,255,0.04)',
+                    }}
+                  >
+                    <p style={{ fontWeight: 700, fontSize: '12px', color: '#fff', marginBottom: '4px' }}>{plan.name}</p>
+                    <p style={{ fontSize: '18px', fontWeight: 800, color: '#F5B731', marginBottom: '4px' }}>{plan.price}</p>
+                    <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)' }}>{plan.desc}</p>
+                  </button>
+                </div>
+              )
+            })}
           </div>
         </div>
 

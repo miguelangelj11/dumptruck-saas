@@ -46,8 +46,12 @@ export async function POST(request: Request) {
         .eq('status', 'active')
 
       if ((count ?? 0) >= limit) {
+        const required_plan = plan === 'solo' ? 'owner_operator' : 'fleet'
+        const msg = plan === 'solo'
+          ? `Solo plan allows 1 driver. Upgrade to Owner Operator for up to 5 drivers.`
+          : `Driver limit (${limit}) reached for your plan. Upgrade to Fleet for unlimited drivers.`
         return NextResponse.json(
-          { error: 'upgrade_required', feature: 'drivers', required_plan: 'fleet', message: `Driver limit (${limit}) reached for your plan. Upgrade to Fleet for unlimited drivers.` },
+          { error: 'upgrade_required', feature: 'drivers', required_plan, message: msg },
           { status: 403 },
         )
       }

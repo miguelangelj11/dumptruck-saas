@@ -6,19 +6,38 @@ import { useRouter } from 'next/navigation'
 import Nav from '@/components/landing/nav'
 import Footer from '@/components/landing/footer'
 
-// ─── Plan data (original 3-plan structure) ───────────────────────────────────
+// ─── Plan data ───────────────────────────────────────────────────────────────
 
 const plans = [
   {
-    key: 'owner',
+    key: 'solo',
+    name: 'Solo',
+    tagline: 'For the one-man operation — 1 truck, 1 driver',
+    monthlyPrice: '$25',
+    popular: false,
+    ctaLabel: 'Start Free 7-Day Trial',
+    features: [
+      '1 truck & 1 driver',
+      'Ticket tracking (unlimited)',
+      'Basic invoicing',
+      'Basic dashboard',
+      '7-day free trial',
+    ],
+    locked: [
+      'Dispatching & job management',
+      'Subcontractor management',
+      'Revenue & profit tracking',
+      'CRM Pipeline',
+      'Team access',
+    ],
+  },
+  {
+    key: 'owner_operator',
     name: 'Owner Operator',
     tagline: 'Perfect for solo operators with up to 5 trucks',
     monthlyPrice: '$80',
-    annualPrice: '$64',
-    annualSavings: 'Save $192/year',
     popular: false,
     ctaLabel: 'Start Free 7-Day Trial',
-    ctaHref: '/signup?plan=owner_operator',
     features: [
       'Up to 5 trucks & 5 drivers',
       'Dispatching & job management',
@@ -46,11 +65,8 @@ const plans = [
     name: 'Fleet',
     tagline: 'For growing companies that need full control',
     monthlyPrice: '$200',
-    annualPrice: '$160',
-    annualSavings: 'Save $480/year',
     popular: true,
     ctaLabel: 'Start Free 7-Day Trial',
-    ctaHref: '/signup?plan=fleet',
     features: [
       'Unlimited trucks & drivers',
       'Everything in Owner Operator',
@@ -82,11 +98,8 @@ const plans = [
     name: 'Growth',
     tagline: 'For operators ready to grow their business',
     monthlyPrice: '$350',
-    annualPrice: null,
-    annualSavings: null,
     popular: false,
     ctaLabel: 'Start Free 7-Day Trial',
-    ctaHref: '/signup?plan=growth',
     features: [
       'Everything in Fleet',
       'CRM Growth Pipeline',
@@ -111,53 +124,52 @@ const plans = [
 
 type V = true | false | string
 
-const table: { section: string; rows: { label: string; vals: [V, V, V] }[] }[] = [
+const table: { section: string; rows: { label: string; vals: [V, V, V, V] }[] }[] = [
   {
     section: 'Core Features',
     rows: [
-      { label: 'Ticket management',      vals: ['Basic', 'Full', 'Full'] },
-      { label: 'Ticket photo upload',    vals: [true, true, true] },
-      { label: 'Load tracking',          vals: ['Basic', 'Full', 'Full'] },
-      { label: 'Full dispatch board',    vals: [false, true, true] },
-      { label: 'AI document reader',     vals: [false, '50/mo', '400/mo'] },
-      { label: 'Documents hub',          vals: [false, false, true] },
+      { label: 'Ticket management',      vals: ['Basic', 'Basic', 'Full', 'Full'] },
+      { label: 'Ticket photo upload',    vals: [true, true, true, true] },
+      { label: 'Full dispatch board',    vals: [false, true, true, true] },
+      { label: 'AI document reader',     vals: [false, false, '50/mo', '400/mo'] },
+      { label: 'Documents hub',          vals: [false, false, false, true] },
     ],
   },
   {
     section: 'Team & Fleet',
     rows: [
-      { label: 'Trucks & drivers',       vals: ['Up to 5', 'Unlimited', 'Unlimited'] },
-      { label: 'Team logins',            vals: ['1 (owner)', 'Unlimited', 'Unlimited'] },
-      { label: 'Subcontractor mgmt',     vals: [false, true, true] },
-      { label: 'Client portal',          vals: [false, true, true] },
+      { label: 'Trucks & drivers',       vals: ['1 each', 'Up to 5', 'Unlimited', 'Unlimited'] },
+      { label: 'Team logins',            vals: ['1 (owner)', '1 (owner)', 'Unlimited', 'Unlimited'] },
+      { label: 'Subcontractor mgmt',     vals: [false, false, true, true] },
+      { label: 'Client portal',          vals: [false, false, true, true] },
     ],
   },
   {
     section: 'Invoicing & Automation',
     rows: [
-      { label: 'Invoice types',              vals: ['Client only', 'All 3 types', 'All 3 types'] },
-      { label: 'Send by email',              vals: [false, true, true] },
-      { label: 'Missing ticket detection',   vals: [false, true, true] },
-      { label: 'Follow-up automation',       vals: [false, true, true] },
-      { label: 'Overdue invoice automation', vals: [false, true, true] },
-      { label: 'Weekly performance reports', vals: [false, true, true] },
+      { label: 'Basic invoicing',            vals: [true, true, true, true] },
+      { label: 'Send invoices by email',     vals: [false, false, true, true] },
+      { label: 'Missing ticket detection',   vals: [false, false, true, true] },
+      { label: 'Follow-up automation',       vals: [false, false, true, true] },
+      { label: 'Overdue invoice automation', vals: [false, false, true, true] },
+      { label: 'Weekly performance reports', vals: [false, false, true, true] },
     ],
   },
   {
     section: 'Growth & CRM',
     rows: [
-      { label: 'CRM Growth Pipeline',        vals: [false, false, true] },
-      { label: 'Quote builder',              vals: [false, false, true] },
-      { label: 'Advanced job profitability', vals: [false, false, true] },
-      { label: 'Mobile ticket + signature',  vals: [false, false, true] },
-      { label: 'Revenue per driver & truck', vals: [false, false, true] },
+      { label: 'CRM Growth Pipeline',        vals: [false, false, false, true] },
+      { label: 'Quote builder',              vals: [false, false, false, true] },
+      { label: 'Advanced job profitability', vals: [false, false, false, true] },
+      { label: 'Mobile ticket + signature',  vals: [false, false, false, true] },
+      { label: 'Revenue per driver & truck', vals: [false, false, false, true] },
     ],
   },
   {
     section: 'Support',
     rows: [
-      { label: 'Support tier',   vals: ['Email', 'Priority email', 'Priority phone'] },
-      { label: 'Free trial',     vals: ['7 days', '7 days', '7 days'] },
+      { label: 'Support tier',   vals: ['Email', 'Email', 'Priority email', 'Priority phone'] },
+      { label: 'Free trial',     vals: ['7 days', '7 days', '7 days', '7 days'] },
     ],
   },
 ]
@@ -256,8 +268,8 @@ export default function PricingPage() {
       </div>
 
       {/* ── Pricing cards ─────────────────────────────────────────────────────── */}
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 20px 0' }}>
-        <div className="plans-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', alignItems: 'stretch' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px 0' }}>
+        <div className="plans-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', alignItems: 'stretch' }}>
           {plans.map((plan) => {
             const hl = plan.popular
 
@@ -339,7 +351,7 @@ export default function PricingPage() {
                     {checkoutLoading === plan.key ? 'Loading…' : `${plan.ctaLabel} →`}
                   </button>
                   <Link
-                    href={`/signup?plan=${plan.key === 'owner' ? 'owner_operator' : plan.key}&subscribe=true`}
+                    href={`/signup?plan=${plan.key}&subscribe=true`}
                     style={{
                       display: 'block',
                       textAlign: 'center',
@@ -405,19 +417,19 @@ export default function PricingPage() {
       </div>
 
       {/* ── Compare all features ──────────────────────────────────────────────── */}
-      <div style={{ maxWidth: '1100px', margin: '88px auto 0', padding: '0 20px' }}>
+      <div style={{ maxWidth: '1200px', margin: '88px auto 0', padding: '0 20px' }}>
         <h2 style={{ fontSize: 'clamp(22px, 3vw, 32px)', fontWeight: 800, color: '#fff', textAlign: 'center', marginBottom: '8px', letterSpacing: '-0.01em' }}>
           Compare all features
         </h2>
         <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginBottom: '40px' }}>
-          See exactly what's included in each plan.
+          See exactly what&apos;s included in each plan.
         </p>
 
         <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)' }}>
-          <table style={{ width: '100%', minWidth: '580px', borderCollapse: 'collapse' }}>
+          <table style={{ width: '100%', minWidth: '640px', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
-                <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', width: '40%', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', width: '35%', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                   Feature
                 </th>
                 {plans.map((p) => (
@@ -429,7 +441,7 @@ export default function PricingPage() {
                     color: p.popular ? GREEN_LIGHT : '#fff',
                     borderBottom: '1px solid rgba(255,255,255,0.08)',
                     background: p.popular ? 'rgba(45,122,79,0.08)' : 'transparent',
-                    width: '20%',
+                    width: '16.25%',
                   }}>
                     {p.name}
                   </th>
@@ -440,7 +452,7 @@ export default function PricingPage() {
               {table.map((section, si) => (
                 <React.Fragment key={`s${si}`}>
                   <tr>
-                    <td colSpan={4} style={{
+                    <td colSpan={5} style={{
                       padding: '18px 20px 8px',
                       fontSize: '10px',
                       fontWeight: 800,
@@ -490,7 +502,7 @@ export default function PricingPage() {
       </div>
 
       {/* ── Bottom CTA ───────────────────────────────────────────────────────── */}
-      <div style={{ maxWidth: '1100px', margin: '88px auto 0', padding: '0 20px 88px' }}>
+      <div style={{ maxWidth: '1200px', margin: '88px auto 0', padding: '0 20px 88px' }}>
         <div style={{
           background: 'linear-gradient(135deg, #152a1e 0%, #0f1923 100%)',
           border: '1px solid rgba(45,122,79,0.35)',
@@ -530,9 +542,12 @@ export default function PricingPage() {
 
       {/* Responsive grid */}
       <style>{`
-        @media (max-width: 860px) {
-          .plans-grid { grid-template-columns: 1fr !important; }
+        @media (max-width: 1100px) {
+          .plans-grid { grid-template-columns: repeat(2, 1fr) !important; }
           .plans-grid > div { margin-top: 0 !important; }
+        }
+        @media (max-width: 600px) {
+          .plans-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
 

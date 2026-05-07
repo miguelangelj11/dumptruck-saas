@@ -177,17 +177,20 @@ export default function Sidebar({ user, logoUrl, companyName: companyNameProp, p
   const t = useTranslations('nav')
 
   // Build the full nav item definitions (locked state depends on plan/role)
-  const buildNavDefs = useCallback((): NavItem[] => [
-    { id: 'dashboard',    href: '/dashboard',             icon: LayoutDashboard, label: t('dashboard'),     locked: false },
-    { id: 'dispatch',     href: '/dashboard/dispatch',    icon: Clipboard,       label: t('dispatch'),      locked: false },
-    { id: 'tickets',      href: '/dashboard/tickets',     icon: FileText,        label: t('tickets'),       locked: false },
-    { id: 'contractors',  href: '/dashboard/contractors', icon: Truck,           label: t('subcontractors'),locked: !isSuperAdmin && plan === 'owner_operator' },
-    { id: 'drivers',      href: '/dashboard/drivers',     icon: Users,           label: t('drivers'),       locked: false },
-    { id: 'invoices',     href: '/dashboard/invoices',    icon: Receipt,         label: t('invoices'),      locked: false },
-    { id: 'revenue',      href: '/dashboard/revenue',     icon: TrendingUp,      label: t('revenue'),       locked: false },
-    { id: 'crm',          href: '/dashboard/crm',         icon: Kanban,          label: t('crm'),           locked: !isSuperAdmin && plan !== 'growth' && plan !== 'enterprise' },
-    { id: 'documents',    href: '/dashboard/documents',   icon: FolderOpen,      label: 'Documents',        locked: false },
-  ], [t, plan, isSuperAdmin])
+  const buildNavDefs = useCallback((): NavItem[] => {
+    const solo = !isSuperAdmin && plan === 'solo'
+    return [
+      { id: 'dashboard',    href: '/dashboard',             icon: LayoutDashboard, label: t('dashboard'),     locked: false },
+      { id: 'dispatch',     href: '/dashboard/dispatch',    icon: Clipboard,       label: t('dispatch'),      locked: solo },
+      { id: 'tickets',      href: '/dashboard/tickets',     icon: FileText,        label: t('tickets'),       locked: false },
+      { id: 'contractors',  href: '/dashboard/contractors', icon: Truck,           label: t('subcontractors'),locked: !isSuperAdmin && (plan === 'owner_operator' || plan === 'solo') },
+      { id: 'drivers',      href: '/dashboard/drivers',     icon: Users,           label: t('drivers'),       locked: false },
+      { id: 'invoices',     href: '/dashboard/invoices',    icon: Receipt,         label: t('invoices'),      locked: false },
+      { id: 'revenue',      href: '/dashboard/revenue',     icon: TrendingUp,      label: t('revenue'),       locked: solo },
+      { id: 'crm',          href: '/dashboard/crm',         icon: Kanban,          label: t('crm'),           locked: !isSuperAdmin && plan !== 'growth' && plan !== 'enterprise' },
+      { id: 'documents',    href: '/dashboard/documents',   icon: FolderOpen,      label: 'Documents',        locked: false },
+    ]
+  }, [t, plan, isSuperAdmin])
 
   const [navDefs, setNavDefs] = useState<NavItem[]>(() => buildNavDefs())
   const [itemOrder, setItemOrder] = useState<string[]>(() => {

@@ -10,6 +10,7 @@ import RecentDocuments from '@/components/dashboard/recent-documents'
 import LoadsChart from '@/components/dashboard/loads-chart'
 import { ProfitAlerts } from '@/components/dashboard/profit-alerts'
 import { DriverProfitTable } from '@/components/dashboard/driver-profit-table'
+import SoloUpgradeNudge from '@/components/dashboard/solo-upgrade-nudge'
 import Link from 'next/link'
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -96,7 +97,7 @@ export default async function DashboardPage() {
       .eq('company_id', effectiveCompanyId),
     supabase
       .from('companies')
-      .select('id, name')
+      .select('id, name, plan')
       .eq('id', effectiveCompanyId)
       .maybeSingle(),
     supabase
@@ -111,6 +112,7 @@ export default async function DashboardPage() {
   const invoices    = invoicesRes.data ?? []
   const companyId   = companyRes.data?.id
   const companyName = companyRes.data?.name ?? ''
+  const companyPlan = (companyRes.data as Record<string, unknown> | null)?.plan as string | null ?? null
   const activityFeed = activityRes.error ? [] : (activityRes.data ?? [])
 
   // ── Display name: profiles.full_name → auth metadata → email prefix ──────
@@ -338,7 +340,11 @@ export default async function DashboardPage() {
   ].filter(Boolean) as { label: string; icon: React.ElementType; color: string; iconCls: string; href: string; cta: string }[]
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl">
+    <div className="max-w-7xl">
+      {/* Solo upgrade nudge */}
+      {companyPlan === 'solo' && <SoloUpgradeNudge />}
+
+      <div className="p-6 md:p-8">
 
       {/* Header */}
       <div className="mb-8">
@@ -669,6 +675,7 @@ export default async function DashboardPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }

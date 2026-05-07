@@ -1,4 +1,31 @@
 export const PLANS = {
+  solo: {
+    id: 'solo',
+    name: 'Solo',
+    price: 25,
+    priceId: process.env.STRIPE_SOLO_PRICE_ID!,
+    description: 'Track your loads and get paid. Simple.',
+    tagline: 'For the one-man operation — 1 truck, 1 driver',
+    badge: null,
+    limits: {
+      trucks: 1,
+      drivers: 1,
+    },
+    features: [
+      '1 truck & 1 driver',
+      'Ticket tracking (unlimited)',
+      'Basic invoicing',
+      'Basic dashboard',
+      '7-day free trial',
+    ],
+    locked: [
+      'Dispatching & job management',
+      'Subcontractor management',
+      'Revenue & profit tracking',
+      'CRM Pipeline',
+      'Team access',
+    ],
+  },
   owner_operator: {
     id: 'owner_operator',
     name: 'Owner Operator',
@@ -128,7 +155,7 @@ export type FeatureKey =
   | 'customer_invoicing'
 
 export const FEATURE_GATES: Record<FeatureKey, PlanId[]> = {
-  // Owner Operator + above
+  // Owner Operator + above (solo cannot dispatch or use driver portal features)
   realtime_dispatch: ['owner_operator', 'fleet', 'growth'],
   driver_portal:     ['owner_operator', 'fleet', 'growth'],
 
@@ -156,8 +183,10 @@ export function canAccess(planId: string, feature: FeatureKey): boolean {
 }
 
 function normalizePlanId(plan: string | null | undefined): PlanId {
-  if (plan === 'fleet')                       return 'fleet'
+  if (plan === 'solo')                            return 'solo'
+  if (plan === 'fleet')                           return 'fleet'
   if (plan === 'growth' || plan === 'enterprise') return 'growth'
+  if (plan === 'owner_operator')                  return 'owner_operator'
   return 'owner_operator'
 }
 
@@ -171,7 +200,9 @@ export function getPlanGate(company: {
     return {
       planId:          'growth' as PlanId,
       can:             (_feature: FeatureKey) => true,
-      truckLimit:      null,
+      truckLimit:      null as number | null,
+      driverLimit:     null as number | null,
+      isSolo:          false,
       isOwnerOperator: false,
       isFleet:         false,
       isGrowth:        true,
@@ -183,7 +214,9 @@ export function getPlanGate(company: {
   return {
     planId,
     can:             (feature: FeatureKey) => canAccess(planId, feature),
-    truckLimit:      PLANS[planId].limits.trucks,
+    truckLimit:      PLANS[planId].limits.trucks as number | null,
+    driverLimit:     PLANS[planId].limits.drivers as number | null,
+    isSolo:          planId === 'solo',
     isOwnerOperator: planId === 'owner_operator',
     isFleet:         planId === 'fleet',
     isGrowth:        planId === 'growth',

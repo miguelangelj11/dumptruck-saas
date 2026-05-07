@@ -6,7 +6,8 @@ import type { Plan, Feature } from '@/lib/plan-gate'
 import { canUse, FEATURE_PLAN, UPGRADE_URL } from '@/lib/plan-gate'
 
 const PLAN_LABEL: Record<Plan, string> = {
-  owner_operator: 'Owner Operator Plan',
+  solo:           'Owner Operator Plan',
+  owner_operator: 'Fleet Plan',
   fleet:          'Fleet Plan',
   enterprise:     'Enterprise Plan',
 }

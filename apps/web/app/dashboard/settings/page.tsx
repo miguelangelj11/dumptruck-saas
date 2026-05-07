@@ -611,6 +611,13 @@ export default function SettingsPage() {
   async function handleAddTruck(e: React.FormEvent) {
     e.preventDefault()
     if (!newTruckNum.trim() || !companyId) return
+    // Enforce per-plan truck limits
+    const truckLimit = subscriptionPlan === 'solo' ? 1 : subscriptionPlan === 'owner_operator' ? 5 : null
+    if (truckLimit !== null && trucks.length >= truckLimit) {
+      const nextPlan = subscriptionPlan === 'solo' ? 'Owner Operator ($80/mo)' : 'Fleet ($200/mo)'
+      toast.error(`Truck limit (${truckLimit}) reached. Upgrade to ${nextPlan} for more trucks.`)
+      return
+    }
     setAddingTruck(true)
     const { error } = await supabase
       .from('trucks')
@@ -1490,8 +1497,8 @@ export default function SettingsPage() {
             ))}
           </div>
 
-          {/* Invite form — locked for owner_operator */}
-          {subscriptionPlan === 'owner_operator' ? (
+          {/* Invite form — locked for solo and owner_operator */}
+          {(subscriptionPlan === 'solo' || subscriptionPlan === 'owner_operator') ? (
             <div className="border-t border-gray-100 pt-5">
               <div className="rounded-xl border border-[#F5B731]/40 p-5 flex items-start gap-4" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2000 100%)' }}>
                 <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: '#F5B731' }}>
@@ -1500,7 +1507,9 @@ export default function SettingsPage() {
                 <div className="flex-1">
                   <p className="text-sm font-bold text-white">Team logins require the Fleet Plan</p>
                   <p className="text-xs text-white/60 mt-1 mb-4">
-                    Owner Operator is a single-user plan. Upgrade to Fleet to add dispatchers, drivers, and accountants as team members with their own logins.
+                    {subscriptionPlan === 'solo'
+                      ? 'Solo is a single-user plan. Upgrade to Fleet to add dispatchers, drivers, and accountants as team members with their own logins.'
+                      : 'Owner Operator is a single-user plan. Upgrade to Fleet to add dispatchers, drivers, and accountants as team members with their own logins.'}
                   </p>
                   <button
                     type="button"
@@ -1630,38 +1639,37 @@ export default function SettingsPage() {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          UPGRADE PROMPT — owner_operator only
+          UPGRADE PROMPT — solo and owner_operator
       ═══════════════════════════════════════════════════════════════════ */}
-      {subscriptionPlan === 'owner_operator' && (
+      {(subscriptionPlan === 'solo' || subscriptionPlan === 'owner_operator') && (
         <div className="rounded-xl border border-[#F5B731]/30 overflow-hidden" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #1e1800 100%)' }}>
           <div className="px-6 pt-6 pb-4">
             <p className="text-base font-bold text-white">Unlock More Features</p>
-            <p className="text-xs text-white/50 mt-1">Upgrade to Fleet ($200/mo) to stop leaving money on the table.</p>
+            <p className="text-xs text-white/50 mt-1">
+              {subscriptionPlan === 'solo'
+                ? 'Upgrade to Owner Operator ($80/mo) to get dispatch, 5 trucks & 5 drivers.'
+                : 'Upgrade to Fleet ($200/mo) to stop leaving money on the table.'}
+            </p>
           </div>
           <div className="px-6 pb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {[
-              {
-                icon: '🔍',
-                title: 'Missing Ticket Detection',
-                desc: 'Automatically find loads where tickets never came in. Stop losing $500–$2,000/month to missing paperwork.',
-              },
-              {
-                icon: '🤝',
-                title: 'Subcontractor Management',
-                desc: 'Track subs, their loads, and what you owe them — all in one place with automated billing.',
-              },
-              {
-                icon: '⚡',
-                title: 'Follow-Up Automation',
-                desc: 'Automatically chase overdue invoices and missing tickets so you don\'t have to make awkward calls.',
-              },
-            ].map(card => (
-              <div key={card.title} className="rounded-xl border border-white/10 bg-white/5 p-4 flex flex-col gap-2">
-                <span className="text-2xl">{card.icon}</span>
-                <p className="text-sm font-bold text-white">{card.title}</p>
-                <p className="text-xs text-white/50 flex-1">{card.desc}</p>
-              </div>
-            ))}
+{(() => {
+              const cards = subscriptionPlan === 'solo' ? [
+                { icon: '📋', title: 'Dispatching & Job Management', desc: 'Assign drivers, manage jobs, and track loads from one board. Solo plan does not include dispatch.' },
+                { icon: '🚚', title: 'Up to 5 Trucks & Drivers', desc: 'Solo is limited to 1 truck and 1 driver. Grow your operation without replacing your tools.' },
+                { icon: '🏢', title: 'Client Companies', desc: 'Track your clients, manage their jobs, and stay organized as your business expands.' },
+              ] : [
+                { icon: '🔍', title: 'Missing Ticket Detection', desc: 'Automatically find loads where tickets never came in. Stop losing $500–$2,000/month to missing paperwork.' },
+                { icon: '🤝', title: 'Subcontractor Management', desc: 'Track subs, their loads, and what you owe them — all in one place with automated billing.' },
+                { icon: '⚡', title: 'Follow-Up Automation', desc: 'Automatically chase overdue invoices and missing tickets so you don\'t have to make awkward calls.' },
+              ]
+              return cards.map(card => (
+                <div key={card.title} className="rounded-xl border border-white/10 bg-white/5 p-4 flex flex-col gap-2">
+                  <span className="text-2xl">{card.icon}</span>
+                  <p className="text-sm font-bold text-white">{card.title}</p>
+                  <p className="text-xs text-white/50 flex-1">{card.desc}</p>
+                </div>
+              ))
+            })()}
           </div>
           <div className="px-6 pb-6">
             <button
@@ -1669,7 +1677,8 @@ export default function SettingsPage() {
               onClick={async () => {
                 setUpgradePlanLoading(true)
                 try {
-                  const res = await fetch('/api/stripe/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan: 'fleet' }) })
+                  const upgradeTo = subscriptionPlan === 'solo' ? 'owner_operator' : 'fleet'
+                  const res = await fetch('/api/stripe/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan: upgradeTo }) })
                   const d = await res.json()
                   if (d.url) { window.location.href = d.url; return }
                 } catch { /* fall through */ }
@@ -1680,7 +1689,7 @@ export default function SettingsPage() {
               style={{ background: '#F5B731', color: '#1a1a1a' }}
             >
               {upgradePlanLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Upgrade to Fleet — $200/mo →
+              {subscriptionPlan === 'solo' ? 'Upgrade to Owner Operator — $80/mo →' : 'Upgrade to Fleet — $200/mo →'}
             </button>
           </div>
         </div>
@@ -1801,6 +1810,7 @@ export default function SettingsPage() {
             const urgent  = daysLeft !== null && daysLeft <= 3
 
             const planLabel =
+              subscriptionPlan === 'solo'           ? 'Solo Plan' :
               subscriptionPlan === 'owner_operator' ? 'Owner Operator Plan' :
               subscriptionPlan === 'fleet'          ? 'Fleet Plan' :
               subscriptionPlan === 'enterprise'     ? 'Enterprise Plan' :
@@ -1876,13 +1886,27 @@ export default function SettingsPage() {
           {/* Next-tier upsell card — hidden for super admin */}
           {!isSuperAdmin && !subscriptionOverride && (() => {
             // Normalize plan key — handles null, '', 'owner' (Stripe metadata key), unknown values
-            const normalizePlan = (p: string | null): 'owner_operator' | 'fleet' | 'enterprise' => {
+            const normalizePlan = (p: string | null): 'solo' | 'owner_operator' | 'fleet' | 'enterprise' => {
+              if (p === 'solo')       return 'solo'
               if (p === 'fleet')      return 'fleet'
-              if (p === 'enterprise') return 'enterprise'
+              if (p === 'enterprise' || p === 'growth') return 'enterprise'
+              if (p === 'owner_operator') return 'owner_operator'
               return 'owner_operator' // null, '', 'owner', or anything else → base tier
             }
 
-            const NEXT: Record<'owner_operator' | 'fleet' | 'enterprise', { label: string; price: string; checkoutKey: string | null; features: string[] } | null> = {
+            const NEXT: Record<'solo' | 'owner_operator' | 'fleet' | 'enterprise', { label: string; price: string; checkoutKey: string | null; features: string[] } | null> = {
+              solo: {
+                label:       'Owner Operator Plan',
+                price:       '$80/mo',
+                checkoutKey: 'owner_operator',
+                features: [
+                  'Up to 5 trucks & 5 drivers',
+                  'Dispatching & job management',
+                  'Driver management',
+                  'Client companies',
+                  'Unlimited ticket tracking',
+                ],
+              },
               owner_operator: {
                 label:       'Fleet Plan',
                 price:       '$200/mo',

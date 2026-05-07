@@ -72,14 +72,14 @@ export async function POST(request: Request) {
     companyName = teamCompany.name
   }
 
-  // Block owner_operator plan from inviting team members
+  // Block solo and owner_operator plans from inviting team members
   const { data: companyForPlan } = await admin
     .from('companies')
     .select('plan')
     .eq('id', companyId!)
     .maybeSingle()
 
-  if (companyForPlan?.plan === 'owner_operator') {
+  if (companyForPlan?.plan === 'solo' || companyForPlan?.plan === 'owner_operator') {
     return NextResponse.json(
       { error: 'upgrade_required', message: 'Team invitations require the Fleet plan. Upgrade at /dashboard/settings#billing.' },
       { status: 403 },

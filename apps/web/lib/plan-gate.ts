@@ -1,13 +1,14 @@
-export type Plan = 'owner_operator' | 'fleet' | 'enterprise'
+export type Plan = 'solo' | 'owner_operator' | 'fleet' | 'enterprise'
 
 // Ordered tiers: higher index = higher plan
-const TIER: Record<Plan, number> = { owner_operator: 0, fleet: 1, enterprise: 2 }
+const TIER: Record<Plan, number> = { solo: 0, owner_operator: 1, fleet: 2, enterprise: 3 }
 
 export function planTier(plan: string | null | undefined): number {
-  return TIER[(plan ?? 'owner_operator') as Plan] ?? 0
+  return TIER[(plan ?? 'owner_operator') as Plan] ?? 1
 }
 
 export function normalizePlan(plan: string | null | undefined): Plan {
+  if (plan === 'solo')                            return 'solo'
   if (plan === 'fleet')                           return 'fleet'
   if (plan === 'enterprise' || plan === 'growth') return 'enterprise'
   return 'owner_operator'
@@ -42,6 +43,7 @@ export const FEATURE_PLAN: Record<Feature, Plan> = {
 }
 
 export const PLAN_LIMITS: Record<Plan, { maxDrivers: number; maxTrucks: number; maxTicketsPerMonth: number }> = {
+  solo:           { maxDrivers: 1, maxTrucks: 1, maxTicketsPerMonth: Infinity },
   owner_operator: { maxDrivers: 5, maxTrucks: 5, maxTicketsPerMonth: Infinity },
   fleet:          { maxDrivers: Infinity, maxTrucks: Infinity, maxTicketsPerMonth: Infinity },
   enterprise:     { maxDrivers: Infinity, maxTrucks: Infinity, maxTicketsPerMonth: Infinity },
