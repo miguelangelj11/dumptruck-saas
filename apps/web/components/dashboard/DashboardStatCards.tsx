@@ -144,55 +144,57 @@ export default function DashboardStatCards({
 
   useEffect(() => {
     if (openPanel !== 'tickets') return
-    setTicketLoading(true)
-    setTicketRows([])
-    supabase.from('loads')
-      .select('id, date, job_name, driver_name, rate, total_pay, status, client_company, truck_number')
-      .eq('company_id', companyId)
-      .gte('date', thisWeekStartStr)
-      .lte('date', todayStr)
-      .order('date', { ascending: false })
-      .then(({ data }) => { setTicketRows((data ?? []) as TicketRow[]); setTicketLoading(false) })
+    setTicketLoading(true); setTicketRows([])
+    void (async () => {
+      const { data } = await supabase.from('loads')
+        .select('id, date, job_name, driver_name, rate, total_pay, status, client_company, truck_number')
+        .eq('company_id', companyId).gte('date', thisWeekStartStr).lte('date', todayStr)
+        .order('date', { ascending: false })
+      setTicketRows((data ?? []) as TicketRow[])
+      setTicketLoading(false)
+    })()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openPanel])
 
   useEffect(() => {
     if (openPanel !== 'revenue') return
-    setRevLoading(true)
-    setRevRows([])
-    supabase.from('loads')
-      .select('id, date, driver_name, rate, status')
-      .eq('company_id', companyId)
-      .like('date', `${thisMonthStr}-%`)
-      .order('date', { ascending: false })
-      .then(({ data }) => { setRevRows((data ?? []) as RevRow[]); setRevLoading(false) })
+    setRevLoading(true); setRevRows([])
+    void (async () => {
+      const { data } = await supabase.from('loads')
+        .select('id, date, driver_name, rate, status')
+        .eq('company_id', companyId).like('date', `${thisMonthStr}-%`)
+        .order('date', { ascending: false })
+      setRevRows((data ?? []) as RevRow[])
+      setRevLoading(false)
+    })()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openPanel])
 
   useEffect(() => {
     if (openPanel !== 'outstanding') return
-    setInvLoading(true)
-    setInvRows([])
-    supabase.from('invoices')
-      .select('id, invoice_number, client_name, total, due_date, status')
-      .eq('company_id', companyId)
-      .in('status', ['draft', 'sent', 'overdue', 'partially_paid'])
-      .order('due_date', { ascending: true })
-      .then(({ data }) => { setInvRows((data ?? []) as InvRow[]); setInvLoading(false) })
+    setInvLoading(true); setInvRows([])
+    void (async () => {
+      const { data } = await supabase.from('invoices')
+        .select('id, invoice_number, client_name, total, due_date, status')
+        .eq('company_id', companyId).in('status', ['draft', 'sent', 'overdue', 'partially_paid'])
+        .order('due_date', { ascending: true })
+      setInvRows((data ?? []) as InvRow[])
+      setInvLoading(false)
+    })()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openPanel])
 
   useEffect(() => {
     if (openPanel !== 'dispatched') return
-    setDispLoading(true)
-    setDispRows([])
-    supabase.from('dispatches')
-      .select('id, driver_name, truck_number, status, loads_completed, start_time, jobs(job_name)')
-      .eq('company_id', companyId)
-      .eq('dispatch_date', todayStr)
-      .neq('status', 'cancelled')
-      .order('created_at', { ascending: false })
-      .then(({ data }) => { setDispRows((data ?? []) as unknown as DispRow[]); setDispLoading(false) })
+    setDispLoading(true); setDispRows([])
+    void (async () => {
+      const { data } = await supabase.from('dispatches')
+        .select('id, driver_name, truck_number, status, loads_completed, start_time, jobs(job_name)')
+        .eq('company_id', companyId).eq('dispatch_date', todayStr).neq('status', 'cancelled')
+        .order('created_at', { ascending: false })
+      setDispRows((data ?? []) as unknown as DispRow[])
+      setDispLoading(false)
+    })()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openPanel])
 
