@@ -128,4 +128,6 @@ export const LIMITS = {
   chat:         { limit: 20, windowMs: 60 * 60_000 },
   /** OCR: 30 scans / hr per user (Anthropic API cost control) */
   ocr:          { limit: 30, windowMs: 60 * 60_000 },
+  /** AI document extraction: 20 per hr per user */
+  docExtract:   { limit: 20, windowMs: 60 * 60_000 },
 } satisfies Record<string, RateLimitConfig>

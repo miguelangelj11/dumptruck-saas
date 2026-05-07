@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Pencil, Trash2, Loader2, FileText, Camera, X, ImageIcon, ChevronLeft, ChevronRight, Search, Filter, CheckCircle2, XCircle, DollarSign, Send } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, FileText, Camera, X, ImageIcon, ChevronLeft, ChevronRight, Search, Filter, CheckCircle2, XCircle, DollarSign, Send, Bot } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Load, LoadTicket, Contractor } from '@/lib/types'
 import { linkTicketToDispatch, approveTicket } from '@/lib/workflows'
@@ -105,7 +105,7 @@ export default function TicketsPage() {
   )
 
   // Source filter
-  const [sourceFilter, setSourceFilter] = useState<'all' | 'office' | 'driver'>('all')
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'office' | 'driver' | 'ai'>('all')
 
   // Missing tickets
   type MissingDispatch = {
@@ -214,10 +214,15 @@ export default function TicketsPage() {
     () => loads.filter(l => l.source === 'driver' && l.status === 'pending').length,
     [loads],
   )
+  const aiImportCount = useMemo(
+    () => loads.filter(l => l.generated_by_ai).length,
+    [loads],
+  )
 
   const filtered = useMemo(() => loads.filter(l => {
-    if (sourceFilter === 'office' && l.source === 'driver') return false
+    if (sourceFilter === 'office' && (l.source === 'driver' || l.generated_by_ai)) return false
     if (sourceFilter === 'driver' && l.source !== 'driver') return false
+    if (sourceFilter === 'ai'     && !l.generated_by_ai) return false
     if (filterStatus && l.status !== filterStatus) return false
     if (filterContractor && l.client_company !== filterContractor) return false
     if (filterTruck && l.truck_number !== filterTruck) return false
@@ -479,6 +484,9 @@ export default function TicketsPage() {
           <p className="text-gray-500 text-sm mt-0.5">{loads.length} total · {filtered.length} shown</p>
         </div>
         <div className="flex items-center gap-2">
+          <Link href="/dashboard/tickets/import" className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+            <Bot className="h-4 w-4" /> Import from Document
+          </Link>
           <Link href="/dashboard/tickets/new" className="inline-flex items-center gap-2 rounded-lg border border-[var(--brand-primary)] px-3 py-2 text-sm font-medium text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/5 transition-colors">
             <Camera className="h-4 w-4" /> Quick Entry
           </Link>
@@ -500,6 +508,12 @@ export default function TicketsPage() {
           Driver Submitted
           {driverPendingCount > 0 && (
             <span className="h-4 min-w-[1rem] px-1 rounded-full bg-blue-500 text-white text-[10px] flex items-center justify-center font-bold">{driverPendingCount}</span>
+          )}
+        </button>
+        <button onClick={() => setSourceFilter('ai')} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 ${sourceFilter === 'ai' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+          AI Imported
+          {aiImportCount > 0 && (
+            <span className="h-4 min-w-[1rem] px-1 rounded-full bg-violet-500 text-white text-[10px] flex items-center justify-center font-bold">{aiImportCount}</span>
           )}
         </button>
       </div>
@@ -713,6 +727,9 @@ export default function TicketsPage() {
                           <p className="font-medium text-gray-900 whitespace-nowrap">{l.job_name}</p>
                           {l.source === 'driver' && (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 text-[10px] font-bold uppercase tracking-wide whitespace-nowrap">Driver Upload</span>
+                          )}
+                          {l.generated_by_ai && (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-700 text-[10px] font-bold uppercase tracking-wide whitespace-nowrap">🤖 AI Import</span>
                           )}
                         </div>
                         {l.client_company && <p className="text-xs text-gray-400">{l.client_company}</p>}

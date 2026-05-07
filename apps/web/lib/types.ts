@@ -41,6 +41,14 @@ export type Load = {
   driver_end_time: string | null
   created_at: string
   load_tickets?: LoadTicket[]
+  // AI import columns
+  generated_by_ai?: boolean | null
+  source_document_url?: string | null
+  ai_confidence?: number | null
+  shift?: string | null
+  phase?: string | null
+  broker_name?: string | null
+  project_number?: string | null
 }
 
 export type Driver = {
@@ -87,6 +95,21 @@ export type Invoice = {
   last_reminder_sent_at: string | null
   reminder_count: number
   created_at: string
+}
+
+export type TicketImport = {
+  id: string
+  company_id: string
+  document_url: string | null
+  document_type: string | null
+  document_name: string | null
+  status: 'pending' | 'processing' | 'review' | 'completed' | 'failed'
+  total_rows: number
+  imported_rows: number
+  skipped_rows: number
+  raw_extraction: Record<string, unknown> | null
+  created_at: string
+  completed_at: string | null
 }
 
 export type Payment = {
