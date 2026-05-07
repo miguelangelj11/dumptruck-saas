@@ -48,7 +48,7 @@ export default async function TrialExpiredPage() {
           </div>
 
           {/* Subscribe buttons */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '24px' }}>
             <Link
               href="/signup?plan=owner_operator"
               style={{
@@ -57,14 +57,14 @@ export default async function TrialExpiredPage() {
                 borderRadius: '10px',
                 background: '#f59e0b',
                 color: '#0f1923',
-                fontSize: '14px',
+                fontSize: '13px',
                 fontWeight: 700,
                 textDecoration: 'none',
                 textAlign: 'center',
               }}
             >
               Subscribe — $80/mo
-              <div style={{ fontSize: '11px', fontWeight: 400, marginTop: '2px', opacity: 0.7 }}>Owner Operator Plan</div>
+              <div style={{ fontSize: '11px', fontWeight: 400, marginTop: '2px', opacity: 0.7 }}>Owner Operator</div>
             </Link>
             <Link
               href="/signup?plan=fleet"
@@ -74,14 +74,31 @@ export default async function TrialExpiredPage() {
                 borderRadius: '10px',
                 background: '#2d7a4f',
                 color: '#fff',
-                fontSize: '14px',
+                fontSize: '13px',
                 fontWeight: 700,
                 textDecoration: 'none',
                 textAlign: 'center',
               }}
             >
-              Subscribe — $150/mo
+              Subscribe — $200/mo
               <div style={{ fontSize: '11px', fontWeight: 400, marginTop: '2px', opacity: 0.7 }}>Fleet Plan</div>
+            </Link>
+            <Link
+              href="/signup?plan=growth"
+              style={{
+                display: 'block',
+                padding: '14px',
+                borderRadius: '10px',
+                background: '#6d28d9',
+                color: '#fff',
+                fontSize: '13px',
+                fontWeight: 700,
+                textDecoration: 'none',
+                textAlign: 'center',
+              }}
+            >
+              Subscribe — $350/mo
+              <div style={{ fontSize: '11px', fontWeight: 400, marginTop: '2px', opacity: 0.7 }}>Growth Plan</div>
             </Link>
           </div>
 

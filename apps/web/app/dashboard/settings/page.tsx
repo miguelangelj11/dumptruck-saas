@@ -1492,7 +1492,7 @@ export default function SettingsPage() {
                     style={{ background: '#F5B731', color: '#1a1a1a' }}
                   >
                     {upgradePlanLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                    Upgrade to Fleet — $150/mo →
+                    Upgrade to Fleet — $200/mo →
                   </button>
                 </div>
               </div>
@@ -1610,7 +1610,7 @@ export default function SettingsPage() {
         <div className="rounded-xl border border-[#F5B731]/30 overflow-hidden" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #1e1800 100%)' }}>
           <div className="px-6 pt-6 pb-4">
             <p className="text-base font-bold text-white">Unlock More Features</p>
-            <p className="text-xs text-white/50 mt-1">Upgrade to Fleet ($150/mo) to stop leaving money on the table.</p>
+            <p className="text-xs text-white/50 mt-1">Upgrade to Fleet ($200/mo) to stop leaving money on the table.</p>
           </div>
           <div className="px-6 pb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
             {[
@@ -1654,7 +1654,7 @@ export default function SettingsPage() {
               style={{ background: '#F5B731', color: '#1a1a1a' }}
             >
               {upgradePlanLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Upgrade to Fleet — $150/mo →
+              Upgrade to Fleet — $200/mo →
             </button>
           </div>
         </div>
@@ -1859,28 +1859,28 @@ export default function SettingsPage() {
             const NEXT: Record<'owner_operator' | 'fleet' | 'enterprise', { label: string; price: string; checkoutKey: string | null; features: string[] } | null> = {
               owner_operator: {
                 label:       'Fleet Plan',
-                price:       '$150/mo',
+                price:       '$200/mo',
                 checkoutKey: 'fleet',
                 features: [
-                  'Up to 15 drivers (you currently have 3)',
-                  'Unlimited tickets per month',
-                  'Full dispatch board with driver assignments',
-                  '3 team logins (owner + dispatcher + accountant)',
-                  'Send invoices directly via email',
+                  'Unlimited trucks & drivers',
                   'Subcontractor management & pay stubs',
+                  'Missing ticket detection',
+                  'Follow-up automation engine',
+                  'Team access (unlimited users)',
+                  'AI document reader (50/mo)',
                 ],
               },
               fleet: {
-                label:       'Enterprise Plan',
-                price:       'Custom pricing',
-                checkoutKey: null, // talk to sales
+                label:       'Growth Plan',
+                price:       '$350/mo',
+                checkoutKey: 'growth',
                 features: [
-                  'Unlimited drivers & trucks',
-                  'Mobile driver app for field ticket submission',
-                  'AI ticket photo reader (auto-fill loads)',
-                  'Send invoices & reminders via SMS',
-                  'Dedicated account manager',
-                  'Custom onboarding & data migration',
+                  'CRM Growth Pipeline',
+                  'Lead & job tracking',
+                  'Quote builder (convert quotes → jobs → invoices)',
+                  'Advanced job profitability',
+                  'Mobile ticket with signature capture',
+                  'AI document reader (400/mo)',
                 ],
               },
               enterprise: null,

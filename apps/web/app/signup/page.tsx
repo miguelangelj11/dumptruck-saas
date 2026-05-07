@@ -7,11 +7,12 @@ import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
-type Plan = 'owner_operator' | 'fleet'
+type Plan = 'owner_operator' | 'fleet' | 'growth'
 
 const PLANS: { id: Plan; name: string; price: string; desc: string; color: string; badge?: string; subtext?: string }[] = [
-  { id: 'owner_operator', name: 'Owner Operator', price: '$80/mo', desc: 'Up to 5 trucks, solo operator', color: '#1a1a1a' },
-  { id: 'fleet',          name: 'Fleet',          price: '$150/mo', desc: 'Unlimited trucks & drivers', color: '#F5B731', badge: 'Most Popular', subtext: 'Includes missing ticket detection + auto follow-ups' },
+  { id: 'owner_operator', name: 'Owner Operator', price: '$80/mo',  desc: 'Up to 5 trucks, solo operator',           color: '#1a1a1a' },
+  { id: 'fleet',          name: 'Fleet',          price: '$200/mo', desc: 'Unlimited trucks & drivers',               color: '#F5B731', badge: 'Most Popular', subtext: 'Includes missing ticket detection + auto follow-ups' },
+  { id: 'growth',         name: 'Growth',         price: '$350/mo', desc: 'CRM + quotes + advanced analytics',        color: '#8B5CF6' },
 ]
 
 export default function SignupPage() {
@@ -32,6 +33,7 @@ export default function SignupPage() {
     const params = new URLSearchParams(window.location.search)
     const p = params.get('plan')
     if (p === 'fleet') setSelectedPlan('fleet')
+    else if (p === 'growth') setSelectedPlan('growth')
     else if (p === 'owner_operator' || p === 'owner') setSelectedPlan('owner_operator')
     if (params.get('subscribe') === 'true') setSubscribeMode(true)
     if (params.get('paid') === 'true') setPaymentComplete(true)
@@ -120,7 +122,7 @@ export default function SignupPage() {
     }, 20_000)
 
     try {
-      const planKey = selectedPlan === 'owner_operator' ? 'owner' : 'fleet'
+      const planKey = selectedPlan === 'owner_operator' ? 'owner' : selectedPlan
       let res: Response
       try {
         res = await fetch('/api/stripe/checkout', {
@@ -212,7 +214,7 @@ export default function SignupPage() {
         {/* Plan selector */}
         <div style={{ marginBottom: '24px' }}>
           <p style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: '12px' }}>Which plan are you signing up for?</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
             {PLANS.map((plan) => {
               const sel = selectedPlan === plan.id
               return (

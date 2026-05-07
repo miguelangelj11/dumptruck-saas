@@ -20,13 +20,14 @@ const plans = [
     ctaLabel: 'Start Free 7-Day Trial',
     ctaHref: '/signup?plan=owner_operator',
     features: [
-      'Up to 5 trucks',
+      'Up to 5 trucks & 5 drivers',
       'Dispatching & job management',
-      'Ticket tracking',
+      'Ticket tracking (unlimited)',
       'Basic invoicing',
       'Basic dashboard',
       'Driver management',
       'Client companies',
+      '7-day free trial',
     ],
     locked: [
       'Subcontractor management',
@@ -35,15 +36,18 @@ const plans = [
       'Auto invoice intelligence',
       'Profit tracking',
       'AI dispatch recommendations',
+      'CRM Pipeline',
+      'AI document reader',
+      'Team access',
     ],
   },
   {
     key: 'fleet',
     name: 'Fleet',
     tagline: 'For growing companies that need full control',
-    monthlyPrice: '$150',
-    annualPrice: '$120',
-    annualSavings: 'Save $360/year',
+    monthlyPrice: '$200',
+    annualPrice: '$160',
+    annualSavings: 'Save $480/year',
     popular: true,
     ctaLabel: 'Start Free 7-Day Trial',
     ctaHref: '/signup?plan=fleet',
@@ -60,35 +64,44 @@ const plans = [
       'AI dispatch recommendations',
       'Overdue invoice automation',
       'Weekly performance reports',
+      'Team access (unlimited users)',
+      'Client portal',
+      'AI document reader (50/mo)',
+      '7-day free trial',
     ],
     locked: [
-      'Lead & job pipeline (CRM)',
+      'CRM Growth Pipeline',
       'Quote builder',
       'Advanced job profitability',
       'Customer insights',
+      'Mobile ticket + signature',
     ],
   },
   {
-    key: 'enterprise',
+    key: 'growth',
     name: 'Growth',
     tagline: 'For operators ready to grow their business',
-    monthlyPrice: '$300',
+    monthlyPrice: '$350',
     annualPrice: null,
     annualSavings: null,
     popular: false,
-    ctaLabel: 'Contact Us',
-    ctaHref: 'mailto:hello@dumptruckboss.com',
+    ctaLabel: 'Start Free 7-Day Trial',
+    ctaHref: '/signup?plan=growth',
     features: [
       'Everything in Fleet',
-      'Lead & job pipeline (CRM)',
+      'CRM Growth Pipeline',
+      'Lead & job tracking',
       'Quote builder',
       'Convert quotes → jobs → invoices',
       'Advanced job profitability',
       'Revenue per driver & truck',
       'Customer insights dashboard',
       'Top clients & slow payer tracking',
-      'Revenue per customer reporting',
+      'Mobile ticket with signature capture',
+      'AI document reader (400/mo)',
+      'Documents hub',
       'Priority support',
+      '7-day free trial',
     ],
     locked: [],
   },
@@ -297,10 +310,9 @@ export default function PricingPage() {
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 20px 0' }}>
         <div className="plans-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', alignItems: 'stretch' }}>
           {plans.map((plan) => {
-            const isEnterprise = plan.key === 'enterprise'
             const hl = plan.popular
             const price = annual
-              ? (plan.annualPrice ?? 'Contact us')
+              ? (plan.annualPrice ?? plan.monthlyPrice)
               : plan.monthlyPrice
 
             return (
@@ -345,17 +357,10 @@ export default function PricingPage() {
                 </p>
 
                 {/* Price block */}
-                {isEnterprise && annual ? (
-                  <div style={{ marginBottom: '6px' }}>
-                    <span style={{ fontSize: '34px', fontWeight: 800, color: '#fff', lineHeight: 1 }}>Contact us</span>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '6px' }}>
-                    <span style={{ fontSize: '44px', fontWeight: 800, color: '#fff', lineHeight: 1 }}>{price}</span>
-                    {!isEnterprise && <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.35)' }}>/mo</span>}
-                    {isEnterprise && <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.35)' }}>/mo</span>}
-                  </div>
-                )}
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '44px', fontWeight: 800, color: '#fff', lineHeight: 1 }}>{price}</span>
+                  <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.35)' }}>/mo</span>
+                </div>
 
                 {/* Annual savings note */}
                 <p style={{ fontSize: '12px', color: hl ? GREEN_LIGHT : 'rgba(255,255,255,0.35)', marginBottom: '6px', minHeight: '18px' }}>
@@ -368,70 +373,49 @@ export default function PricingPage() {
                 </p>
 
                 {/* CTA */}
-                {isEnterprise ? (
-                  <Link
-                    href={plan.ctaHref}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '28px' }}>
+                  <button
+                    onClick={() => handleStartTrial(plan.key)}
+                    disabled={checkoutLoading === plan.key}
                     style={{
                       display: 'block',
+                      width: '100%',
                       textAlign: 'center',
                       padding: '12px 16px',
                       borderRadius: '10px',
                       fontSize: '14px',
                       fontWeight: 700,
-                      textDecoration: 'none',
-                      marginBottom: '28px',
-                      background: 'transparent',
-                      color: '#fff',
-                      border: '1px solid rgba(255,255,255,0.2)',
+                      cursor: checkoutLoading === plan.key ? 'default' : 'pointer',
+                      transition: 'opacity 0.15s',
+                      border: 'none',
+                      opacity: checkoutLoading === plan.key ? 0.7 : 1,
+                      ...(hl
+                        ? { background: '#F5B731', color: '#1a1a1a' }
+                        : { background: '#1a1a1a', color: '#fff', border: '1px solid rgba(255,255,255,0.12)' }
+                      ),
                     }}
                   >
-                    {plan.ctaLabel} →
+                    {checkoutLoading === plan.key ? 'Loading…' : `${plan.ctaLabel} →`}
+                  </button>
+                  <Link
+                    href={`/signup?plan=${plan.key === 'owner' ? 'owner_operator' : plan.key}&subscribe=true`}
+                    style={{
+                      display: 'block',
+                      textAlign: 'center',
+                      padding: '10px 16px',
+                      borderRadius: '10px',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      textDecoration: 'none',
+                      color: hl ? '#4ade80' : 'rgba(255,255,255,0.55)',
+                      border: `1px solid ${hl ? 'rgba(74,222,128,0.25)' : 'rgba(255,255,255,0.1)'}`,
+                      background: 'transparent',
+                      transition: 'opacity 0.15s',
+                    }}
+                  >
+                    Subscribe Now — {plan.monthlyPrice}/mo →
                   </Link>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '28px' }}>
-                    <button
-                      onClick={() => handleStartTrial(plan.key)}
-                      disabled={checkoutLoading === plan.key}
-                      style={{
-                        display: 'block',
-                        width: '100%',
-                        textAlign: 'center',
-                        padding: '12px 16px',
-                        borderRadius: '10px',
-                        fontSize: '14px',
-                        fontWeight: 700,
-                        cursor: checkoutLoading === plan.key ? 'default' : 'pointer',
-                        transition: 'opacity 0.15s',
-                        border: 'none',
-                        opacity: checkoutLoading === plan.key ? 0.7 : 1,
-                        ...(hl
-                          ? { background: '#F5B731', color: '#1a1a1a' }
-                          : { background: '#1a1a1a', color: '#fff', border: '1px solid rgba(255,255,255,0.12)' }
-                        ),
-                      }}
-                    >
-                      {checkoutLoading === plan.key ? 'Loading…' : `${plan.ctaLabel} →`}
-                    </button>
-                    <Link
-                      href={`/signup?plan=${plan.key === 'owner' ? 'owner_operator' : plan.key}&subscribe=true`}
-                      style={{
-                        display: 'block',
-                        textAlign: 'center',
-                        padding: '10px 16px',
-                        borderRadius: '10px',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        textDecoration: 'none',
-                        color: hl ? '#4ade80' : 'rgba(255,255,255,0.55)',
-                        border: `1px solid ${hl ? 'rgba(74,222,128,0.25)' : 'rgba(255,255,255,0.1)'}`,
-                        background: 'transparent',
-                        transition: 'opacity 0.15s',
-                      }}
-                    >
-                      Subscribe Now — {plan.monthlyPrice}/mo →
-                    </Link>
-                  </div>
-                )}
+                </div>
 
                 {/* Divider */}
                 <div style={{ height: '1px', background: hl ? 'rgba(45,122,79,0.3)' : 'rgba(255,255,255,0.07)', marginBottom: '24px' }} />
@@ -452,23 +436,15 @@ export default function PricingPage() {
                   ))}
                 </ul>
 
-                {/* Trust bullets (trial plans) */}
-                {!isEnterprise && (
-                  <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: hl ? '1px solid rgba(45,122,79,0.3)' : '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {['7-day free trial', 'No credit card required', 'Cancel anytime'].map((t) => (
-                      <div key={t} style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: 'rgba(255,255,255,0.35)' }}>
-                        <span style={{ color: hl ? GREEN_LIGHT : GREEN, fontWeight: 700 }}>✓</span>
-                        {t}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {isEnterprise && (
-                  <p style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.07)', fontSize: '12px', color: 'rgba(255,255,255,0.35)', lineHeight: 1.6 }}>
-                    Custom pricing based on fleet size. Talk to us before you commit — we'll walk you through everything.
-                  </p>
-                )}
+                {/* Trust bullets */}
+                <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: hl ? '1px solid rgba(45,122,79,0.3)' : '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {['7-day free trial', 'No credit card required', 'Cancel anytime'].map((t) => (
+                    <div key={t} style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: 'rgba(255,255,255,0.35)' }}>
+                      <span style={{ color: hl ? GREEN_LIGHT : GREEN, fontWeight: 700 }}>✓</span>
+                      {t}
+                    </div>
+                  ))}
+                </div>
               </div>
             )
           })}
@@ -479,10 +455,10 @@ export default function PricingPage() {
       <div style={{ maxWidth: '800px', margin: '48px auto 0', padding: '0 20px' }}>
         <div style={{ background: 'rgba(245,183,49,0.08)', border: '1px solid rgba(245,183,49,0.25)', borderRadius: '16px', padding: '28px 32px', textAlign: 'center' }}>
           <p style={{ fontSize: '17px', fontWeight: 700, color: '#fff', marginBottom: '8px', lineHeight: 1.4 }}>
-            🚛 Most operators on Owner Operator are losing $500–$2,000/month in untracked tickets.
+            🚛 Most Fleet operators recover $500–$2,000/month in untracked tickets.
           </p>
           <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', margin: 0 }}>
-            Fleet plan pays for itself the first week.
+            The Fleet plan pays for itself in the first week.
           </p>
         </div>
       </div>
