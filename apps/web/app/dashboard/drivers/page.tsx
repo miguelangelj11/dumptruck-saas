@@ -2,10 +2,19 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Loader2, Users, Phone, Mail, X, Pencil, Trash2, DollarSign, CreditCard, Calendar, AlertCircle, Lock } from 'lucide-react'
+import { Plus, Loader2, Users, Phone, Mail, X, Pencil, Trash2, DollarSign, CreditCard, Calendar, AlertCircle, Lock, FileText, ChevronLeft, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Driver, Load, DriverPayment } from '@/lib/types'
 import { getCompanyId } from '@/lib/get-company-id'
+
+function fmtDate(s: string | null | undefined): string {
+  if (!s) return '—'
+  const ymd = s.slice(0, 10)
+  const [y, m, d] = ymd.split('-')
+  return `${parseInt(m!)}/${parseInt(d!)}/${y}`
+}
+
+type LoadWithTickets = Load & { load_tickets?: { ticket_number: string | null }[] }
 
 const EMPTY_DRIVER = { name: '', email: '', phone: '', status: 'active' }
 const PAY_METHODS = ['Check', 'Cash', 'Zelle', 'ACH', 'Direct Deposit']
@@ -33,6 +42,10 @@ export default function DriversPage() {
   const [payingDriver, setPayingDriver]     = useState<Driver | null>(null)
   const [payForm, setPayForm]               = useState(EMPTY_PAY)
   const [savingPay, setSavingPay]           = useState(false)
+  const [viewingTicketsDriver, setViewingTicketsDriver] = useState<Driver | null>(null)
+  const [driverTickets, setDriverTickets]               = useState<LoadWithTickets[]>([])
+  const [loadingDriverTickets, setLoadingDriverTickets] = useState(false)
+  const [driverTicketFilter, setDriverTicketFilter]     = useState<'all' | 'pending' | 'invoiced' | 'paid'>('all')
   const [companyPlan, setCompanyPlan]           = useState<string | null>(null)
   const [isInternal, setIsInternal]             = useState(false)
   const [nearLimitDismissed, setNearLimitDismissed] = useState(false)
@@ -149,6 +162,25 @@ export default function DriversPage() {
     if (error) { toast.error('Status update failed'); return }
     setDrivers(prev => prev.map(x => x.id === d.id ? { ...x, status: ns } : x))
     if (selectedDriver?.id === d.id) setSelectedDriver(p => p ? { ...p, status: ns } : null)
+  }
+
+  // ── View Tickets modal ────────────────────────────────────────────────────
+  async function openDriverTickets(driver: Driver, e: React.MouseEvent) {
+    e.stopPropagation()
+    setViewingTicketsDriver(driver)
+    setDriverTicketFilter('all')
+    setLoadingDriverTickets(true)
+    const companyId = await getCompanyId()
+    if (!companyId) { setLoadingDriverTickets(false); return }
+    const { data, error } = await supabase
+      .from('loads')
+      .select('*, load_tickets(ticket_number)')
+      .eq('company_id', companyId)
+      .eq('driver_name', driver.name)
+      .order('date', { ascending: false })
+    if (error) toast.error('Failed to load tickets: ' + error.message)
+    setDriverTickets((data ?? []) as LoadWithTickets[])
+    setLoadingDriverTickets(false)
   }
 
   // ── Payment modal ─────────────────────────────────────────────────────────
@@ -373,6 +405,12 @@ export default function DriversPage() {
                       </button>
                     )}
                   </div>
+                  <button
+                    onClick={e => openDriverTickets(d, e)}
+                    className="w-full rounded-lg bg-[var(--brand-primary)]/10 hover:bg-[var(--brand-primary)]/20 text-[var(--brand-primary)] text-sm font-medium py-2 transition-colors mt-2"
+                  >
+                    View Tickets →
+                  </button>
                 </div>
               )
             })}
@@ -568,6 +606,119 @@ export default function DriversPage() {
           </div>
         </div>
       )}
+
+      {/* View Tickets Modal */}
+      {viewingTicketsDriver && (() => {
+        const ticketCounts = {
+          all:      driverTickets.length,
+          pending:  driverTickets.filter(t => t.status === 'pending').length,
+          invoiced: driverTickets.filter(t => t.status === 'invoiced').length,
+          paid:     driverTickets.filter(t => t.status === 'paid').length,
+        }
+        const filtered = driverTicketFilter === 'all'
+          ? driverTickets
+          : driverTickets.filter(t => t.status === driverTicketFilter)
+        const totalAmt = filtered.reduce((s, t) => s + (t.rate ?? 0), 0)
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+            <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl flex flex-col max-h-[90vh]">
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-full bg-[var(--brand-dark)] flex items-center justify-center text-white font-bold text-sm shrink-0">
+                    {viewingTicketsDriver.name.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <h2 className="font-semibold text-gray-900">{viewingTicketsDriver.name}&apos;s Tickets</h2>
+                    <p className="text-xs text-gray-400">{driverTickets.length} total loads</p>
+                  </div>
+                </div>
+                <button onClick={() => { setViewingTicketsDriver(null); setDriverTickets([]) }} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+              </div>
+
+              {/* Tabs */}
+              <div className="px-6 pt-4 shrink-0">
+                <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit">
+                  {(['all', 'pending', 'invoiced', 'paid'] as const).map(tab => (
+                    <button
+                      key={tab}
+                      onClick={() => setDriverTicketFilter(tab)}
+                      className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-1.5 ${driverTicketFilter === tab ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                      {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                      {ticketCounts[tab] > 0 && <span className="text-[10px] bg-gray-200 text-gray-600 rounded-full px-1.5 py-0.5 font-bold">{ticketCounts[tab]}</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Table */}
+              <div className="flex-1 overflow-y-auto px-6 py-4">
+                {loadingDriverTickets ? (
+                  <div className="flex items-center justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-[var(--brand-primary)]" /></div>
+                ) : filtered.length === 0 ? (
+                  <div className="text-center py-16">
+                    <FileText className="h-10 w-10 text-gray-200 mx-auto mb-3" />
+                    <p className="text-sm text-gray-400">No tickets found</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-100">
+                          <th className="text-left text-xs font-semibold text-gray-400 pb-3 pr-4">Date</th>
+                          <th className="text-left text-xs font-semibold text-gray-400 pb-3 pr-4">Job</th>
+                          <th className="text-left text-xs font-semibold text-gray-400 pb-3 pr-4">Truck #</th>
+                          <th className="text-left text-xs font-semibold text-gray-400 pb-3 pr-4">Material</th>
+                          <th className="text-left text-xs font-semibold text-gray-400 pb-3 pr-4">Ticket #</th>
+                          <th className="text-left text-xs font-semibold text-gray-400 pb-3 pr-4">Hours</th>
+                          <th className="text-right text-xs font-semibold text-gray-400 pb-3 pr-4">Rate</th>
+                          <th className="text-right text-xs font-semibold text-gray-400 pb-3 pr-4">Amount</th>
+                          <th className="text-left text-xs font-semibold text-gray-400 pb-3">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {filtered.map(t => {
+                          const ticketNums = t.load_tickets?.map(lt => lt.ticket_number).filter(Boolean).join(', ') || '—'
+                          return (
+                            <tr key={t.id} className="hover:bg-gray-50/50 transition-colors">
+                              <td className="py-3 pr-4 text-gray-600 whitespace-nowrap">{fmtDate(t.date)}</td>
+                              <td className="py-3 pr-4 text-gray-900 font-medium max-w-[160px] truncate">{t.job_name}</td>
+                              <td className="py-3 pr-4 text-gray-600">{t.truck_number || '—'}</td>
+                              <td className="py-3 pr-4 text-gray-600">{t.material || '—'}</td>
+                              <td className="py-3 pr-4 text-gray-600 font-mono text-xs">{ticketNums}</td>
+                              <td className="py-3 pr-4 text-gray-600">{t.hours_worked || '—'}</td>
+                              <td className="py-3 pr-4 text-right text-gray-600">{t.rate != null ? `$${t.rate.toLocaleString()}` : '—'}</td>
+                              <td className="py-3 pr-4 text-right font-semibold text-gray-900">{t.rate != null ? `$${t.rate.toLocaleString()}` : '—'}</td>
+                              <td className="py-3">
+                                <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                                  t.status === 'paid'     ? 'bg-green-100 text-green-700' :
+                                  t.status === 'invoiced' ? 'bg-blue-100 text-blue-700' :
+                                  t.status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
+                                  t.status === 'disputed' ? 'bg-red-100 text-red-700' :
+                                  'bg-yellow-100 text-yellow-700'
+                                }`}>{t.status}</span>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              {!loadingDriverTickets && filtered.length > 0 && (
+                <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-between text-sm shrink-0">
+                  <span className="text-gray-400">{filtered.length} ticket{filtered.length !== 1 ? 's' : ''}</span>
+                  <span className="font-semibold text-gray-900">Total: ${totalAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Driver detail panel */}
       {selectedDriver && (
