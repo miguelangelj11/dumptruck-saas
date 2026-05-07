@@ -167,7 +167,7 @@ export async function getDriverProfitability(
 
   const [driversRes, loadsRes] = await Promise.all([
     supabase.from('drivers').select('id, name').eq('company_id', companyId).eq('status', 'active'),
-    supabase.from('loads').select('driver_name, rate')
+    supabase.from('loads').select('driver_name, rate, total_pay')
       .eq('company_id', companyId)
       .gte('date', start).lte('date', end)
       .in('status', ['approved', 'invoiced', 'paid']),
@@ -181,7 +181,7 @@ export async function getDriverProfitability(
     const key = (l as Record<string, unknown>).driver_name as string | null
     if (!key) continue
     const entry = statsMap.get(key) ?? { revenue: 0, loads: 0 }
-    entry.revenue += Number((l as Record<string, unknown>).rate) || 0
+    entry.revenue += Number((l as Record<string, unknown>).total_pay ?? (l as Record<string, unknown>).rate) || 0
     entry.loads++
     statsMap.set(key, entry)
   }
@@ -334,13 +334,13 @@ export async function getCompanyProfitSummary(
   const weekStart  = weekAgo.toISOString().split('T')[0]!
 
   const [allLoadsRes, weekLoadsRes, jobsRes] = await Promise.all([
-    supabase.from('loads').select('rate').eq('company_id', companyId).in('status', ['approved', 'invoiced', 'paid']),
-    supabase.from('loads').select('rate').eq('company_id', companyId).in('status', ['approved', 'invoiced', 'paid']).gte('date', weekStart).lte('date', todayStr),
+    supabase.from('loads').select('rate, total_pay').eq('company_id', companyId).in('status', ['approved', 'invoiced', 'paid']),
+    supabase.from('loads').select('rate, total_pay').eq('company_id', companyId).in('status', ['approved', 'invoiced', 'paid']).gte('date', weekStart).lte('date', todayStr),
     supabase.from('jobs').select('driver_cost, fuel_cost, other_costs').eq('company_id', companyId),
   ])
 
   const sumRev = (rows: Record<string, unknown>[] | null) =>
-    (rows ?? []).reduce((s, l) => s + (Number(l.rate) || 0), 0)
+    (rows ?? []).reduce((s, l) => s + (Number(l.total_pay ?? l.rate) || 0), 0)
 
   const totalRevenue = sumRev(allLoadsRes.data  as Record<string, unknown>[] | null)
   const weekRevenue  = sumRev(weekLoadsRes.data as Record<string, unknown>[] | null)

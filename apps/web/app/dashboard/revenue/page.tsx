@@ -41,7 +41,7 @@ function getRangeBounds(range: DateRange): { start: string; end: string } {
 }
 
 function invDate(inv: Invoice): string {
-  return inv.date_from ?? inv.created_at.split('T')[0]!
+  return inv.date_paid ?? inv.date_from ?? inv.created_at.split('T')[0]!
 }
 
 function buildRevExpChartData(
@@ -298,7 +298,7 @@ export default function RevenuePage() {
   }, {})
 
   // Cash Collected: for paid invoices in range, use payment records if available else invoice total
-  const paidInvoices = filteredInvoices.filter(i => i.status === 'paid')
+  const paidInvoices = filteredInvoices.filter(i => i.status === 'paid' && i.invoice_type === 'client')
   const cashCollected = paidInvoices.reduce((s, i) => {
     const pmtSum = paymentsByInvoiceId[i.id]
     return s + (pmtSum !== undefined ? pmtSum : i.total)

@@ -85,7 +85,7 @@ export default async function DashboardPage() {
   const fetchCutoffStr = fetchCutoff.toISOString().split('T')[0]!
 
   // ── Batch 1 ───────────────────────────────────────────────────────────────
-  const [loadsRes, invoicesRes, companyRes, activityRes, paymentsRes] = await Promise.all([
+  const [loadsRes, invoicesRes, companyRes, activityRes] = await Promise.all([
     supabase
       .from('loads')
       .select('id, rate, total_pay, status, driver_name, job_name, date, created_at, source, submitted_by_driver')
@@ -94,7 +94,7 @@ export default async function DashboardPage() {
       .order('date', { ascending: false }),
     supabase
       .from('invoices')
-      .select('id, status, total, created_at')
+      .select('id, status, total, invoice_type, date_paid, created_at')
       .eq('company_id', effectiveCompanyId),
     supabase
       .from('companies')
@@ -107,12 +107,6 @@ export default async function DashboardPage() {
       .eq('company_id', effectiveCompanyId)
       .order('created_at', { ascending: false })
       .limit(6),
-    supabase
-      .from('payments')
-      .select('id, amount, payment_date')
-      .eq('company_id', effectiveCompanyId)
-      .gte('payment_date', fetchCutoffStr)
-      .order('payment_date', { ascending: false }),
   ])
 
   const loads       = loadsRes.data    ?? []
@@ -121,7 +115,12 @@ export default async function DashboardPage() {
   const companyName = companyRes.data?.name ?? ''
   const companyPlan = (companyRes.data as Record<string, unknown> | null)?.plan as string | null ?? null
   const activityFeed = activityRes.error ? [] : (activityRes.data ?? [])
-  const payments = (paymentsRes.data ?? []) as { id: string; amount: number; payment_date: string }[]
+
+  // Paid client invoices — source of truth for revenue
+  type InvoiceRow = { id: string; status: string; total: number | null; invoice_type: string | null; date_paid: string | null }
+  const clientPaidInvs = (invoices as InvoiceRow[])
+    .filter(i => i.invoice_type === 'client' && i.status === 'paid' && i.date_paid)
+    .map(i => ({ ...i, date_paid: i.date_paid! }))
 
   // ── Display name: profiles.full_name → auth metadata → email prefix ──────
   const meta         = user?.user_metadata ?? {}
@@ -182,9 +181,9 @@ export default async function DashboardPage() {
   const lastWeekTickets = loads.filter(l => l.date >= lastWeekStartStr && l.date <= lastWeekEndStr).length
   const ticketPct = lastWeekTickets > 0 ? Math.round((thisWeekTickets - lastWeekTickets) / lastWeekTickets * 100) : null
 
-  // Revenue this month = sum of payments received (cash collected from paid invoices)
-  const thisMonthRev = payments.filter(p => p.payment_date?.startsWith(thisMonthStr)).reduce((s, p) => s + (p.amount ?? 0), 0)
-  const prevMonthRev = payments.filter(p => p.payment_date?.startsWith(prevMonthStr)).reduce((s, p) => s + (p.amount ?? 0), 0)
+  // Revenue = paid client invoices, using date_paid as the revenue date
+  const thisMonthRev = clientPaidInvs.filter(i => i.date_paid.startsWith(thisMonthStr)).reduce((s, i) => s + (i.total ?? 0), 0)
+  const prevMonthRev = clientPaidInvs.filter(i => i.date_paid.startsWith(prevMonthStr)).reduce((s, i) => s + (i.total ?? 0), 0)
   const revPct = prevMonthRev > 0 ? Math.round((thisMonthRev - prevMonthRev) / prevMonthRev * 100) : null
 
   // Outstanding = draft + sent invoices
@@ -199,9 +198,9 @@ export default async function DashboardPage() {
   const overdueInvs     = invoices.filter(i => i.status === 'overdue')
   const overdueTotal    = overdueInvs.reduce((s, i) => s + (i.total ?? 0), 0)
   const loadsToday      = loads.filter(l => l.date === todayStr)
-  const weekRevCollected = payments
-    .filter(p => p.payment_date >= thisWeekStartStr && p.payment_date <= todayStr)
-    .reduce((s, p) => s + (p.amount ?? 0), 0)
+  const weekRevCollected = clientPaidInvs
+    .filter(i => i.date_paid >= thisWeekStartStr && i.date_paid <= todayStr)
+    .reduce((s, i) => s + (i.total ?? 0), 0)
   const weekRevProjected = loads
     .filter(l => l.date >= thisWeekStartStr && l.date <= todayStr)
     .reduce((s, l) => s + ((l.total_pay ?? l.rate) ?? 0), 0)
@@ -230,13 +229,13 @@ export default async function DashboardPage() {
 
   // ── Chart data ────────────────────────────────────────────────────────────
 
-  // Charts are payment-based (cash actually received)
+  // Charts show cash collected = paid client invoices, by date_paid
   // This Week: Mon–Sun, revenue per day
   const weekData = DAY_NAMES.map((label, i) => {
     const d = new Date(thisWeekStart)
     d.setDate(thisWeekStart.getDate() + i)
     const ds = d.toISOString().split('T')[0]!
-    const revenue = payments.filter(p => p.payment_date === ds).reduce((s, p) => s + (p.amount ?? 0), 0)
+    const revenue = clientPaidInvs.filter(i => i.date_paid === ds).reduce((s, i) => s + (i.total ?? 0), 0)
     return { label, revenue }
   })
 
@@ -246,18 +245,18 @@ export default async function DashboardPage() {
   const monthData   = Array.from({ length: numWeeks }, (_, w) => {
     const startDay = w * 7 + 1
     const endDay   = Math.min(startDay + 6, daysInMonth)
-    const revenue  = payments.filter(p => {
-      if (!p.payment_date?.startsWith(thisMonthStr)) return false
-      const day = parseInt(p.payment_date.split('-')[2] ?? '0')
+    const revenue  = clientPaidInvs.filter(i => {
+      if (!i.date_paid.startsWith(thisMonthStr)) return false
+      const day = parseInt(i.date_paid.split('-')[2] ?? '0')
       return day >= startDay && day <= endDay
-    }).reduce((s, p) => s + (p.amount ?? 0), 0)
+    }).reduce((s, i) => s + (i.total ?? 0), 0)
     return { label: `W${w + 1}`, revenue }
   })
 
   // This Year: Jan–Dec of current year
   const yearData = MONTH_NAMES.map((label, i) => {
     const key     = `${now.getFullYear()}-${String(i + 1).padStart(2, '0')}`
-    const revenue = payments.filter(p => p.payment_date?.startsWith(key)).reduce((s, p) => s + (p.amount ?? 0), 0)
+    const revenue = clientPaidInvs.filter(i => i.date_paid.startsWith(key)).reduce((s, i) => s + (i.total ?? 0), 0)
     return { label, revenue }
   })
 
@@ -471,7 +470,7 @@ export default async function DashboardPage() {
           <div className="flex items-center justify-between mb-1">
             <h2 className="font-semibold text-gray-900 text-sm">Revenue</h2>
           </div>
-          <p className="text-xs text-gray-400 mb-4">Based on payments received on paid invoices</p>
+          <p className="text-xs text-gray-400 mb-4">Based on paid client invoices (date paid)</p>
           <LoadsChart week={weekData} month={monthData} year={yearData} />
         </div>
 

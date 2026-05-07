@@ -230,8 +230,10 @@ export default function DriversPage() {
   // ── Stats helpers ─────────────────────────────────────────────────────────
   function getDriverStats(name: string) {
     const dl = loads.filter(l => l.driver_name === name)
-    const revenue = dl.filter(l => l.status === 'paid').reduce((s, l) => s + (l.rate ?? 0), 0)
-    const owed    = dl.filter(l => l.status === 'approved' && !l.driver_paid).reduce((s, l) => s + (l.rate ?? 0), 0)
+    const revenue = dl
+      .filter(l => ['approved', 'invoiced', 'paid'].includes(l.status))
+      .reduce((s, l) => s + ((l as { total_pay?: number | null }).total_pay ?? l.rate ?? 0), 0)
+    const owed = dl.filter(l => l.status === 'approved' && !l.driver_paid).reduce((s, l) => s + (l.rate ?? 0), 0)
     return { loads: dl.length, revenue, owed }
   }
 
@@ -754,7 +756,7 @@ export default function DriversPage() {
                 </div>
                 <div className="bg-[var(--brand-primary)]/5 rounded-xl p-3">
                   <p className="text-xs text-gray-400 mb-1">Revenue</p>
-                  <p className="text-base font-bold text-[var(--brand-primary)]">${driverLoads.filter(l => l.status === 'paid').reduce((s, l) => s + (l.rate ?? 0), 0).toLocaleString()}</p>
+                  <p className="text-base font-bold text-[var(--brand-primary)]">${driverLoads.filter(l => ['approved', 'invoiced', 'paid'].includes(l.status)).reduce((s, l) => s + ((l as { total_pay?: number | null }).total_pay ?? l.rate ?? 0), 0).toLocaleString()}</p>
                 </div>
                 <div className={`rounded-xl p-3 ${driverAmountOwed > 0 ? 'bg-orange-50' : 'bg-gray-50'}`}>
                   <p className="text-xs text-gray-400 mb-1">Owed</p>

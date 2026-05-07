@@ -62,10 +62,11 @@ function buildTimeWorked(load: { time_in: string | null; time_out: string | null
   if (t1) return t1
   return load.hours_worked ?? null
 }
-function buildMaterial(load: { material: string | null; load_type: string | null; origin: string | null; destination: string | null }): string | null {
-  const mat = load.material || load.load_type || null
-  const loc = [load.origin, load.destination].filter(Boolean).join(' → ')
-  return [mat, loc].filter(Boolean).join(' · ') || null
+function buildMaterial(load: { material: string | null; load_type: string | null }): string | null {
+  return load.material || load.load_type || null
+}
+function buildLocation(load: { origin: string | null; destination: string | null }): string | null {
+  return [load.origin, load.destination].filter(Boolean).join(' → ') || null
 }
 
 function buildLineItems(loads: LoadWithTickets[], deductionPct: number): InvoiceLineItem[] {
@@ -75,6 +76,7 @@ function buildLineItems(loads: LoadWithTickets[], deductionPct: number): Invoice
   for (const load of loads) {
     const slips = load.load_tickets ?? []
     const mat = buildMaterial(load)
+    const loc = buildLocation(load)
     const tw  = buildTimeWorked(load)
     const totalPay = load.total_pay ?? null
 
@@ -87,7 +89,7 @@ function buildLineItems(loads: LoadWithTickets[], deductionPct: number): Invoice
         invoice_id: '',
         line_date: load.date,
         truck_number: load.truck_number,
-        driver_name: load.driver_name,
+        driver_name: loc,
         material: mat,
         ticket_number: slips[0]?.ticket_number ?? null,
         time_worked: tw,
@@ -107,7 +109,7 @@ function buildLineItems(loads: LoadWithTickets[], deductionPct: number): Invoice
         invoice_id: '',
         line_date: load.date,
         truck_number: load.truck_number,
-        driver_name: load.driver_name,
+        driver_name: loc,
         material: mat,
         ticket_number: null,
         time_worked: tw,
@@ -129,7 +131,7 @@ function buildLineItems(loads: LoadWithTickets[], deductionPct: number): Invoice
           invoice_id: '',
           line_date: load.date,
           truck_number: load.truck_number,
-          driver_name: load.driver_name,
+          driver_name: loc,
           material: mat,
           ticket_number: slip.ticket_number,
           time_worked: tw,
@@ -178,6 +180,7 @@ function buildDriverPayLineItems(
   for (const load of loads) {
     const slips = load.load_tickets ?? []
     const mat = buildMaterial(load)
+    const loc = buildLocation(load)
     const tw  = buildTimeWorked(load)
     const totalPay = load.total_pay ?? null
     if (totalPay != null || slips.length === 0) {
@@ -185,7 +188,7 @@ function buildDriverPayLineItems(
       items.push({
         id: crypto.randomUUID(), invoice_id: '',
         line_date: load.date, truck_number: load.truck_number,
-        driver_name: load.driver_name, material: mat,
+        driver_name: loc, material: mat,
         ticket_number: slips[0]?.ticket_number ?? null, time_worked: tw,
         quantity: load.rate_quantity ?? 1, rate: load.rate, rate_type: load.rate_type,
         amount: gross * (payPct / 100),
@@ -199,7 +202,7 @@ function buildDriverPayLineItems(
         items.push({
           id: crypto.randomUUID(), invoice_id: '',
           line_date: load.date, truck_number: load.truck_number,
-          driver_name: load.driver_name, material: mat,
+          driver_name: loc, material: mat,
           ticket_number: slip.ticket_number, time_worked: tw,
           quantity: load.rate_type === 'hr' ? null : qty,
           rate: load.rate, rate_type: load.rate_type,
