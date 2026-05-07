@@ -811,7 +811,7 @@ export default function TicketsPage() {
             <table className="w-full min-w-[800px] text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  {['Photo', 'Date', 'Job / Company', 'Load Type', 'Driver', 'Truck', 'Origin → Dest', 'Slips', 'Total Pay', 'Status', ''].map(h => (
+                  {['Photo', 'Date', 'Job / Company', 'Load Type', 'Driver', 'Truck', 'Origin → Dest', 'Loads', 'Tons', 'Total Pay', 'Status', ''].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -852,13 +852,11 @@ export default function TicketsPage() {
                       <td className="px-4 py-3 text-xs text-gray-500 max-w-[160px]">
                         {l.origin || l.destination ? <span>{l.origin || '?'} → {l.destination || '?'}</span> : <span className="text-gray-300">—</span>}
                       </td>
-                      <td className="px-4 py-3">
-                        {tickets.length > 0 ? (
-                          <div>
-                            <span className="text-sm font-medium text-gray-900">{tickets.length}</span>
-                            {tons > 0 && <p className="text-xs text-gray-400">{tons.toFixed(1)} tons</p>}
-                          </div>
-                        ) : <span className="text-gray-300">—</span>}
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                        {tickets.length > 0 ? tickets.length : <span className="text-gray-300">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {tons > 0 ? `${tons % 1 === 0 ? tons : tons.toFixed(1)}T` : <span className="text-gray-300">—</span>}
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap font-medium">
                         {l.total_pay != null
