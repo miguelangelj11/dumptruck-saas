@@ -8,7 +8,7 @@ import { toast } from 'sonner'
 import * as Sentry from '@sentry/nextjs'
 import { ticketSchema, fileUploadSchema, validate } from '@/lib/schemas'
 
-const MATERIALS = ['Dirt', 'Gravel', 'Asphalt', 'Sand', 'Rock', 'Fill', 'Millings', 'Other']
+const MATERIALS = ['Asphalt', 'Dirt', 'Fill', 'Gravel', 'Millings', 'Mix', 'Rock', 'Sand', 'Other']
 
 function calcHours(start: string, end: string): string {
   if (!start || !end) return ''

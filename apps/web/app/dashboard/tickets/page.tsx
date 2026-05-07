@@ -21,7 +21,7 @@ const statusColor = {
   paid:     'bg-emerald-100 text-emerald-700',
 }
 
-const LOAD_TYPES = ['Dirt', 'Gravel', 'Asphalt', 'Sand', 'Rock', 'Fill', 'Millings', 'Other']
+const LOAD_TYPES = ['Asphalt', 'Dirt', 'Fill', 'Gravel', 'Millings', 'Mix', 'Rock', 'Sand', 'Other']
 
 const TIME_OPTIONS: string[] = (() => {
   const opts: string[] = []

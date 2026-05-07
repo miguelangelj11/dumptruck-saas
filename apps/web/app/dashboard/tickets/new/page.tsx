@@ -11,7 +11,7 @@ import Image from 'next/image'
 import * as Sentry from '@sentry/nextjs'
 import { ticketSchema, fileUploadSchema, validate } from '@/lib/schemas'
 
-const LOAD_TYPES = ['Dirt', 'Gravel', 'Asphalt', 'Sand', 'Rock', 'Fill', 'Millings', 'Other']
+const LOAD_TYPES = ['Asphalt', 'Dirt', 'Fill', 'Gravel', 'Millings', 'Mix', 'Rock', 'Sand', 'Other']
 
 type SlipRow = {
   id: string

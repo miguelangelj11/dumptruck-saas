@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { Camera, Loader2, CheckCircle, Truck } from 'lucide-react'
 import { toast } from 'sonner'
 
-const MATERIALS = ['Dirt', 'Gravel', 'Asphalt', 'Sand', 'Rock', 'Fill', 'Millings', 'Other']
+const MATERIALS = ['Asphalt', 'Dirt', 'Fill', 'Gravel', 'Millings', 'Mix', 'Rock', 'Sand', 'Other']
 
 const TIME_OPTIONS: string[] = (() => {
   const opts: string[] = []

@@ -14,7 +14,7 @@ const statusColor = {
   paid: 'bg-green-100 text-green-700',
 }
 
-const materials = ['Dirt', 'Gravel', 'Sand', 'Rock', 'Concrete', 'Asphalt', 'Mulch', 'Other']
+const materials = ['Asphalt', 'Concrete', 'Dirt', 'Gravel', 'Mix', 'Mulch', 'Rock', 'Sand', 'Other']
 
 type SlipRow = { id: string; tonnage: string; imageFile: File | null; imagePreview: string | null }
 
@@ -67,6 +67,12 @@ export default function ContractorsPage() {
   const [savingTicket, setSavingTicket] = useState(false)
   const [trucks, setTrucks] = useState<{ id: string; truck_number: string }[]>([])
   const [truckMode, setTruckMode] = useState<'dropdown' | 'manual'>('dropdown')
+  const [activeJobs, setActiveJobs] = useState<{ id: string; job_name: string }[]>([])
+  const [jobMode, setJobMode] = useState<'dropdown' | 'manual'>('dropdown')
+  const [contractorTrucks, setContractorTrucks] = useState<{ id: string; truck_number: string }[]>([])
+  const [addingContractorTruck, setAddingContractorTruck] = useState(false)
+  const [newContractorTruckNumber, setNewContractorTruckNumber] = useState('')
+  const [savingContractorTruck, setSavingContractorTruck] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [slipRows, setSlipRows] = useState<SlipRow[]>([makeEmptySlip()])
   const fileInputRefs = useRef<Map<string, HTMLInputElement>>(new Map())
@@ -121,10 +127,61 @@ export default function ContractorsPage() {
     setLoadingTickets(false)
   }
 
+  async function fetchActiveJobs(orgId: string) {
+    const { data } = await supabase
+      .from('jobs')
+      .select('id, job_name')
+      .eq('company_id', orgId)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+    setActiveJobs(data ?? [])
+  }
+
+  async function fetchContractorTrucks(contractorId: string) {
+    const res = await fetch(`/api/contractors/${contractorId}/trucks`)
+    if (res.ok) {
+      const data = await res.json() as { id: string; truck_number: string }[]
+      setContractorTrucks(data)
+    }
+  }
+
+  async function saveContractorTruck() {
+    if (!newContractorTruckNumber.trim() || !selected) return
+    setSavingContractorTruck(true)
+    const res = await fetch(`/api/contractors/${selected.id}/trucks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ truck_number: newContractorTruckNumber.trim() }),
+    })
+    if (res.ok) {
+      const truck = await res.json() as { id: string; truck_number: string }
+      setContractorTrucks(prev => [...prev, truck].sort((a, b) => a.truck_number.localeCompare(b.truck_number)))
+      setNewContractorTruckNumber('')
+      setAddingContractorTruck(false)
+    } else {
+      const d = await res.json() as { error?: string }
+      toast.error(d.error ?? 'Failed to add truck')
+    }
+    setSavingContractorTruck(false)
+  }
+
+  async function deleteContractorTruck(truckId: string) {
+    if (!selected) return
+    const res = await fetch(`/api/contractors/${selected.id}/trucks/${truckId}`, { method: 'DELETE' })
+    if (res.ok) {
+      setContractorTrucks(prev => prev.filter(t => t.id !== truckId))
+    } else {
+      toast.error('Failed to remove truck')
+    }
+  }
+
   function selectContractor(c: Contractor) {
     setSelected(c)
     setTicketTab('pending')
     fetchTickets(c.id)
+    fetchContractorTrucks(c.id)
+    setAddingContractorTruck(false)
+    setNewContractorTruckNumber('')
   }
 
   // --- Contractor CRUD ---
@@ -180,15 +237,19 @@ export default function ContractorsPage() {
   }
 
   // --- Ticket CRUD ---
-  function openAddTicket() {
+  async function openAddTicket() {
     setEditingTicket(null)
     setTicketForm({ ...EMPTY_TICKET, date: localToday() })
-    setTruckMode(trucks.length > 0 ? 'dropdown' : 'manual')
+    const allTrucks = [...contractorTrucks, ...trucks]
+    setTruckMode(allTrucks.length > 0 ? 'dropdown' : 'manual')
+    setJobMode('dropdown')
     setSlipRows([makeEmptySlip()])
+    const orgId = await getCompanyId()
+    if (orgId) fetchActiveJobs(orgId)
     setShowTicketForm(true)
   }
 
-  function openEditTicket(t: ContractorTicket) {
+  async function openEditTicket(t: ContractorTicket) {
     setEditingTicket(t)
     const existingTruck = t.truck_number ?? ''
     setTicketForm({
@@ -199,7 +260,15 @@ export default function ContractorsPage() {
       material: t.material ?? '',
       rate: String(t.rate), rate_type: t.rate_type ?? 'load', status: t.status, notes: t.notes ?? '',
     })
-    setTruckMode(trucks.some(tr => tr.truck_number === existingTruck) || !existingTruck ? 'dropdown' : 'manual')
+    const allTrucks = [...contractorTrucks, ...trucks]
+    setTruckMode(allTrucks.some(tr => tr.truck_number === existingTruck) || !existingTruck ? 'dropdown' : 'manual')
+    // If job_name matches an active job → show dropdown; else manual
+    const orgId = await getCompanyId()
+    if (orgId) {
+      const { data: jobs } = await supabase.from('jobs').select('id, job_name').eq('company_id', orgId).eq('status', 'active').order('created_at', { ascending: false })
+      setActiveJobs(jobs ?? [])
+      setJobMode(jobs?.some((j: { job_name: string }) => j.job_name === t.job_name) ? 'dropdown' : 'manual')
+    }
     setSlipRows([makeEmptySlip()])
     setShowTicketForm(true)
   }
@@ -325,6 +394,58 @@ export default function ContractorsPage() {
           <button onClick={openAddTicket} className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors">
             <Plus className="h-4 w-4" /> Add Ticket
           </button>
+        </div>
+
+        {/* Contractor trucks */}
+        <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-sm font-semibold text-gray-700">Truck Numbers</h4>
+            {!addingContractorTruck && (
+              <button
+                onClick={() => setAddingContractorTruck(true)}
+                className="text-xs text-[var(--brand-primary)] font-medium hover:underline"
+              >
+                + Add Truck
+              </button>
+            )}
+          </div>
+          {contractorTrucks.length === 0 && !addingContractorTruck ? (
+            <p className="text-xs text-gray-400">No trucks added yet</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {contractorTrucks.map(truck => (
+                <span key={truck.id} className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-lg text-sm font-medium">
+                  🚛 {truck.truck_number}
+                  <button onClick={() => deleteContractorTruck(truck.id)} className="text-gray-400 hover:text-red-500 ml-1 text-xs leading-none">×</button>
+                </span>
+              ))}
+            </div>
+          )}
+          {addingContractorTruck && (
+            <div className="flex gap-2 mt-2">
+              <input
+                value={newContractorTruckNumber}
+                onChange={e => setNewContractorTruckNumber(e.target.value)}
+                placeholder="e.g. SE17"
+                className="flex-1 px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); saveContractorTruck() } }}
+                autoFocus
+              />
+              <button
+                onClick={saveContractorTruck}
+                disabled={savingContractorTruck || !newContractorTruckNumber.trim()}
+                className="px-3 py-1.5 bg-[var(--brand-primary)] text-white rounded-lg text-sm font-medium hover:bg-[var(--brand-primary-hover)] disabled:opacity-50 transition-colors"
+              >
+                {savingContractorTruck ? '…' : 'Add'}
+              </button>
+              <button
+                onClick={() => { setAddingContractorTruck(false); setNewContractorTruckNumber('') }}
+                className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Ticket status tabs */}
@@ -453,8 +574,42 @@ export default function ContractorsPage() {
                     )}
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Job Name *</label>
-                    <input required value={ticketForm.job_name} onChange={e => setTicketForm(p => ({ ...p, job_name: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="Ironclad Grade Site" />
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-medium text-gray-700">Job Name *</label>
+                      <button
+                        type="button"
+                        onClick={() => setJobMode(m => m === 'dropdown' ? 'manual' : 'dropdown')}
+                        className="text-xs text-[var(--brand-primary)] hover:underline"
+                      >
+                        {jobMode === 'dropdown' ? '✏️ Enter manually' : '← Back to list'}
+                      </button>
+                    </div>
+                    {jobMode === 'dropdown' ? (
+                      activeJobs.length > 0 ? (
+                        <select
+                          required
+                          value={ticketForm.job_name}
+                          onChange={e => setTicketForm(p => ({ ...p, job_name: e.target.value }))}
+                          className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white"
+                        >
+                          <option value="">— Select a job —</option>
+                          {activeJobs.map(j => <option key={j.id} value={j.job_name}>{j.job_name}</option>)}
+                        </select>
+                      ) : (
+                        <div className="w-full rounded-lg border border-dashed border-gray-200 px-3 py-2.5 text-sm text-gray-400 flex items-center justify-between">
+                          <span>No active jobs</span>
+                          <button type="button" onClick={() => setJobMode('manual')} className="text-xs text-[var(--brand-primary)] shrink-0">Enter manually →</button>
+                        </div>
+                      )
+                    ) : (
+                      <input
+                        required
+                        value={ticketForm.job_name}
+                        onChange={e => setTicketForm(p => ({ ...p, job_name: e.target.value }))}
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
+                        placeholder="Ironclad Grade Site"
+                      />
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Date *</label>
@@ -465,43 +620,53 @@ export default function ContractorsPage() {
                     <input value={ticketForm.hours_worked} onChange={e => setTicketForm(p => ({ ...p, hours_worked: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="7:30am – 5:30pm" />
                   </div>
                   <div className="col-span-2">
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-medium text-gray-700">Truck #</label>
-                      {trucks.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setTruckMode(m => m === 'dropdown' ? 'manual' : 'dropdown')}
-                          className="text-xs text-[var(--brand-primary)] hover:underline"
-                        >
-                          {truckMode === 'dropdown' ? '✏️ Enter manually' : '← Back to list'}
-                        </button>
-                      )}
-                    </div>
-                    {truckMode === 'dropdown' && trucks.length > 0 ? (
-                      <select
-                        value={ticketForm.truck_number}
-                        onChange={e => setTicketForm(p => ({ ...p, truck_number: e.target.value }))}
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white"
-                      >
-                        <option value="">— Select a truck —</option>
-                        {trucks.map(tr => <option key={tr.id} value={tr.truck_number}>#{tr.truck_number}</option>)}
-                      </select>
-                    ) : (
-                      <div>
-                        <input
-                          value={ticketForm.truck_number}
-                          onChange={e => setTicketForm(p => ({ ...p, truck_number: e.target.value }))}
-                          className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
-                          placeholder="e.g. 12"
-                        />
-                        {trucks.length === 0 && (
-                          <p className="text-xs text-gray-400 mt-1">
-                            No trucks added yet.{' '}
-                            <a href="/dashboard/settings" target="_blank" className="text-[var(--brand-primary)] hover:underline">Add trucks in Settings →</a>
-                          </p>
-                        )}
-                      </div>
-                    )}
+                    {(() => {
+                      const allTrucks = [...contractorTrucks, ...trucks.filter(t => !contractorTrucks.some(ct => ct.truck_number === t.truck_number))]
+                      return (
+                        <>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-xs font-medium text-gray-700">Truck #</label>
+                            {allTrucks.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => setTruckMode(m => m === 'dropdown' ? 'manual' : 'dropdown')}
+                                className="text-xs text-[var(--brand-primary)] hover:underline"
+                              >
+                                {truckMode === 'dropdown' ? '✏️ Enter manually' : '← Back to list'}
+                              </button>
+                            )}
+                          </div>
+                          {truckMode === 'dropdown' && allTrucks.length > 0 ? (
+                            <select
+                              value={ticketForm.truck_number}
+                              onChange={e => setTicketForm(p => ({ ...p, truck_number: e.target.value }))}
+                              className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white"
+                            >
+                              <option value="">— Select a truck —</option>
+                              {contractorTrucks.length > 0 && (
+                                <optgroup label={`${selected?.name ?? 'Contractor'} trucks`}>
+                                  {contractorTrucks.map(tr => <option key={tr.id} value={tr.truck_number}>#{tr.truck_number}</option>)}
+                                </optgroup>
+                              )}
+                              {trucks.filter(t => !contractorTrucks.some(ct => ct.truck_number === t.truck_number)).length > 0 && (
+                                <optgroup label="Company trucks">
+                                  {trucks.filter(t => !contractorTrucks.some(ct => ct.truck_number === t.truck_number)).map(tr => <option key={tr.id} value={tr.truck_number}>#{tr.truck_number}</option>)}
+                                </optgroup>
+                              )}
+                            </select>
+                          ) : (
+                            <div>
+                              <input
+                                value={ticketForm.truck_number}
+                                onChange={e => setTicketForm(p => ({ ...p, truck_number: e.target.value }))}
+                                className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
+                                placeholder="e.g. SE17"
+                              />
+                            </div>
+                          )}
+                        </>
+                      )
+                    })()}
                   </div>
                   <div className="col-span-2">
                     <label className="block text-xs font-medium text-gray-700 mb-1">Ticket #</label>
