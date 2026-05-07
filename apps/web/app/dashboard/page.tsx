@@ -88,7 +88,7 @@ export default async function DashboardPage() {
   const [loadsRes, invoicesRes, companyRes, activityRes] = await Promise.all([
     supabase
       .from('loads')
-      .select('id, rate, status, driver_name, job_name, date, created_at, source, submitted_by_driver')
+      .select('id, rate, total_pay, status, driver_name, job_name, date, created_at, source, submitted_by_driver')
       .eq('company_id', effectiveCompanyId)
       .gte('date', fetchCutoffStr)
       .order('date', { ascending: false }),
@@ -175,9 +175,9 @@ export default async function DashboardPage() {
   const lastWeekTickets = loads.filter(l => l.date >= lastWeekStartStr && l.date <= lastWeekEndStr).length
   const ticketPct = lastWeekTickets > 0 ? Math.round((thisWeekTickets - lastWeekTickets) / lastWeekTickets * 100) : null
 
-  // Revenue this month = sum of loads.rate where date is this month
-  const thisMonthRev = loads.filter(l => l.date?.startsWith(thisMonthStr)).reduce((s, l) => s + (l.rate ?? 0), 0)
-  const prevMonthRev = loads.filter(l => l.date?.startsWith(prevMonthStr)).reduce((s, l) => s + (l.rate ?? 0), 0)
+  // Revenue this month = sum of total_pay (fallback to rate) where date is this month
+  const thisMonthRev = loads.filter(l => l.date?.startsWith(thisMonthStr)).reduce((s, l) => s + ((l.total_pay ?? l.rate) ?? 0), 0)
+  const prevMonthRev = loads.filter(l => l.date?.startsWith(prevMonthStr)).reduce((s, l) => s + ((l.total_pay ?? l.rate) ?? 0), 0)
   const revPct = prevMonthRev > 0 ? Math.round((thisMonthRev - prevMonthRev) / prevMonthRev * 100) : null
 
   // Outstanding = draft + sent invoices
@@ -194,10 +194,10 @@ export default async function DashboardPage() {
   const loadsToday      = loads.filter(l => l.date === todayStr)
   const weekRevCollected = loads
     .filter(l => l.date >= thisWeekStartStr && l.date <= todayStr && l.status === 'paid')
-    .reduce((s, l) => s + (l.rate ?? 0), 0)
+    .reduce((s, l) => s + ((l.total_pay ?? l.rate) ?? 0), 0)
   const weekRevProjected = loads
     .filter(l => l.date >= thisWeekStartStr && l.date <= todayStr)
-    .reduce((s, l) => s + (l.rate ?? 0), 0)
+    .reduce((s, l) => s + ((l.total_pay ?? l.rate) ?? 0), 0)
 
   // Week profit (costs attributed to jobs active this week)
   const weekJobNames = new Set(loads.filter(l => l.date >= thisWeekStartStr && l.date <= todayStr).map(l => l.job_name))
@@ -215,7 +215,7 @@ export default async function DashboardPage() {
     const key = l.driver_name || 'Unknown'
     if (!acc[key]) acc[key] = { loads: 0, revenue: 0 }
     acc[key]!.loads++
-    acc[key]!.revenue += l.rate ?? 0
+    acc[key]!.revenue += (l.total_pay ?? l.rate) ?? 0
     return acc
   }, {})
   const topDrivers    = Object.entries(driverMap).map(([name, d]) => ({ name, ...d })).sort((a, b) => b.revenue - a.revenue).slice(0, 5)
@@ -228,7 +228,7 @@ export default async function DashboardPage() {
     const d = new Date(thisWeekStart)
     d.setDate(thisWeekStart.getDate() + i)
     const ds = d.toISOString().split('T')[0]!
-    const revenue = loads.filter(l => l.date === ds).reduce((s, l) => s + (l.rate ?? 0), 0)
+    const revenue = loads.filter(l => l.date === ds).reduce((s, l) => s + ((l.total_pay ?? l.rate) ?? 0), 0)
     return { label, revenue }
   })
 
@@ -242,14 +242,14 @@ export default async function DashboardPage() {
       if (!l.date?.startsWith(thisMonthStr)) return false
       const day = parseInt(l.date.split('-')[2] ?? '0')
       return day >= startDay && day <= endDay
-    }).reduce((s, l) => s + (l.rate ?? 0), 0)
+    }).reduce((s, l) => s + ((l.total_pay ?? l.rate) ?? 0), 0)
     return { label: `W${w + 1}`, revenue }
   })
 
   // This Year: Jan–Dec of current year
   const yearData = MONTH_NAMES.map((label, i) => {
     const key     = `${now.getFullYear()}-${String(i + 1).padStart(2, '0')}`
-    const revenue = loads.filter(l => l.date?.startsWith(key)).reduce((s, l) => s + (l.rate ?? 0), 0)
+    const revenue = loads.filter(l => l.date?.startsWith(key)).reduce((s, l) => s + ((l.total_pay ?? l.rate) ?? 0), 0)
     return { label, revenue }
   })
 

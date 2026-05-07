@@ -128,7 +128,7 @@ export default function DashboardStatCards({
   const [ticketLoading, setTicketLoading] = useState(false)
 
   // Revenue panel
-  type RevRow = { id: string; date: string; driver_name: string; rate: number; status: string }
+  type RevRow = { id: string; date: string; driver_name: string; rate: number; total_pay: number | null; status: string }
   const [revRows, setRevRows] = useState<RevRow[]>([])
   const [revLoading, setRevLoading] = useState(false)
 
@@ -161,7 +161,7 @@ export default function DashboardStatCards({
     setRevLoading(true); setRevRows([])
     void (async () => {
       const { data } = await supabase.from('loads')
-        .select('id, date, driver_name, rate, status')
+        .select('id, date, driver_name, rate, total_pay, status')
         .eq('company_id', companyId).like('date', `${thisMonthStr}-%`)
         .order('date', { ascending: false })
       setRevRows((data ?? []) as RevRow[])
@@ -215,13 +215,13 @@ export default function DashboardStatCards({
     const total    = revRows.filter(r => {
       const day = parseInt(r.date.split('-')[2] ?? '0', 10)
       return day >= startDay && day <= endDay
-    }).reduce((s, r) => s + (r.rate ?? 0), 0)
+    }).reduce((s, r) => s + ((r.total_pay ?? r.rate) ?? 0), 0)
     return { label: `W${w + 1} (${monthLabel.split(' ')[0]} ${startDay}–${endDay})`, total }
   })
 
   const byDriver = revRows.reduce<Record<string, number>>((acc, r) => {
     const key = r.driver_name || 'Unknown'
-    acc[key] = (acc[key] ?? 0) + (r.rate ?? 0)
+    acc[key] = (acc[key] ?? 0) + ((r.total_pay ?? r.rate) ?? 0)
     return acc
   }, {})
   const topDrivers = Object.entries(byDriver).sort((a, b) => b[1] - a[1]).slice(0, 5)
@@ -298,10 +298,10 @@ export default function DashboardStatCards({
         subtitle={fmt(thisMonthRev)}
       >
         <CalculationExplainer
-          source="Loads (tickets) table — Rate field"
+          source="Loads (tickets) table — Total Pay field (falls back to Rate if not set)"
           dateRange={`${monthLabel} · 1st → today`}
           filter="All ticket statuses included — no status filter applied"
-          note={'Revenue = sum of the "Rate" field on every ticket this month. Does not yet factor in Total Pay values entered on individual tickets.'}
+          note="Revenue = sum of Total Pay on each ticket. If Total Pay is blank, the Rate field is used instead."
         />
         {revLoading ? <Spinner /> : (
           <>
