@@ -32,9 +32,17 @@ function fmtDate(s: string | null | undefined): string {
   return `${parseInt(m!)}/${parseInt(d!)}/${y}`
 }
 
+function calcContractorTotal(unitRate: string, rateType: string, qty: string): string {
+  const r = parseFloat(unitRate)
+  const q = parseFloat(qty)
+  if (isNaN(r) || r <= 0 || isNaN(q) || q <= 0) return ''
+  return (r * q).toFixed(2)
+}
+
 const EMPTY_TICKET = {
   job_name: '', client_company: '', date: '',
-  hours_worked: '', truck_number: '', ticket_number: '', material: '', rate: '', rate_type: 'load', status: 'pending', notes: '',
+  hours_worked: '', truck_number: '', ticket_number: '', material: '',
+  unit_rate: '', rate_quantity: '', rate: '', rate_type: 'load', status: 'pending', notes: '',
 }
 
 function makeEmptySlip(): SlipRow {
@@ -115,6 +123,12 @@ export default function ContractorsPage() {
   }
 
   useEffect(() => { init() }, [])
+
+  useEffect(() => {
+    const total = calcContractorTotal(ticketForm.unit_rate, ticketForm.rate_type, ticketForm.rate_quantity)
+    if (total !== '') setTicketForm(p => ({ ...p, rate: total }))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticketForm.unit_rate, ticketForm.rate_type, ticketForm.rate_quantity])
 
   async function fetchTickets(contractorId: string) {
     setLoadingTickets(true)
@@ -258,7 +272,7 @@ export default function ContractorsPage() {
       truck_number: existingTruck,
       ticket_number: t.ticket_number ?? '',
       material: t.material ?? '',
-      rate: String(t.rate), rate_type: t.rate_type ?? 'load', status: t.status, notes: t.notes ?? '',
+      rate: String(t.rate), unit_rate: '', rate_quantity: '', rate_type: t.rate_type ?? 'load', status: t.status, notes: t.notes ?? '',
     })
     const allTrucks = [...contractorTrucks, ...trucks]
     setTruckMode(allTrucks.some(tr => tr.truck_number === existingTruck) || !existingTruck ? 'dropdown' : 'manual')
@@ -684,17 +698,40 @@ export default function ContractorsPage() {
                       {materials.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                   </div>
-                  <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Total Pay ($) *</label>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Job Rate</label>
                     <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/20 focus-within:border-[var(--brand-primary)]">
                       <span className="flex items-center px-3 bg-gray-50 text-sm text-gray-500 border-r border-gray-200">$</span>
-                      <input required type="number" min="0" step="0.01" value={ticketForm.rate} onChange={e => setTicketForm(p => ({ ...p, rate: e.target.value }))} className="flex-1 px-3 py-2.5 text-sm focus:outline-none bg-white" placeholder="450.00" />
-                      <select value={ticketForm.rate_type} onChange={e => setTicketForm(p => ({ ...p, rate_type: e.target.value }))} className="px-2 py-2.5 text-xs font-medium text-gray-600 bg-gray-50 border-l border-gray-200 focus:outline-none">
+                      <input type="number" min="0" step="0.01" value={ticketForm.unit_rate} onChange={e => setTicketForm(p => ({ ...p, unit_rate: e.target.value }))} className="flex-1 px-3 py-2.5 text-sm focus:outline-none bg-white" placeholder="0.00" />
+                      <select value={ticketForm.rate_type} onChange={e => setTicketForm(p => ({ ...p, rate_type: e.target.value, rate_quantity: '' }))} className="px-2 text-xs font-medium text-gray-600 bg-gray-50 border-l border-gray-200 focus:outline-none">
                         <option value="load">/ load</option>
                         <option value="ton">/ ton</option>
                         <option value="hr">/ hr</option>
                       </select>
                     </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      {ticketForm.rate_type === 'hr' ? 'Hours Worked' : ticketForm.rate_type === 'ton' ? 'Total Tons' : '# of Loads'}
+                    </label>
+                    <input type="number" min="0" step="0.01" value={ticketForm.rate_quantity} onChange={e => setTicketForm(p => ({ ...p, rate_quantity: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="0" />
+                  </div>
+                  {parseFloat(ticketForm.unit_rate) > 0 && parseFloat(ticketForm.rate_quantity) > 0 && (
+                    <div className="col-span-2 -mt-2">
+                      <p className="text-xs text-gray-400">
+                        ${parseFloat(ticketForm.unit_rate).toFixed(2)}/{ticketForm.rate_type} × {ticketForm.rate_quantity} {ticketForm.rate_type === 'ton' ? 'tons' : ticketForm.rate_type === 'hr' ? 'hrs' : 'loads'} = <span className="font-semibold text-gray-600">${(parseFloat(ticketForm.unit_rate) * parseFloat(ticketForm.rate_quantity)).toFixed(2)}</span>
+                      </p>
+                    </div>
+                  )}
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Total Pay ($) *</label>
+                    <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/20 focus-within:border-[var(--brand-primary)]">
+                      <span className="flex items-center px-3 bg-gray-50 text-sm text-gray-500 border-r border-gray-200">$</span>
+                      <input required type="number" min="0" step="0.01" value={ticketForm.rate} onChange={e => setTicketForm(p => ({ ...p, rate: e.target.value }))} className="flex-1 px-3 py-2.5 text-sm focus:outline-none bg-white" placeholder="450.00" />
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {ticketForm.rate_type === 'hr' ? 'Auto-calculated from rate × hours' : ticketForm.rate_type === 'ton' ? 'Auto-calculated from rate × total tons' : 'Auto-calculated from rate × # of loads'}
+                    </p>
                   </div>
                   <div className="col-span-2">
                     <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>

@@ -76,6 +76,39 @@ function TimeInput({ label, value, onChange }: { label: string; value: string; o
   )
 }
 
+function parseTimeToDecimal(t: string): number | null {
+  const m = t.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
+  if (!m) return null
+  let h = parseInt(m[1]!, 10)
+  const min = parseInt(m[2]!, 10)
+  const pm = /pm/i.test(m[3]!)
+  if (h === 12) h = pm ? 12 : 0
+  else if (pm) h += 12
+  return h + min / 60
+}
+
+function calculateHoursWorked(timeIn: string, timeOut: string): number | null {
+  const start = parseTimeToDecimal(timeIn)
+  const end   = parseTimeToDecimal(timeOut)
+  if (start === null || end === null) return null
+  let diff = end - start
+  if (diff < 0) diff += 24
+  return Math.round(diff * 100) / 100
+}
+
+function calculateTotalPay(rate: string, rateType: string, qty: string, timeIn: string, timeOut: string): string {
+  const r = parseFloat(rate)
+  if (isNaN(r) || r <= 0) return ''
+  if (rateType === 'hr') {
+    const hrs = calculateHoursWorked(timeIn, timeOut)
+    if (hrs === null || hrs <= 0) return ''
+    return (r * hrs).toFixed(2)
+  }
+  const q = parseFloat(qty)
+  if (isNaN(q) || q <= 0) return ''
+  return (r * q).toFixed(2)
+}
+
 const EMPTY_FORM = {
   job_name: '',
   client_company: '',
@@ -238,6 +271,20 @@ export default function TicketsPage() {
     const t = setTimeout(() => setDebouncedSearch(search), 200)
     return () => clearTimeout(t)
   }, [search])
+
+  // Auto-calculate total_pay whenever rate, rate_type, qty, or time fields change
+  useEffect(() => {
+    const pay = calculateTotalPay(form.rate, form.rate_type, form.rate_quantity, form.time_in, form.time_out)
+    if (pay !== '') {
+      const hrs = form.rate_type === 'hr' ? calculateHoursWorked(form.time_in, form.time_out) : null
+      setForm(p => ({
+        ...p,
+        total_pay: pay,
+        ...(hrs !== null ? { rate_quantity: String(hrs) } : {}),
+      }))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.rate, form.rate_type, form.rate_quantity, form.time_in, form.time_out])
 
   const drivers = useMemo(
     () => [...new Set(loads.map(l => l.driver_name))].filter(Boolean),
@@ -1029,16 +1076,13 @@ export default function TicketsPage() {
                       type="number" min="0" step="0.01"
                       value={form.rate}
                       onChange={e => {
-                        const r = e.target.value
                         setAutoFilledFromJob(false)
-                        const qty = parseFloat(form.rate_quantity)
-                        const rNum = parseFloat(r)
-                        setForm(p => ({ ...p, rate: r, total_pay: (!isNaN(rNum) && !isNaN(qty) && qty > 0) ? String((rNum * qty).toFixed(2)) : p.total_pay }))
+                        setForm(p => ({ ...p, rate: e.target.value }))
                       }}
                       className="flex-1 px-3 py-2.5 text-sm focus:outline-none bg-white"
                       placeholder="0.00"
                     />
-                    <select value={form.rate_type} onChange={e => setForm(p => ({ ...p, rate_type: e.target.value }))} className="px-2 text-xs font-medium text-gray-600 bg-gray-50 border-l border-gray-200 focus:outline-none">
+                    <select value={form.rate_type} onChange={e => setForm(p => ({ ...p, rate_type: e.target.value, rate_quantity: '' }))} className="px-2 text-xs font-medium text-gray-600 bg-gray-50 border-l border-gray-200 focus:outline-none">
                       <option value="load">/ load</option>
                       <option value="ton">/ ton</option>
                       <option value="hr">/ hr</option>
@@ -1047,28 +1091,33 @@ export default function TicketsPage() {
                   {autoFilledFromJob && <p className="text-xs text-green-600 mt-1">✓ Rate auto-filled from job settings</p>}
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Qty / Tons</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    {form.rate_type === 'hr' ? 'Hours Worked' : form.rate_type === 'ton' ? 'Total Tons' : '# of Loads'}
+                  </label>
                   <input
                     type="number" min="0" step="0.01"
                     value={form.rate_quantity}
-                    onChange={e => {
-                      const qty = e.target.value
-                      const rNum = parseFloat(form.rate)
-                      const qNum = parseFloat(qty)
-                      setForm(p => ({ ...p, rate_quantity: qty, total_pay: (!isNaN(rNum) && rNum > 0 && !isNaN(qNum) && qNum > 0) ? String((rNum * qNum).toFixed(2)) : p.total_pay }))
-                    }}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
-                    placeholder="0"
+                    readOnly={form.rate_type === 'hr'}
+                    onChange={e => setForm(p => ({ ...p, rate_quantity: e.target.value }))}
+                    className={`w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] ${form.rate_type === 'hr' ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''}`}
+                    placeholder={form.rate_type === 'hr' ? 'Auto from time in/out' : '0'}
                   />
                 </div>
 
                 {/* Auto-calc helper */}
-                {parseFloat(form.rate) > 0 && parseFloat(form.rate_quantity) > 0 && (
+                {parseFloat(form.rate) > 0 && (
                   <div className="col-span-2 -mt-2">
-                    <p className="text-xs text-gray-400">
-                      ${parseFloat(form.rate).toFixed(2)}/{form.rate_type} × {form.rate_quantity} ={' '}
-                      <span className="font-semibold text-gray-600">${(parseFloat(form.rate) * parseFloat(form.rate_quantity)).toFixed(2)}</span>
-                    </p>
+                    {form.rate_type === 'hr' && (() => {
+                      const hrs = calculateHoursWorked(form.time_in, form.time_out)
+                      if (hrs === null || hrs <= 0) return <p className="text-xs text-gray-400">Enter Time In + Time Out to auto-calculate hours</p>
+                      return <p className="text-xs text-gray-400">${parseFloat(form.rate).toFixed(2)}/hr × {hrs} hrs = <span className="font-semibold text-gray-600">${(parseFloat(form.rate) * hrs).toFixed(2)}</span></p>
+                    })()}
+                    {form.rate_type === 'load' && parseFloat(form.rate_quantity) > 0 && (
+                      <p className="text-xs text-gray-400">${parseFloat(form.rate).toFixed(2)}/load × {form.rate_quantity} loads = <span className="font-semibold text-gray-600">${(parseFloat(form.rate) * parseFloat(form.rate_quantity)).toFixed(2)}</span></p>
+                    )}
+                    {form.rate_type === 'ton' && parseFloat(form.rate_quantity) > 0 && (
+                      <p className="text-xs text-gray-400">${parseFloat(form.rate).toFixed(2)}/ton × {form.rate_quantity} tons = <span className="font-semibold text-gray-600">${(parseFloat(form.rate) * parseFloat(form.rate_quantity)).toFixed(2)}</span></p>
+                    )}
                   </div>
                 )}
 
@@ -1085,7 +1134,9 @@ export default function TicketsPage() {
                       placeholder="0.00"
                     />
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">Auto-calculated from job rate × qty, or enter manually</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {form.rate_type === 'hr' ? 'Auto-calculated from rate × hours (time in/out)' : form.rate_type === 'ton' ? 'Auto-calculated from rate × total tons' : 'Auto-calculated from rate × # of loads'}
+                  </p>
                 </div>
 
                 {/* Status */}
