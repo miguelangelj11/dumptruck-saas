@@ -2,7 +2,7 @@ export const revalidate = 30
 
 import { createClient } from '@/lib/supabase/server'
 import {
-  TrendingUp, Truck, Receipt, Radio,
+  Truck, Radio,
   Send, Plus, Users, FileText,
   AlertTriangle, Clock, Activity, FolderOpen,
 } from 'lucide-react'
@@ -11,6 +11,7 @@ import LoadsChart from '@/components/dashboard/loads-chart'
 import { ProfitAlerts } from '@/components/dashboard/profit-alerts'
 import { DriverProfitTable } from '@/components/dashboard/driver-profit-table'
 import SoloUpgradeNudge from '@/components/dashboard/solo-upgrade-nudge'
+import DashboardStatCards from '@/components/dashboard/DashboardStatCards'
 import Link from 'next/link'
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -252,54 +253,7 @@ export default async function DashboardPage() {
     return { label, revenue }
   })
 
-  // ── Helper ────────────────────────────────────────────────────────────────
-  function pctBadge(value: number | null, period: 'week' | 'month') {
-    if (value === null) return null
-    const pos = value >= 0
-    return (
-      <span className={`text-xs mt-1 font-medium ${pos ? 'text-green-600' : 'text-red-500'}`}>
-        {pos ? '↑' : '↓'} {Math.abs(value)}% vs last {period}
-      </span>
-    )
-  }
-
   const fmt = (n: number) => `$${n.toLocaleString()}`
-
-  // ── Stat cards ────────────────────────────────────────────────────────────
-  const stats = [
-    {
-      label: 'Tickets This Week',
-      value: thisWeekTickets.toString(),
-      sub:   pctBadge(ticketPct, 'week'),
-      icon:  Truck,
-      color: 'text-[var(--brand-primary)] bg-[var(--brand-primary)]/10',
-      href:  '/dashboard/tickets',
-    },
-    {
-      label: 'Revenue This Month',
-      value: fmt(thisMonthRev),
-      sub:   pctBadge(revPct, 'month'),
-      icon:  TrendingUp,
-      color: 'text-blue-600 bg-blue-100',
-      href:  '/dashboard/revenue',
-    },
-    {
-      label: 'Outstanding Balance',
-      value: fmt(outstandingTotal),
-      sub:   <span className="text-xs mt-1 text-gray-400">{outstandingInvs.length} invoice{outstandingInvs.length !== 1 ? 's' : ''} unpaid</span>,
-      icon:  Receipt,
-      color: outstandingTotal > 0 ? 'text-orange-500 bg-orange-100' : 'text-gray-400 bg-gray-100',
-      href:  '/dashboard/invoices',
-    },
-    {
-      label: 'Dispatched Today',
-      value: dispatchedToday.toString(),
-      sub:   <span className="text-xs mt-1 text-gray-400">active drivers out</span>,
-      icon:  Radio,
-      color: dispatchedToday > 0 ? 'text-purple-600 bg-purple-100' : 'text-gray-400 bg-gray-100',
-      href:  '/dashboard/dispatch',
-    },
-  ]
 
   // ── Alerts ────────────────────────────────────────────────────────────────
   const alerts = [
@@ -448,21 +402,19 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {stats.map((s) => {
-          const Icon = s.icon
-          return (
-            <Link key={s.label} href={s.href} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md hover:border-gray-200 transition-all block">
-              <div className={`inline-flex rounded-lg p-2 mb-3 ${s.color}`}>
-                <Icon className="h-4 w-4" />
-              </div>
-              <p className="text-2xl font-bold text-gray-900">{s.value}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
-              {s.sub}
-            </Link>
-          )
-        })}
-      </div>
+      <DashboardStatCards
+        companyId={effectiveCompanyId}
+        thisWeekTickets={thisWeekTickets}
+        ticketPct={ticketPct}
+        thisMonthRev={thisMonthRev}
+        revPct={revPct}
+        outstandingTotal={outstandingTotal}
+        outstandingCount={outstandingInvs.length}
+        dispatchedToday={dispatchedToday}
+        thisWeekStartStr={thisWeekStartStr}
+        todayStr={todayStr}
+        thisMonthStr={thisMonthStr}
+      />
 
       {/* Quick Actions */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
