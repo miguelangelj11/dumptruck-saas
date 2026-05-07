@@ -128,8 +128,8 @@ export default function DashboardStatCards({
   const [ticketLoading, setTicketLoading] = useState(false)
 
   // Revenue panel
-  type RevRow = { id: string; date: string; driver_name: string; rate: number; total_pay: number | null; status: string }
-  const [revRows, setRevRows] = useState<RevRow[]>([])
+  type PaymentRow = { id: string; amount: number; payment_date: string; payment_method: string | null; invoices: { client_name: string; invoice_number: string } | null }
+  const [payRows, setPayRows] = useState<PaymentRow[]>([])
   const [revLoading, setRevLoading] = useState(false)
 
   // Outstanding panel
@@ -158,13 +158,13 @@ export default function DashboardStatCards({
 
   useEffect(() => {
     if (openPanel !== 'revenue') return
-    setRevLoading(true); setRevRows([])
+    setRevLoading(true); setPayRows([])
     void (async () => {
-      const { data } = await supabase.from('loads')
-        .select('id, date, driver_name, rate, total_pay, status')
-        .eq('company_id', companyId).like('date', `${thisMonthStr}-%`)
-        .order('date', { ascending: false })
-      setRevRows((data ?? []) as RevRow[])
+      const { data } = await supabase.from('payments')
+        .select('id, amount, payment_date, payment_method, invoices(client_name, invoice_number)')
+        .eq('company_id', companyId).like('payment_date', `${thisMonthStr}-%`)
+        .order('payment_date', { ascending: false })
+      setPayRows((data ?? []) as unknown as PaymentRow[])
       setRevLoading(false)
     })()
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -205,26 +205,19 @@ export default function DashboardStatCards({
   const todayLabel     = new Date(todayStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   const monthLabel     = new Date(thisMonthStr + '-01T00:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
-  // Revenue panel: weekly breakdown + top drivers
+  // Revenue panel: weekly breakdown from payments
   const [yearNum, monthNum] = thisMonthStr.split('-').map(Number) as [number, number]
   const daysInMonth  = new Date(yearNum, monthNum, 0).getDate()
   const numWeeks     = Math.ceil(daysInMonth / 7)
   const weeklyRevenue = Array.from({ length: numWeeks }, (_, w) => {
     const startDay = w * 7 + 1
     const endDay   = Math.min(startDay + 6, daysInMonth)
-    const total    = revRows.filter(r => {
-      const day = parseInt(r.date.split('-')[2] ?? '0', 10)
+    const total    = payRows.filter(r => {
+      const day = parseInt(r.payment_date.split('-')[2] ?? '0', 10)
       return day >= startDay && day <= endDay
-    }).reduce((s, r) => s + ((r.total_pay ?? r.rate) ?? 0), 0)
+    }).reduce((s, r) => s + (r.amount ?? 0), 0)
     return { label: `W${w + 1} (${monthLabel.split(' ')[0]} ${startDay}–${endDay})`, total }
   })
-
-  const byDriver = revRows.reduce<Record<string, number>>((acc, r) => {
-    const key = r.driver_name || 'Unknown'
-    acc[key] = (acc[key] ?? 0) + ((r.total_pay ?? r.rate) ?? 0)
-    return acc
-  }, {})
-  const topDrivers = Object.entries(byDriver).sort((a, b) => b[1] - a[1]).slice(0, 5)
 
   const cards = [
     { key: 'tickets'     as Panel, label: 'Tickets This Week',   value: thisWeekTickets.toString(), sub: <PctBadge value={ticketPct} period="week" />,    icon: Truck,     color: 'text-[var(--brand-primary)] bg-[var(--brand-primary)]/10' },
@@ -298,10 +291,10 @@ export default function DashboardStatCards({
         subtitle={fmt(thisMonthRev)}
       >
         <CalculationExplainer
-          source="Loads (tickets) table — Total Pay field (falls back to Rate if not set)"
+          source="Payments table — cash received on paid invoices"
           dateRange={`${monthLabel} · 1st → today`}
-          filter="All ticket statuses included — no status filter applied"
-          note="Revenue = sum of Total Pay on each ticket. If Total Pay is blank, the Rate field is used instead."
+          filter="Only actual payments recorded — not ticket values or invoice totals"
+          note="Revenue = sum of all payment amounts received this month. Record payments on the Invoices page when a client pays."
         />
         {revLoading ? <Spinner /> : (
           <>
@@ -320,20 +313,31 @@ export default function DashboardStatCards({
                 </div>
               </div>
             </div>
-            {topDrivers.length > 0 && (
+            {payRows.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-4">No payments recorded this month</p>
+            ) : (
               <div className="mb-4">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Top Drivers This Month</p>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Payments Received</p>
                 <div className="space-y-2">
-                  {topDrivers.map(([name, rev]) => (
-                    <div key={name} className="flex items-center justify-between">
-                      <span className="text-sm text-gray-700">{name}</span>
-                      <span className="text-sm font-semibold text-gray-900">{fmt(rev)}</span>
+                  {payRows.map(p => (
+                    <div key={p.id} className="flex items-start justify-between gap-3 p-3 rounded-lg border border-gray-100">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{p.invoices?.client_name ?? 'Unknown client'}</p>
+                        {p.invoices?.invoice_number && (
+                          <p className="text-xs text-gray-400">Invoice #{p.invoices.invoice_number}</p>
+                        )}
+                        <p className="text-xs text-gray-400">
+                          {new Date(p.payment_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          {p.payment_method ? ` · ${p.payment_method}` : ''}
+                        </p>
+                      </div>
+                      <span className="text-sm font-semibold text-green-700 shrink-0">{fmt(p.amount)}</span>
                     </div>
                   ))}
                 </div>
               </div>
             )}
-            <p className="text-xs text-gray-400">{revRows.length} ticket{revRows.length !== 1 ? 's' : ''} this month</p>
+            <p className="text-xs text-gray-400">{payRows.length} payment{payRows.length !== 1 ? 's' : ''} this month</p>
           </>
         )}
         <div className="pt-4 border-t border-gray-100 mt-4">
