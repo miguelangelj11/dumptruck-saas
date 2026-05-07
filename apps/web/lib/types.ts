@@ -41,6 +41,9 @@ export type Load = {
   driver_end_time: string | null
   created_at: string
   load_tickets?: LoadTicket[]
+  // Rate breakdown columns
+  total_pay?: number | null
+  rate_quantity?: number | null
   // AI import columns
   generated_by_ai?: boolean | null
   source_document_url?: string | null

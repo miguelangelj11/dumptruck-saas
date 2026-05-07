@@ -764,7 +764,7 @@ export default function TicketsPage() {
             <table className="w-full min-w-[800px] text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  {['Photo', 'Date', 'Job / Company', 'Load Type', 'Driver', 'Truck', 'Origin → Dest', 'Slips', 'Rate', 'Status', ''].map(h => (
+                  {['Photo', 'Date', 'Job / Company', 'Load Type', 'Driver', 'Truck', 'Origin → Dest', 'Slips', 'Total Pay', 'Status', ''].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -813,7 +813,11 @@ export default function TicketsPage() {
                           </div>
                         ) : <span className="text-gray-300">—</span>}
                       </td>
-                      <td className="px-4 py-3 text-gray-700 whitespace-nowrap">${l.rate?.toLocaleString()}<span className="text-xs text-gray-400">/{l.rate_type ?? 'load'}</span></td>
+                      <td className="px-4 py-3 text-gray-700 whitespace-nowrap font-medium">
+                        {l.total_pay != null
+                          ? `$${l.total_pay.toLocaleString()}`
+                          : l.rate != null ? `$${l.rate.toLocaleString()}` : '—'}
+                      </td>
                       <td className="px-4 py-3">
                         <select
                           value={l.status}

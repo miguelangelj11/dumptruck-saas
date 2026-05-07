@@ -76,7 +76,30 @@ function buildLineItems(loads: LoadWithTickets[], deductionPct: number): Invoice
     const slips = load.load_tickets ?? []
     const mat = buildMaterial(load)
     const tw  = buildTimeWorked(load)
-    if (slips.length === 0) {
+    const totalPay = load.total_pay ?? null
+
+    if (totalPay != null) {
+      // total_pay is pre-computed — use it directly as a single line item
+      const gross = totalPay
+      const amount = deductionPct > 0 ? gross * (1 - deductionPct / 100) : gross
+      items.push({
+        id: crypto.randomUUID(),
+        invoice_id: '',
+        line_date: load.date,
+        truck_number: load.truck_number,
+        driver_name: load.driver_name,
+        material: mat,
+        ticket_number: slips[0]?.ticket_number ?? null,
+        time_worked: tw,
+        quantity: load.rate_quantity ?? 1,
+        rate: load.rate,
+        rate_type: load.rate_type,
+        amount,
+        deduction_pct: deductionPct > 0 ? deductionPct : null,
+        sort_order: order++,
+        photo_url: slips[0]?.image_url ?? load.image_url ?? null,
+      })
+    } else if (slips.length === 0) {
       const amount = load.rate
       const deducted = amount * (1 - deductionPct / 100)
       items.push({
@@ -156,17 +179,18 @@ function buildDriverPayLineItems(
     const slips = load.load_tickets ?? []
     const mat = buildMaterial(load)
     const tw  = buildTimeWorked(load)
-    if (slips.length === 0) {
-      const gross = load.rate
+    const totalPay = load.total_pay ?? null
+    if (totalPay != null || slips.length === 0) {
+      const gross = totalPay ?? load.rate
       items.push({
         id: crypto.randomUUID(), invoice_id: '',
         line_date: load.date, truck_number: load.truck_number,
         driver_name: load.driver_name, material: mat,
-        ticket_number: null, time_worked: tw,
-        quantity: 1, rate: load.rate, rate_type: load.rate_type,
+        ticket_number: slips[0]?.ticket_number ?? null, time_worked: tw,
+        quantity: load.rate_quantity ?? 1, rate: load.rate, rate_type: load.rate_type,
         amount: gross * (payPct / 100),
         deduction_pct: null, sort_order: order++,
-        photo_url: load.image_url ?? null,
+        photo_url: slips[0]?.image_url ?? load.image_url ?? null,
       })
     } else {
       for (const slip of slips) {
@@ -526,7 +550,7 @@ export default function InvoicesPage() {
 
   // Approved loads not yet selected — used for the "you're leaving money behind" warning
   const unselectedApprovedLoads = allLoads.filter(l => l.status === 'approved' && !selectedLoadIds.has(l.id))
-  const unselectedApprovedTotal = unselectedApprovedLoads.reduce((s, l) => s + (l.rate ?? 0), 0)
+  const unselectedApprovedTotal = unselectedApprovedLoads.reduce((s, l) => s + (l.total_pay ?? l.rate ?? 0), 0)
 
   function toggleLoad(id: string) {
     setSelectedLoadIds(prev => {
@@ -1657,7 +1681,12 @@ export default function InvoicesPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
                             <p className="text-sm font-medium text-gray-900 truncate">{load.job_name}</p>
-                            <p className="text-sm font-semibold text-gray-700 shrink-0">${fmt(load.rate)}<span className="text-xs font-normal text-gray-400">/{load.rate_type ?? 'load'}</span></p>
+                            <p className="text-sm font-semibold text-gray-700 shrink-0">
+                              {load.total_pay != null
+                                ? `$${fmt(load.total_pay)}`
+                                : `$${fmt(load.rate)}`}
+                              {load.total_pay == null && <span className="text-xs font-normal text-gray-400">/{load.rate_type ?? 'load'}</span>}
+                            </p>
                           </div>
                           <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                             <span className="text-xs text-gray-500">{load.driver_name}</span>
