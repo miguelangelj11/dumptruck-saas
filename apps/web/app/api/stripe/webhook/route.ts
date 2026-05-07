@@ -366,14 +366,12 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error(`[stripe-webhook] Error processing ${event.type}:`, err)
     // Mark as failed so it can be inspected
-    await admin.from('webhook_events').update({ status: 'failed', processed_at: new Date().toISOString() })
-      .eq('event_id', event.id).catch(() => {})
+    void admin.from('webhook_events').update({ status: 'failed', processed_at: new Date().toISOString() }).eq('event_id', event.id)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 
   // Mark event as successfully processed
-  await admin.from('webhook_events').update({ status: 'processed', processed_at: new Date().toISOString() })
-    .eq('event_id', event.id).catch(() => {})
+  void admin.from('webhook_events').update({ status: 'processed', processed_at: new Date().toISOString() }).eq('event_id', event.id)
 
   return NextResponse.json({ received: true })
 }
