@@ -213,29 +213,61 @@ export default function SignupPage() {
 
         {/* Plan selector */}
         <div style={{ marginBottom: '24px' }}>
-          <p style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: '12px' }}>Which plan are you signing up for?</p>
+          <p style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: '16px' }}>Which plan are you signing up for?</p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-            {PLANS.map((plan) => {
-              const sel = selectedPlan === plan.id
-              return (
-                <button key={plan.id} type="button" onClick={() => setSelectedPlan(plan.id)} style={{
-                  position: 'relative',
-                  background: sel ? `${plan.color}18` : 'rgba(255,255,255,0.04)',
-                  border: `2px solid ${sel ? plan.color : 'rgba(255,255,255,0.1)'}`,
-                  borderRadius: '12px', padding: '16px', textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s', outline: 'none',
-                }}>
-                  {plan.badge && (
-                    <span style={{ position: 'absolute', top: '-10px', left: '12px', background: '#F5B731', color: '#1a1a1a', fontSize: '10px', fontWeight: 800, padding: '2px 8px', borderRadius: '100px' }}>
-                      {plan.badge}
-                    </span>
-                  )}
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: sel ? plan.color : '#fff', marginBottom: '4px' }}>{plan.name}</div>
-                  <div style={{ fontSize: '16px', fontWeight: 800, color: sel ? plan.color : 'rgba(255,255,255,0.7)', marginBottom: '4px' }}>{plan.price}</div>
-                  <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>{plan.desc}</div>
-                  {plan.subtext && <div style={{ fontSize: '11px', color: sel ? plan.color : 'rgba(255,255,255,0.35)', marginTop: '4px' }}>{plan.subtext}</div>}
-                </button>
-              )
-            })}
+
+            {/* Owner Operator */}
+            <button
+              type="button"
+              onClick={() => setSelectedPlan('owner_operator')}
+              style={{
+                padding: '16px', borderRadius: '12px', textAlign: 'left', cursor: 'pointer', outline: 'none', transition: 'all 0.15s',
+                border: `2px solid ${selectedPlan === 'owner_operator' ? '#F5B731' : 'rgba(255,255,255,0.12)'}`,
+                background: selectedPlan === 'owner_operator' ? 'rgba(245,183,49,0.12)' : 'rgba(255,255,255,0.04)',
+              }}
+            >
+              <p style={{ fontWeight: 700, fontSize: '13px', color: '#fff', marginBottom: '4px' }}>Owner Operator</p>
+              <p style={{ fontSize: '20px', fontWeight: 800, color: '#F5B731', marginBottom: '4px' }}>$80/mo</p>
+              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)' }}>Up to 5 trucks, solo operator</p>
+            </button>
+
+            {/* Fleet — Most Popular */}
+            <div style={{ position: 'relative' }}>
+              <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', zIndex: 10 }}>
+                <span style={{ background: '#F5B731', color: '#1a1a1a', fontSize: '10px', fontWeight: 800, padding: '3px 10px', borderRadius: '100px', whiteSpace: 'nowrap' }}>
+                  Most Popular
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedPlan('fleet')}
+                style={{
+                  width: '100%', padding: '16px', borderRadius: '12px', textAlign: 'left', cursor: 'pointer', outline: 'none', transition: 'all 0.15s',
+                  border: `2px solid ${selectedPlan === 'fleet' ? '#F5B731' : 'rgba(245,183,49,0.5)'}`,
+                  background: selectedPlan === 'fleet' ? 'rgba(245,183,49,0.12)' : 'rgba(245,183,49,0.05)',
+                }}
+              >
+                <p style={{ fontWeight: 700, fontSize: '13px', color: '#fff', marginBottom: '4px' }}>Fleet</p>
+                <p style={{ fontSize: '20px', fontWeight: 800, color: '#F5B731', marginBottom: '4px' }}>$200/mo</p>
+                <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)' }}>Unlimited trucks + automation</p>
+              </button>
+            </div>
+
+            {/* Growth */}
+            <button
+              type="button"
+              onClick={() => setSelectedPlan('growth')}
+              style={{
+                padding: '16px', borderRadius: '12px', textAlign: 'left', cursor: 'pointer', outline: 'none', transition: 'all 0.15s',
+                border: `2px solid ${selectedPlan === 'growth' ? '#F5B731' : 'rgba(255,255,255,0.12)'}`,
+                background: selectedPlan === 'growth' ? 'rgba(245,183,49,0.12)' : 'rgba(255,255,255,0.04)',
+              }}
+            >
+              <p style={{ fontWeight: 700, fontSize: '13px', color: '#fff', marginBottom: '4px' }}>Growth</p>
+              <p style={{ fontSize: '20px', fontWeight: 800, color: '#F5B731', marginBottom: '4px' }}>$350/mo</p>
+              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)' }}>CRM + quotes + AI tools</p>
+            </button>
+
           </div>
         </div>
 

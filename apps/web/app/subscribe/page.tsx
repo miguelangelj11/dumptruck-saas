@@ -10,45 +10,47 @@ const plans = [
     name: 'Owner Operator',
     price: '$80',
     period: '/mo',
-    description: 'Perfect for owner-operators with 1–3 trucks',
+    description: 'Perfect for solo operators with up to 5 trucks',
     features: [
-      'Up to 3 drivers',
-      'Up to 200 tickets/month',
-      'Client invoices',
-      'Basic revenue dashboard',
-      'Single user login',
+      'Up to 5 trucks & 5 drivers',
+      'Dispatching & job management',
+      'Ticket tracking (unlimited)',
+      'Basic invoicing',
+      'Driver management',
     ],
-    ctaStyle: 'gold' as const,
+    highlight: false,
   },
   {
     key: 'fleet',
-    name: 'Fleet Plan',
-    price: '$150',
+    name: 'Fleet',
+    price: '$200',
     period: '/mo',
-    description: 'For growing companies with 4–15 trucks',
+    description: 'For growing companies that need full control',
     features: [
-      'Up to 15 drivers',
-      'Unlimited tickets',
-      'All invoice types (Client, Driver Pay, Subcontractor)',
+      'Unlimited trucks & drivers',
       'Subcontractor management',
-      'Up to 3 team logins',
+      'Missing ticket detection',
+      'Follow-up automation engine',
+      'Team access (unlimited users)',
+      'AI document reader (50/mo)',
     ],
-    ctaStyle: 'green' as const,
+    highlight: true,
   },
   {
-    key: null,
-    name: 'Enterprise',
-    price: '$300+',
+    key: 'growth',
+    name: 'Growth',
+    price: '$350',
     period: '/mo',
-    description: 'For large operations with 15+ trucks',
+    description: 'Win more jobs and scale your revenue',
     features: [
-      'Unlimited drivers & team logins',
-      'Driver mobile app',
-      'AI ticket photo reader',
-      'Advanced reporting',
-      'Dedicated account manager',
+      'Everything in Fleet',
+      'CRM Growth Pipeline',
+      'Quote builder',
+      'Advanced job profitability',
+      'Mobile ticket + signature capture',
+      'AI document reader (400/mo)',
     ],
-    ctaStyle: 'disabled' as const,
+    highlight: false,
   },
 ]
 
@@ -64,7 +66,7 @@ export default function SubscribePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan: planKey }),
       })
-      const data = await res.json()
+      const data = await res.json() as { url?: string }
       if (data.url) {
         window.location.href = data.url
         return
@@ -106,17 +108,17 @@ export default function SubscribePage() {
       {/* Cards */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
         gap: '20px',
         maxWidth: '960px',
         width: '100%',
       }}>
         {plans.map((plan) => (
           <div
-            key={plan.name}
+            key={plan.key}
             style={{
               background: '#fff',
-              border: plan.key === 'fleet' ? '2px solid #2d7a4f' : '1px solid #e5e7eb',
+              border: plan.highlight ? '2px solid #F5B731' : '1px solid #e5e7eb',
               borderRadius: '16px',
               padding: '28px',
               display: 'flex',
@@ -124,14 +126,14 @@ export default function SubscribePage() {
               position: 'relative',
             }}
           >
-            {plan.key === 'fleet' && (
+            {plan.highlight && (
               <div style={{
                 position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)',
-                background: '#2d7a4f', color: '#fff',
-                fontSize: '11px', fontWeight: 700, padding: '4px 12px', borderRadius: '12px',
+                background: '#F5B731', color: '#1a1a1a',
+                fontSize: '11px', fontWeight: 800, padding: '4px 12px', borderRadius: '12px',
                 whiteSpace: 'nowrap',
               }}>
-                Best for Growing Fleets
+                Most Popular
               </div>
             )}
 
@@ -153,45 +155,31 @@ export default function SubscribePage() {
               ))}
             </ul>
 
-            {plan.key ? (
-              <button
-                onClick={() => handleCheckout(plan.key!)}
-                disabled={!!loadingPlan}
-                style={{
-                  padding: '13px 20px',
-                  borderRadius: '10px',
-                  fontWeight: 700,
-                  fontSize: '15px',
-                  border: 'none',
-                  cursor: loadingPlan ? 'not-allowed' : 'pointer',
-                  opacity: loadingPlan && loadingPlan !== plan.key ? 0.6 : 1,
-                  background: plan.ctaStyle === 'gold' ? '#FFB800' : '#2d7a4f',
-                  color: plan.ctaStyle === 'gold' ? '#000' : '#fff',
-                  transition: 'opacity 0.15s',
-                }}
-              >
-                {loadingPlan === plan.key ? 'Redirecting…' : `Subscribe — ${plan.name}`}
-              </button>
-            ) : (
-              <div style={{
+            <button
+              onClick={() => handleCheckout(plan.key)}
+              disabled={!!loadingPlan}
+              style={{
                 padding: '13px 20px',
                 borderRadius: '10px',
                 fontWeight: 700,
                 fontSize: '15px',
-                textAlign: 'center',
-                background: '#f3f4f6',
-                color: '#9ca3af',
-              }}>
-                Coming Soon
-              </div>
-            )}
+                border: 'none',
+                cursor: loadingPlan ? 'not-allowed' : 'pointer',
+                opacity: loadingPlan && loadingPlan !== plan.key ? 0.6 : 1,
+                background: plan.highlight ? '#F5B731' : '#2d7a4f',
+                color: plan.highlight ? '#1a1a1a' : '#fff',
+                transition: 'opacity 0.15s',
+              }}
+            >
+              {loadingPlan === plan.key ? 'Redirecting…' : `Subscribe — ${plan.name}`}
+            </button>
           </div>
         ))}
       </div>
 
       <p style={{ marginTop: '32px', fontSize: '13px', color: '#9ca3af', textAlign: 'center' }}>
         Need help?{' '}
-        <Link href="mailto:support@dumpruckboss.com" style={{ color: '#2d7a4f', textDecoration: 'none' }}>
+        <Link href="mailto:support@dumptruckboss.com" style={{ color: '#2d7a4f', textDecoration: 'none' }}>
           Contact support
         </Link>
         {' '}· Already subscribed?{' '}
