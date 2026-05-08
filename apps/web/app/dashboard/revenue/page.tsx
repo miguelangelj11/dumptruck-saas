@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getCompanyId } from '@/lib/get-company-id'
 import { Loader2, Plus, DollarSign, TrendingUp, TrendingDown, AlertCircle, CreditCard, Download, Percent, Pencil, Trash2 } from 'lucide-react'
@@ -190,15 +189,14 @@ export default function RevenuePage() {
   const [payWeek, setPayWeek] = useState<0 | -1>(0)
   const [dateRange, setDateRange] = useState<DateRange>('month')
   const supabase = createClient()
-  const searchParams = useSearchParams()
-  const router = useRouter()
 
   useEffect(() => {
-    if (searchParams.get('new-expense') === '1') {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('new-expense') === '1') {
       setShowExpenseForm(true)
-      router.replace('/dashboard/revenue')
+      window.history.replaceState({}, '', '/dashboard/revenue')
     }
-  }, [searchParams, router])
+  }, [])
 
   async function fetchData() {
     setLoading(true)
