@@ -162,21 +162,27 @@ export default function ContractorsPage() {
   async function saveContractorTruck() {
     if (!newContractorTruckNumber.trim() || !selected) return
     setSavingContractorTruck(true)
-    const res = await fetch(`/api/contractors/${selected.id}/trucks`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ truck_number: newContractorTruckNumber.trim() }),
-    })
-    if (res.ok) {
-      const truck = await res.json() as { id: string; truck_number: string }
-      setContractorTrucks(prev => [...prev, truck].sort((a, b) => a.truck_number.localeCompare(b.truck_number)))
-      setNewContractorTruckNumber('')
-      setAddingContractorTruck(false)
-    } else {
-      const d = await res.json() as { error?: string }
-      toast.error(d.error ?? 'Failed to add truck')
+    try {
+      const res = await fetch(`/api/contractors/${selected.id}/trucks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ truck_number: newContractorTruckNumber.trim() }),
+      })
+      if (res.ok) {
+        const truck = await res.json() as { id: string; truck_number: string }
+        setContractorTrucks(prev => [...prev, truck].sort((a, b) => a.truck_number.localeCompare(b.truck_number)))
+        setNewContractorTruckNumber('')
+        setAddingContractorTruck(false)
+      } else {
+        const d = await res.json().catch(() => ({})) as { error?: string }
+        toast.error(d.error ?? 'Failed to add truck')
+      }
+    } catch (err) {
+      console.error('[saveContractorTruck]', err)
+      toast.error('Failed to add truck — please try again')
+    } finally {
+      setSavingContractorTruck(false)
     }
-    setSavingContractorTruck(false)
   }
 
   async function deleteContractorTruck(truckId: string) {
