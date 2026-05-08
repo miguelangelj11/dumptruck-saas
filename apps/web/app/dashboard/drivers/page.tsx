@@ -675,7 +675,7 @@ export default function DriversPage() {
                           <th className="text-left text-xs font-semibold text-gray-400 pb-3 pr-4">Ticket #</th>
                           <th className="text-left text-xs font-semibold text-gray-400 pb-3 pr-4">Hours</th>
                           <th className="text-right text-xs font-semibold text-gray-400 pb-3 pr-4">Rate</th>
-                          <th className="text-right text-xs font-semibold text-gray-400 pb-3 pr-4">Amount</th>
+                          <th className="text-right text-xs font-semibold text-gray-400 pb-3 pr-4">Total</th>
                           <th className="text-left text-xs font-semibold text-gray-400 pb-3">Status</th>
                         </tr>
                       </thead>
@@ -691,7 +691,7 @@ export default function DriversPage() {
                               <td className="py-3 pr-4 text-gray-600 font-mono text-xs">{ticketNums}</td>
                               <td className="py-3 pr-4 text-gray-600">{t.hours_worked || '—'}</td>
                               <td className="py-3 pr-4 text-right text-gray-600">{t.rate != null ? `$${t.rate.toLocaleString()}` : '—'}</td>
-                              <td className="py-3 pr-4 text-right font-semibold text-gray-900">{t.rate != null ? `$${t.rate.toLocaleString()}` : '—'}</td>
+                              <td className="py-3 pr-4 text-right font-semibold text-gray-900">{((t as {total_pay?: number|null}).total_pay ?? t.rate) != null ? `$${((t as {total_pay?: number|null}).total_pay ?? t.rate)!.toLocaleString()}` : '—'}</td>
                               <td className="py-3">
                                 <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                                   t.status === 'paid'     ? 'bg-green-100 text-green-700' :
