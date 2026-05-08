@@ -24,16 +24,18 @@ type Props = {
   invoice: Invoice & { invoice_line_items?: InvoiceLineItem[] }
   company: CompanyInfo
   ticketPhotos: TicketPhoto[]
+  includeTicketPhotos?: boolean
 }
 
-export default function InvoicePDFButton({ invoice, company, ticketPhotos }: Props) {
-  const photoCount = ticketPhotos.length
+export default function InvoicePDFButton({ invoice, company, ticketPhotos, includeTicketPhotos = true }: Props) {
+  const photos = includeTicketPhotos ? ticketPhotos : []
+  const photoCount = photos.length
   const toastedRef = useRef(false)
 
   const doc = useMemo(
-    () => <InvoicePDF invoice={invoice} company={company} ticketPhotos={ticketPhotos} />,
+    () => <InvoicePDF invoice={invoice} company={company} ticketPhotos={photos} />,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [invoice.id, ticketPhotos.length]
+    [invoice.id, photos.length, includeTicketPhotos]
   )
 
   return (

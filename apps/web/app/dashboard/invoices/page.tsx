@@ -350,7 +350,8 @@ export default function InvoicesPage() {
   const [showSendModal, setShowSendModal] = useState(false)
   const [sendForm, setSendForm] = useState({ toEmail: '', subject: '', message: '' })
   const [sending, setSending] = useState(false)
-  const [detailTicketPhotos, setDetailTicketPhotos] = useState<{ ticketNumber: string | null; imageUrl: string; date: string; driverName: string | null; jobName: string }[]>([])
+  const [detailTicketPhotos, setDetailTicketPhotos] = useState<{ ticketNumber: string | null; imageUrl: string; date: string; driverName: string | null; jobName: string; truckNumber?: string | null; material?: string | null; timeWorked?: string | null }[]>([])
+  const [includeTicketPhotos, setIncludeTicketPhotos] = useState(true)
 
   const [uninvoicedCount, setUninvoicedCount] = useState(0)
   const [generatingInvoice, setGeneratingInvoice] = useState(false)
@@ -612,23 +613,29 @@ export default function InvoicesPage() {
     if (uid && inv.date_from && inv.date_to) {
       const { data: loadsData } = await supabase
         .from('loads')
-        .select('id, job_name, date, driver_name, image_url, load_tickets(ticket_number, image_url)')
+        .select('id, job_name, date, driver_name, truck_number, material, load_type, image_url, load_tickets(ticket_number, image_url, time_in, time_out)')
         .eq('company_id', uid)
         .gte('date', inv.date_from)
         .lte('date', inv.date_to)
 
       const rawPhotos: typeof detailTicketPhotos = []
       for (const load of loadsData ?? []) {
-        const slips = (load.load_tickets ?? []) as { ticket_number: string | null; image_url: string | null }[]
+        const slips = (load.load_tickets ?? []) as { ticket_number: string | null; image_url: string | null; time_in?: string | null; time_out?: string | null }[]
         const slipPhotos = slips.filter(s => s.image_url)
+        const mat = (load as { material?: string | null; load_type?: string | null }).material || (load as { load_type?: string | null }).load_type || null
+        const truck = (load as { truck_number?: string | null }).truck_number || null
         if (slipPhotos.length > 0) {
           for (const slip of slipPhotos) {
+            const timeWorked = slip.time_in && slip.time_out ? `${slip.time_in} – ${slip.time_out}` : null
             rawPhotos.push({
               ticketNumber: slip.ticket_number,
               imageUrl: slip.image_url!,
               date: load.date,
               driverName: load.driver_name,
               jobName: load.job_name,
+              truckNumber: truck,
+              material: mat,
+              timeWorked,
             })
           }
         } else if ((load as { image_url?: string | null }).image_url) {
@@ -638,6 +645,9 @@ export default function InvoicesPage() {
             date: load.date,
             driverName: load.driver_name,
             jobName: load.job_name,
+            truckNumber: truck,
+            material: mat,
+            timeWorked: null,
           })
         }
       }
@@ -894,7 +904,7 @@ export default function InvoicesPage() {
     const res = await fetch('/api/invoices/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ invoiceId: detailInvoice.id, toEmail: sendForm.toEmail, subject: sendForm.subject, message: sendForm.message }),
+      body: JSON.stringify({ invoiceId: detailInvoice.id, toEmail: sendForm.toEmail, subject: sendForm.subject, message: sendForm.message, includeTicketPhotos }),
     })
     const data = await res.json()
     if (!res.ok) { toast.error(data.error ?? 'Failed to send'); setSending(false); return }
@@ -1744,7 +1754,7 @@ export default function InvoicesPage() {
                 <table className="w-full min-w-[700px] text-xs">
                   <thead className="bg-gray-50 border-b border-gray-100">
                     <tr>
-                      {['', 'Date', 'Truck #', 'Material', 'Location', 'Ticket #', 'Time', 'Qty', 'Rate', 'Amount'].map(h => (
+                      {['Date', 'Truck #', 'Material', 'Location', 'Ticket #', 'Time', 'Qty', 'Rate', 'Amount'].map(h => (
                         <th key={h} className="text-left px-3 py-2.5 font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -1752,11 +1762,6 @@ export default function InvoicesPage() {
                   <tbody className="divide-y divide-gray-50">
                     {previewItems.map((item, i) => (
                       <tr key={i} className="hover:bg-gray-50/50">
-                        <td className="px-3 py-2.5">
-                          {item.photo_url
-                            ? <img src={item.photo_url} alt="ticket" className="h-8 w-8 object-cover rounded border border-gray-200" />
-                            : <span className="inline-block h-8 w-8 rounded border border-dashed border-gray-200 bg-gray-50" />}
-                        </td>
                         <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{fmtDate(item.line_date)}</td>
                         <td className="px-3 py-2.5 font-medium text-gray-700">{item.truck_number || '—'}</td>
                         <td className="px-3 py-2.5 text-gray-600">{item.material || '—'}</td>
@@ -1839,7 +1844,6 @@ export default function InvoicesPage() {
 
     const inv = detailInvoice
     const lineItems = inv.invoice_line_items ?? []
-    const photoByTicket = new Map(detailTicketPhotos.map(p => [p.ticketNumber, p.imageUrl]))
     const total = lineItems.reduce((s, i) => s + i.amount, 0)
     const isPaystub = inv.invoice_type === 'paystub' || inv.invoice_type === 'contractor'
     const firstDeduction = lineItems.find(i => (i.deduction_pct ?? 0) > 0)?.deduction_pct ?? 0
@@ -1907,10 +1911,22 @@ export default function InvoicesPage() {
             >
               <Printer className="h-3.5 w-3.5" /> Print
             </button>
+            {detailTicketPhotos.length > 0 && (
+              <label className="inline-flex items-center gap-1.5 cursor-pointer text-xs text-gray-600 no-print">
+                <input
+                  type="checkbox"
+                  checked={includeTicketPhotos}
+                  onChange={e => setIncludeTicketPhotos(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded accent-[var(--brand-primary)]"
+                />
+                Include photos
+              </label>
+            )}
             <InvoicePDFButton
               invoice={inv}
               company={{ name: companyName, address: companyAddress || null, phone: userPhone || null, email: userEmail || null, logo_url: companyLogoUrl }}
               ticketPhotos={detailTicketPhotos}
+              includeTicketPhotos={includeTicketPhotos}
             />
             <button
               onClick={() => openSendModal(inv)}
@@ -2035,7 +2051,6 @@ export default function InvoicesPage() {
               <table className="w-full min-w-[580px] text-sm border-collapse">
                 <thead>
                   <tr className="bg-gray-100">
-                    <th style={{paddingLeft:8,paddingRight:4,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200"></th>
                     <th style={{paddingLeft:16,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Date</th>
                     <th style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Truck #</th>
                     <th style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200">Material</th>
@@ -2048,15 +2063,8 @@ export default function InvoicesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {lineItems.map((item, idx) => {
-                    const photoUrl = item.ticket_number ? photoByTicket.get(item.ticket_number) : undefined
-                    return (
+                  {lineItems.map((item, idx) => (
                     <tr key={item.id} className={`border-b border-gray-100 ${idx % 2 === 1 ? 'bg-gray-50/60' : 'bg-white'}`}>
-                      <td style={{paddingLeft:8,paddingRight:4,paddingTop:8,paddingBottom:8}}>
-                        {photoUrl
-                          ? <img src={photoUrl} alt="ticket" style={{width:32,height:32,objectFit:'cover',borderRadius:4,border:'1px solid #e5e7eb'}} />
-                          : <span style={{display:'inline-block',width:32,height:32,borderRadius:4,border:'1px dashed #e5e7eb',background:'#f9fafb'}} />}
-                      </td>
                       <td style={{paddingLeft:16,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-gray-600 whitespace-nowrap text-xs">{fmtDate(item.line_date)}</td>
                       <td style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="font-semibold text-gray-800">{item.truck_number || <span className="text-gray-300 font-normal">—</span>}</td>
                       <td style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-gray-600">{item.material || <span className="text-gray-300">—</span>}</td>
@@ -2069,7 +2077,7 @@ export default function InvoicesPage() {
                       </td>
                       <td style={{paddingLeft:8,paddingRight:16,paddingTop:12,paddingBottom:12}} className="font-semibold text-gray-900 text-right tabular-nums whitespace-nowrap">${fmt(item.amount)}</td>
                     </tr>
-                  )})}
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -2143,6 +2151,40 @@ export default function InvoicesPage() {
           </div>
         </div>
 
+        {/* Supporting Tickets — web preview */}
+        {includeTicketPhotos && detailTicketPhotos.length > 0 && (
+          <div className="mx-auto max-w-4xl px-6 md:px-8 py-8 border-t-2 border-[#2d6a4f] mt-6">
+            <h2 className="text-lg font-bold text-[#1e3a2a] mb-1">Supporting Tickets</h2>
+            <p className="text-xs text-gray-400 mb-6">Original ticket photos attached for verification</p>
+            <div className="space-y-8">
+              {detailTicketPhotos.map((photo, i) => (
+                <div key={i}>
+                  <div className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-2.5 mb-2">
+                    <span className="text-sm font-bold text-gray-900">
+                      {photo.ticketNumber ? `Ticket #${photo.ticketNumber}` : 'Ticket'}
+                    </span>
+                    <span className="text-sm text-gray-600">{photo.jobName}</span>
+                    <span className="text-xs text-gray-400">{fmtDate(photo.date)}</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mb-3">
+                    {[
+                      photo.driverName ? `Driver: ${photo.driverName}` : null,
+                      photo.truckNumber ? `Truck: ${photo.truckNumber}` : null,
+                      photo.material ? `Material: ${photo.material}` : null,
+                      photo.timeWorked || null,
+                    ].filter(Boolean).join('  |  ')}
+                  </p>
+                  <img
+                    src={photo.imageUrl}
+                    alt={`Ticket ${photo.ticketNumber ?? i + 1}`}
+                    className="w-full max-h-[500px] object-contain rounded-lg border border-gray-200"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Send Invoice Modal */}
         {showSendModal && (
           <div className="no-print fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
@@ -2182,7 +2224,20 @@ export default function InvoicesPage() {
                     className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] resize-none"
                   />
                 </div>
-                <p className="text-xs text-gray-400">Invoice details and line items will be included in the email body.</p>
+                {detailTicketPhotos.length > 0 && (
+                  <label className="flex items-start gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={includeTicketPhotos}
+                      onChange={e => setIncludeTicketPhotos(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded accent-[var(--brand-primary)]"
+                    />
+                    <span className="text-sm text-gray-700">
+                      Include ticket photos in PDF
+                      <span className="block text-xs text-gray-400">Sends invoice + {detailTicketPhotos.length} photo{detailTicketPhotos.length !== 1 ? 's' : ''} as one attachment (recommended)</span>
+                    </span>
+                  </label>
+                )}
                 <div className="flex gap-3 pt-1">
                   <button type="button" onClick={() => setShowSendModal(false)} className="flex-1 h-10 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
                     Cancel

@@ -1,5 +1,3 @@
-'use client'
-
 import {
   Document, Page, View, Text, Image, StyleSheet,
 } from '@react-pdf/renderer'
@@ -11,6 +9,9 @@ export type TicketPhoto = {
   date: string
   driverName: string | null
   jobName: string
+  truckNumber?: string | null
+  material?: string | null
+  timeWorked?: string | null
 }
 
 type CompanyInfo = {
@@ -38,42 +39,39 @@ const s = StyleSheet.create({
   bold: { fontFamily: 'Helvetica-Bold' },
   gray: { color: '#6b7280' },
   small: { fontSize: 8.5 },
-  // Header
   companyName: { fontSize: 18, fontFamily: 'Helvetica-Bold', color: '#1e3a2a' },
-  // Invoice title
   invoiceTitle: { fontSize: 22, fontFamily: 'Helvetica-Bold', color: '#1e3a2a', textAlign: 'right' },
-  // Section header
   sectionLabel: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
-  // Bill To client name — large and bold
   clientName: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#111827', marginBottom: 3 },
-  // Colored divider
   accentDivider: { borderTopWidth: 2, borderTopColor: '#2d7a4f', marginVertical: 14 },
-  // Table
+  // Table — 9 columns, no photo column
   tableHeader: { flexDirection: 'row', backgroundColor: '#1e3a2a', color: '#fff', fontSize: 7.5, fontFamily: 'Helvetica-Bold', paddingVertical: 6, paddingHorizontal: 6 },
   tableRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#f3f4f6', paddingVertical: 5, paddingHorizontal: 6 },
   tableRowAlt: { backgroundColor: '#f9fafb' },
-  // Column widths — 10 columns totalling 100%
-  colPhoto:    { width: '5%' },
-  colDate:     { width: '9%' },
+  colDate:     { width: '12%' },
   colTruck:    { width: '8%' },
-  colDesc:     { width: '17%' },
-  colLocation: { width: '12%' },
+  colDesc:     { width: '10%' },
+  colLocation: { width: '20%' },
   colTicket:   { width: '8%' },
-  colTime:     { width: '13%' },
-  colQty:      { width: '6%', textAlign: 'right' },
-  colRate:     { width: '11%', textAlign: 'right' },
-  colAmt:      { width: '11%', textAlign: 'right' },
+  colTime:     { width: '15%' },
+  colQty:      { width: '5%', textAlign: 'right' },
+  colRate:     { width: '10%', textAlign: 'right' },
+  colAmt:      { width: '12%', textAlign: 'right' },
   // Totals
   totalRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 4 },
   totalLabel: { width: 100, textAlign: 'right', color: '#6b7280' },
   totalValue: { width: 80, textAlign: 'right', fontFamily: 'Helvetica-Bold' },
-  // Divider
   divider: { borderTopWidth: 1, borderTopColor: '#e5e7eb', marginVertical: 12 },
-  // Photo page
-  photoHeader: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#1e3a2a', marginBottom: 4 },
-  photoSubtitle: { fontSize: 9, color: '#6b7280', marginBottom: 16 },
-  photoImage: { width: '100%', objectFit: 'contain', flex: 1 },
-  exhibitLabel: { position: 'absolute', bottom: 40, right: 40, fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#6b7280' },
+  // Supporting Tickets section
+  ticketsDivider: { borderTopWidth: 2, borderTopColor: '#2d6a4f', marginBottom: 12 },
+  ticketsHeader: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: '#1e3a2a', marginBottom: 4 },
+  ticketsSubtitle: { fontSize: 9, color: '#6b7280', marginBottom: 16 },
+  ticketLabelBar: { flexDirection: 'row', backgroundColor: '#f5f5f5', padding: 8, marginBottom: 4 },
+  ticketLabelBold: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: '#1a1a1a', flex: 1 },
+  ticketLabelCenter: { fontSize: 11, color: '#374151', flex: 1, textAlign: 'center' },
+  ticketLabelRight: { fontSize: 11, color: '#6b7280', flex: 1, textAlign: 'right' },
+  ticketDetails: { fontSize: 9, color: '#6b7280', marginBottom: 8 },
+  ticketImage: { width: '100%', height: 350, objectFit: 'contain', border: '1px solid #e0e0e0', marginBottom: 20 },
 })
 
 const fmt = (v: number) =>
@@ -86,6 +84,14 @@ const fmtPdfDate = (d: string | null | undefined): string => {
   return `${parts[1]}/${parts[2]}`
 }
 
+const fmtLongDate = (d: string | null | undefined): string => {
+  if (!d) return ''
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  const parts = d.slice(0, 10).split('-')
+  if (parts.length !== 3) return d
+  return `${months[parseInt(parts[1]!) - 1]} ${parseInt(parts[2]!)}, ${parts[0]}`
+}
+
 const fmtRate = (rate: number | null | undefined, rateType: string | null | undefined): string => {
   if (rate == null) return ''
   const label = rateType === 'hr' ? 'hr' : rateType === 'ton' ? 'ton' : 'job'
@@ -94,8 +100,6 @@ const fmtRate = (rate: number | null | undefined, rateType: string | null | unde
 
 export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
   const lineItems = invoice.invoice_line_items ?? []
-  const exhibitLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-  const photoByTicket = new Map(ticketPhotos.map(p => [p.ticketNumber, p.imageUrl]))
 
   const firstDeduction = lineItems.find(i => (i.deduction_pct ?? 0) > 0)?.deduction_pct ?? 0
   const netTotal   = lineItems.reduce((s, i) => s + i.amount, 0)
@@ -109,10 +113,11 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
 
   return (
     <Document title={`Invoice ${invoice.invoice_number}`}>
-      {/* PAGE 1: Invoice summary */}
+
+      {/* ── PAGE 1: Invoice ── */}
       <Page size="LETTER" style={s.page}>
 
-        {/* ── HEADER ── */}
+        {/* HEADER */}
         <View style={[s.row, s.mb16]}>
           <View style={s.flex1}>
             {company.logo_url && (
@@ -135,22 +140,20 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
           </View>
         </View>
 
-        {/* ── BILL TO / PAY TO ── */}
+        {/* BILL TO */}
         <View style={s.mb8}>
-          <Text style={s.sectionLabel}>{invoice.invoice_type === 'paystub' || invoice.invoice_type === 'contractor' ? 'Pay To' : 'Bill To'}</Text>
+          <Text style={s.sectionLabel}>{isPaystub ? 'Pay To' : 'Bill To'}</Text>
           <Text style={s.clientName}>{invoice.client_name}</Text>
           {invoice.client_address && <Text style={[s.small, s.gray]}>{invoice.client_address}</Text>}
           {invoice.client_phone && <Text style={[s.small, s.gray]}>{invoice.client_phone}</Text>}
           {invoice.client_email && <Text style={[s.small, s.gray]}>{invoice.client_email}</Text>}
         </View>
 
-        {/* ── ACCENT DIVIDER ── */}
         <View style={s.accentDivider} />
 
-        {/* ── LINE ITEMS TABLE ── */}
+        {/* LINE ITEMS TABLE */}
         <View style={s.mb16}>
           <View style={s.tableHeader}>
-            <Text style={s.colPhoto}></Text>
             <Text style={s.colDate}>Date</Text>
             <Text style={s.colTruck}>Truck #</Text>
             <Text style={s.colDesc}>Material</Text>
@@ -161,15 +164,8 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
             <Text style={s.colRate}>Rate</Text>
             <Text style={s.colAmt}>Amount</Text>
           </View>
-          {lineItems.map((item, i) => {
-            const photoUrl = item.ticket_number ? photoByTicket.get(item.ticket_number) : undefined
-            return (
+          {lineItems.map((item, i) => (
             <View key={item.id} style={[s.tableRow, i % 2 === 1 ? s.tableRowAlt : {}]}>
-              <View style={s.colPhoto}>
-                {photoUrl
-                  ? <Image src={photoUrl} style={{ width: 24, height: 24, objectFit: 'cover', borderRadius: 2 }} />
-                  : <View style={{ width: 24, height: 24, backgroundColor: '#f3f4f6', borderRadius: 2 }} />}
-              </View>
               <Text style={s.colDate}>{fmtPdfDate(item.line_date)}</Text>
               <Text style={s.colTruck}>{item.truck_number ?? ''}</Text>
               <Text style={s.colDesc}>{item.material || '—'}</Text>
@@ -180,10 +176,10 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
               <Text style={s.colRate}>{fmtRate(item.rate, item.rate_type)}</Text>
               <Text style={s.colAmt}>{fmt(item.amount)}</Text>
             </View>
-          )})}
+          ))}
         </View>
 
-        {/* ── TOTALS ── */}
+        {/* TOTALS */}
         <View style={{ alignItems: 'flex-end' }}>
           <View style={s.totalRow}>
             <Text style={s.totalLabel}>Subtotal</Text>
@@ -202,14 +198,12 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
             </View>
           )}
           <View style={[s.totalRow, { borderTopWidth: 1.5, borderTopColor: '#1e3a2a', paddingTop: 4 }]}>
-            <Text style={[s.totalLabel, s.bold]}>
-              {isPaystub ? 'Net Pay' : 'Total Due'}
-            </Text>
+            <Text style={[s.totalLabel, s.bold]}>{isPaystub ? 'Net Pay' : 'Total Due'}</Text>
             <Text style={[s.totalValue, s.bold, { color: '#1e3a2a', fontSize: 12 }]}>{fmt(taxRate > 0 ? grandTotal : netTotal)}</Text>
           </View>
         </View>
 
-        {/* ── NOTES / PAYMENT TERMS (above thank-you) ── */}
+        {/* NOTES / PAYMENT TERMS */}
         {(invoice.payment_terms || invoice.notes) && (
           <>
             <View style={s.divider} />
@@ -226,7 +220,7 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
           </>
         )}
 
-        {/* ── FOOTER ── */}
+        {/* FOOTER */}
         <View style={s.divider} />
         <Text style={[s.small, s.gray, { textAlign: 'center' }]}>
           {invoice.invoice_type === 'contractor'
@@ -251,30 +245,48 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
         </Text>
         {ticketPhotos.length > 0 && (
           <Text style={[s.small, s.gray, { textAlign: 'center', marginTop: 4 }]}>
-            See attached Exhibit{ticketPhotos.length > 1 ? 's' : ''} A
-            {ticketPhotos.length > 1 ? `–${exhibitLetters[ticketPhotos.length - 1]}` : ''} for supporting ticket photos.
+            {ticketPhotos.length} supporting ticket photo{ticketPhotos.length !== 1 ? 's' : ''} attached below.
           </Text>
         )}
-
         <Text style={{ fontSize: 7.5, color: '#d1d5db', textAlign: 'center', marginTop: 16 }}>
           Powered by DumpTruckBoss · dumptruckboss.com
         </Text>
 
       </Page>
 
-      {/* PAGES 2+: Ticket Photos */}
-      {ticketPhotos.map((photo, i) => (
-        <Page key={i} size="LETTER" style={s.page}>
-          <Text style={s.photoHeader}>
-            Supporting Ticket {photo.ticketNumber ? `— #${photo.ticketNumber}` : ''}
-          </Text>
-          <Text style={s.photoSubtitle}>
-            {photo.date} · {photo.driverName ?? 'Driver'} · {photo.jobName}
-          </Text>
-          <Image src={photo.imageUrl} style={s.photoImage} />
-          <Text style={s.exhibitLabel}>Exhibit {exhibitLetters[i]}</Text>
+      {/* ── PAGES 2+: Supporting Tickets ── */}
+      {ticketPhotos.length > 0 && (
+        <Page size="LETTER" style={s.page}>
+          <View style={s.ticketsDivider} />
+          <Text style={s.ticketsHeader}>Supporting Tickets</Text>
+          <Text style={s.ticketsSubtitle}>Original ticket photos attached for verification</Text>
+
+          {ticketPhotos.map((photo, i) => (
+            <View key={i}>
+              {/* Label bar */}
+              <View style={s.ticketLabelBar}>
+                <Text style={s.ticketLabelBold}>
+                  {photo.ticketNumber ? `Ticket #${photo.ticketNumber}` : 'Ticket'}
+                </Text>
+                <Text style={s.ticketLabelCenter}>{photo.jobName}</Text>
+                <Text style={s.ticketLabelRight}>{fmtLongDate(photo.date)}</Text>
+              </View>
+              {/* Detail row */}
+              <Text style={s.ticketDetails}>
+                {[
+                  photo.driverName ? `Driver: ${photo.driverName}` : null,
+                  photo.truckNumber ? `Truck: ${photo.truckNumber}` : null,
+                  photo.material ? `Material: ${photo.material}` : null,
+                  photo.timeWorked || null,
+                ].filter(Boolean).join('  |  ')}
+              </Text>
+              {/* Full-width image */}
+              <Image src={photo.imageUrl} style={s.ticketImage} />
+            </View>
+          ))}
         </Page>
-      ))}
+      )}
+
     </Document>
   )
 }
