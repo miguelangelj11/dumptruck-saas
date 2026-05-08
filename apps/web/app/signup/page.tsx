@@ -184,7 +184,7 @@ export default function SignupPage() {
   if (paymentComplete) {
     return (
       <div style={{ minHeight: '100vh', background: '#0f1923', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
-        <div style={{ width: '100%', maxWidth: '480px', textAlign: 'center' }}>
+        <main style={{ width: '100%', maxWidth: '480px', textAlign: 'center' }}>
           <div style={{ fontSize: '56px', marginBottom: '20px' }}>🎉</div>
           <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#fff', marginBottom: '12px' }}>Payment confirmed!</h1>
           <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6, marginBottom: '28px' }}>
@@ -199,7 +199,7 @@ export default function SignupPage() {
           <Link href="/login" style={{ display: 'inline-block', padding: '12px 28px', background: '#2d7a4f', color: '#fff', borderRadius: '10px', textDecoration: 'none', fontSize: '14px', fontWeight: 700 }}>
             Go to Login →
           </Link>
-        </div>
+        </main>
       </div>
     )
   }
@@ -208,7 +208,7 @@ export default function SignupPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#0f1923', backgroundImage: 'radial-gradient(#ffffff06 1px, transparent 1px)', backgroundSize: '24px 24px', padding: '40px 24px' }}>
-      <div style={{ width: '100%', maxWidth: '520px', margin: '0 auto' }}>
+      <main style={{ width: '100%', maxWidth: '520px', margin: '0 auto' }}>
 
         {/* Logo + heading */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
@@ -244,8 +244,8 @@ export default function SignupPage() {
                     onClick={() => setSelectedPlan(plan.id)}
                     style={{
                       flex: 1, width: '100%', padding: '14px', borderRadius: '12px', textAlign: 'left', cursor: 'pointer', outline: 'none', transition: 'all 0.15s',
-                      border: `2px solid ${isSelected ? '#F5B731' : isPopular ? 'rgba(245,183,49,0.5)' : 'rgba(255,255,255,0.12)'}`,
-                      background: isSelected ? 'rgba(245,183,49,0.12)' : isPopular ? 'rgba(245,183,49,0.05)' : 'rgba(255,255,255,0.04)',
+                      border: `2px solid ${isSelected ? '#F5B731' : isPopular ? '#3a3218' : '#1e2530'}`,
+                      background: isSelected ? '#2b2c20' : isPopular ? '#1c2120' : '#19222c',
                     }}
                   >
                     <p style={{ fontWeight: 700, fontSize: '12px', color: '#fff', marginBottom: '4px', minHeight: '30px' }}>{plan.name}</p>
@@ -359,7 +359,7 @@ export default function SignupPage() {
           </p>
         </div>
 
-      </div>
+      </main>
     </div>
   )
 }
