@@ -500,7 +500,7 @@ export default async function DashboardPage() {
                       <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                         <div className="h-full bg-[var(--brand-primary)] rounded-full" style={{ width: `${barPct}%` }} />
                       </div>
-                      <span className="text-[10px] text-gray-400 shrink-0 w-14 text-right">{d.loads} load{d.loads !== 1 ? 's' : ''}</span>
+                      <span className="text-[10px] text-gray-400 shrink-0 w-14 text-right">{d.loads} job{d.loads !== 1 ? 's' : ''}</span>
                     </div>
                   </div>
                 )
