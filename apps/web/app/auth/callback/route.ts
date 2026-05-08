@@ -50,6 +50,15 @@ export async function GET(request: Request) {
     .maybeSingle()
 
   if (driverRecord) {
+    // A user may have a driver record AND an elevated profile role (e.g. co-owner).
+    // Check the existing profile role first — if it's not 'driver', send to the owner dashboard.
+    const { data: existingDriverProf } = await admin
+      .from('profiles').select('role').eq('id', user.id).maybeSingle()
+
+    if (existingDriverProf && existingDriverProf.role !== 'driver') {
+      return NextResponse.redirect(`${origin}/dashboard`)
+    }
+
     await admin.from('profiles').upsert({
       id:              user.id,
       email:           user.email,

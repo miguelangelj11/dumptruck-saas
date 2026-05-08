@@ -23,14 +23,14 @@ export default function LoginPage() {
       setLoading(false)
       return
     }
-    // Route drivers to their portal, owners to the dashboard
+    // Route by profile role — drivers to their portal, everyone else to the dashboard
     if (data.user) {
-      const { data: driverRow } = await supabase
-        .from('drivers')
-        .select('id')
-        .eq('auth_user_id', data.user.id)
+      const { data: profileRow } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user.id)
         .maybeSingle()
-      router.push(driverRow ? '/driver' : '/dashboard')
+      router.push(profileRow?.role === 'driver' ? '/driver' : '/dashboard')
     } else {
       router.push('/dashboard')
     }
