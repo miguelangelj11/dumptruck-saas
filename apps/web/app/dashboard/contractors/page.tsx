@@ -569,7 +569,7 @@ export default function ContractorsPage() {
         {/* Ticket form modal */}
         {showTicketForm && (
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
-            <div className="bg-white w-full sm:rounded-2xl sm:max-w-lg shadow-2xl max-h-[95dvh] overflow-y-auto">
+            <div className="bg-white w-full sm:rounded-2xl sm:max-w-lg shadow-2xl max-h-[95vh] overflow-y-auto">
               <div className="sticky top-0 bg-white px-6 py-4 border-b border-gray-100 flex items-center justify-between z-10">
                 <h2 className="font-semibold text-gray-900">{editingTicket ? 'Edit Ticket' : 'New Ticket'} — {selected.name}</h2>
                 <button onClick={() => setShowTicketForm(false)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
@@ -853,8 +853,8 @@ export default function ContractorsPage() {
               <button className="absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20" onClick={e => { e.stopPropagation(); setViewingIndex(i => Math.min(viewingImages.length - 1, i + 1)) }}><ChevronRight className="h-5 w-5" /></button>
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm bg-black/40 px-3 py-1 rounded-full">{viewingIndex + 1} / {viewingImages.length}</div>
             </>}
-            <div className="relative max-w-3xl w-full" style={{ maxHeight: '85dvh' }} onClick={e => e.stopPropagation()}>
-              <Image src={viewingImages[viewingIndex]!} alt="Ticket photo" width={1200} height={900} className="object-contain w-full rounded-lg" style={{ maxHeight: '85dvh' }} />
+            <div className="relative max-w-3xl w-full" style={{ maxHeight: '85vh' }} onClick={e => e.stopPropagation()}>
+              <Image src={viewingImages[viewingIndex]!} alt="Ticket photo" width={1200} height={900} className="object-contain w-full rounded-lg" style={{ maxHeight: '85vh' }} />
             </div>
           </div>
         )}
