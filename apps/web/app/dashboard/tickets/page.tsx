@@ -1074,9 +1074,33 @@ export default function TicketsPage() {
                   <TimeInput label="Time Out" value={form.time_out} onChange={v => setForm(p => ({ ...p, time_out: v }))} />
                 </div>
 
+                {/* Rate Type Selector */}
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Rate Type</label>
+                  <div className="flex gap-2">
+                    {(['load', 'hr', 'ton'] as const).map(type => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setForm(p => ({ ...p, rate_type: type, rate_quantity: '' }))}
+                        className={`flex-1 rounded-lg border text-sm font-semibold py-2.5 transition-all ${
+                          form.rate_type === type
+                            ? 'bg-[var(--brand-dark)] border-[var(--brand-dark)] text-white'
+                            : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                        }`}
+                        style={{ minHeight: 44 }}
+                      >
+                        {type === 'load' ? '/job' : type === 'hr' ? '/hr' : '/ton'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Row 6: Job Rate + Qty */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Job Rate</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    {form.rate_type === 'hr' ? 'Hourly Rate' : form.rate_type === 'ton' ? 'Rate per Ton' : 'Job Rate'}
+                  </label>
                   <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/20 focus-within:border-[var(--brand-primary)]">
                     <span className="flex items-center px-3 bg-gray-50 text-sm text-gray-500 border-r border-gray-200">$</span>
                     <input
@@ -1089,11 +1113,6 @@ export default function TicketsPage() {
                       className="flex-1 px-3 py-2.5 text-sm focus:outline-none bg-white"
                       placeholder="0.00"
                     />
-                    <select value={form.rate_type} onChange={e => setForm(p => ({ ...p, rate_type: e.target.value, rate_quantity: '' }))} className="px-2 text-xs font-medium text-gray-600 bg-gray-50 border-l border-gray-200 focus:outline-none">
-                      <option value="load">/ job</option>
-                      <option value="ton">/ ton</option>
-                      <option value="hr">/ hr</option>
-                    </select>
                   </div>
                   {autoFilledFromJob && <p className="text-xs text-green-600 mt-1">✓ Rate auto-filled from job settings</p>}
                 </div>
