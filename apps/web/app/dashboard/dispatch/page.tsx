@@ -211,6 +211,14 @@ export default function DispatchPage() {
   const [subcontractorId,  setSubcontractorId]  = useState('')
   const [notifyVia,        setNotifyVia]        = useState<'email' | 'sms' | 'both' | 'none'>('email')
 
+  // Bulk dispatch
+  const [showBulkForm,   setShowBulkForm]   = useState(false)
+  const [bulkJobId,      setBulkJobId]      = useState('')
+  const [bulkStartTime,  setBulkStartTime]  = useState('07:00')
+  const [bulkNotifyVia,  setBulkNotifyVia]  = useState<'email' | 'sms' | 'both' | 'none'>('email')
+  const [bulkSelections, setBulkSelections] = useState<Record<string, { selected: boolean; truckNumber: string }>>({})
+  const [savingBulk,     setSavingBulk]     = useState(false)
+
   // AI Dispatch Brain
   const [recommendation,    setRecommendation]    = useState<DriverRecommendation | null>(null)
   const [loadingRec,        setLoadingRec]        = useState(false)
@@ -524,6 +532,90 @@ export default function DispatchPage() {
     setNotifyVia('email')
     setDispForm({ ...EMPTY_DISPATCH, job_id: job.id })
     setShowDispForm(true)
+  }
+
+  function openBulkDispatch(job: Job, e: React.MouseEvent) {
+    e.stopPropagation()
+    setBulkJobId(job.id)
+    setBulkStartTime('07:00')
+    setBulkNotifyVia('email')
+    const init: Record<string, { selected: boolean; truckNumber: string }> = {}
+    drivers.forEach(d => { init[d.id] = { selected: false, truckNumber: '' } })
+    setBulkSelections(init)
+    setShowBulkForm(true)
+  }
+
+  async function handleBulkDispatch(e: React.FormEvent) {
+    e.preventDefault()
+    const selected = drivers.filter(d => bulkSelections[d.id]?.selected)
+    if (selected.length === 0) { toast.error('Select at least one driver'); return }
+    const uid = await getUid(); if (!uid) { toast.error('Not authenticated'); return }
+    const companyId = await getCompanyId()
+    if (!companyId) { toast.error('Company not found'); return }
+    setSavingBulk(true)
+
+    const job     = jobs.find(j => j.id === bulkJobId)
+    const jobName = job?.job_name ?? ''
+    const jobLocation = job?.location ?? ''
+
+    const inserts = selected.map(d => ({
+      company_id:    companyId,
+      driver_id:     d.id,
+      driver_name:   d.name,
+      truck_number:  bulkSelections[d.id]?.truckNumber || null,
+      start_time:    bulkStartTime || null,
+      job_id:        bulkJobId || null,
+      dispatch_type: 'driver' as const,
+      dispatch_date: today,
+      status:        'dispatched' as const,
+      loads_completed: 0,
+    }))
+
+    const { data: created, error } = await supabase
+      .from('dispatches')
+      .insert(inserts)
+      .select()
+
+    if (error) { toast.error(error.message); setSavingBulk(false); return }
+
+    toast.success(`${selected.length} driver${selected.length !== 1 ? 's' : ''} dispatched!`)
+    setDispatches(prev => [...(created as Dispatch[]), ...prev])
+
+    // Log activity + send notifications
+    for (const d of selected) {
+      const row = created?.find((r: Record<string, unknown>) => r.driver_id === d.id)
+      if (row) logDispatchActivity(companyId, d.name, jobName, row.id as string, supabase)
+
+      const notifyPayload = {
+        driverName: d.name, jobName: jobName || undefined,
+        location: jobLocation || undefined, startTime: bulkStartTime || undefined,
+        truckNumber: bulkSelections[d.id]?.truckNumber || undefined,
+        dispatchId: row?.id as string | undefined, companyId,
+      }
+
+      if ((bulkNotifyVia === 'email' || bulkNotifyVia === 'both') && d.email) {
+        fetch('/api/dispatches/notify', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...notifyPayload, driverEmail: d.email }),
+        }).catch(err => console.error('[bulk notify email]', err))
+      }
+
+      if ((bulkNotifyVia === 'sms' || bulkNotifyVia === 'both') && d.phone) {
+        const msg = [
+          `🚛 You've been dispatched!`,
+          jobName      ? `Job: ${jobName}`              : null,
+          jobLocation  ? `Location: ${jobLocation}`     : null,
+          bulkStartTime ? `Start: ${bulkStartTime}`     : null,
+          bulkSelections[d.id]?.truckNumber ? `Truck #${bulkSelections[d.id]?.truckNumber}` : null,
+          `\nSubmit ticket: https://dumptruckboss.com/portal?c=${companyId}`,
+        ].filter(Boolean).join('\n')
+        const clean = d.phone.replace(/\D/g, '')
+        window.open(`sms:+${clean}?body=${encodeURIComponent(msg)}`, '_blank')
+      }
+    }
+
+    setSavingBulk(false)
+    setShowBulkForm(false)
   }
 
   function openNewDispatch(type: 'driver' | 'subcontractor' = 'driver') {
@@ -921,6 +1013,13 @@ export default function DispatchPage() {
                                 className="flex items-center gap-1.5 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
                               >
                                 <Send className="h-3 w-3" /> Dispatch
+                              </button>
+                              <button
+                                onClick={e => openBulkDispatch(job, e)}
+                                title="Dispatch multiple drivers to this job"
+                                className="flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors"
+                              >
+                                <Users className="h-3 w-3" /> Multi
                               </button>
                               <button onClick={e => openEditJob(job, e)} className="h-8 w-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600">
                                 <Pencil className="h-3.5 w-3.5" />
@@ -1568,6 +1667,159 @@ export default function DispatchPage() {
                 >
                   {savingDispatch && <Loader2 className="h-4 w-4 animate-spin" />}
                   {savingDispatch ? 'Saving…' : editingDispatch ? 'Save Changes' : 'Dispatch Now'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════
+          BULK DISPATCH MODAL
+      ══════════════════════════════════════════════════════════════ */}
+      {showBulkForm && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Dispatch Multiple Drivers</h2>
+                {bulkJobId && (
+                  <p className="text-sm text-gray-500 mt-0.5">{jobs.find(j => j.id === bulkJobId)?.job_name}</p>
+                )}
+              </div>
+              <button onClick={() => setShowBulkForm(false)} className="h-8 w-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <form onSubmit={handleBulkDispatch} className="p-5 space-y-4">
+
+              {/* Job selector */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Job</label>
+                <select
+                  value={bulkJobId}
+                  onChange={e => setBulkJobId(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
+                >
+                  <option value="">— No specific job —</option>
+                  {jobs.filter(j => j.status === 'active').map(j => (
+                    <option key={j.id} value={j.id}>{j.job_name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Shared start time */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Start Time (all drivers)</label>
+                <input
+                  type="time"
+                  value={bulkStartTime}
+                  onChange={e => setBulkStartTime(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
+                />
+              </div>
+
+              {/* Driver checklist */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">Select Drivers</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const allSelected = drivers.every(d => bulkSelections[d.id]?.selected)
+                      setBulkSelections(prev => {
+                        const next = { ...prev }
+                        drivers.forEach(d => { next[d.id] = { ...next[d.id]!, selected: !allSelected } })
+                        return next
+                      })
+                    }}
+                    className="text-xs text-[var(--brand-primary)] font-medium hover:underline"
+                  >
+                    {drivers.every(d => bulkSelections[d.id]?.selected) ? 'Deselect All' : 'Select All'}
+                  </button>
+                </div>
+                {drivers.length === 0 ? (
+                  <p className="text-sm text-amber-600">No drivers found. Add drivers first.</p>
+                ) : (
+                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    {drivers.map(d => {
+                      const sel = bulkSelections[d.id]
+                      const alreadyDispatched = driverDispMap.has(d.id)
+                      return (
+                        <div key={d.id} className={`flex items-center gap-3 p-2.5 rounded-xl border transition-all ${
+                          sel?.selected ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)]/5' : 'border-gray-200'
+                        } ${alreadyDispatched ? 'opacity-50' : ''}`}>
+                          <input
+                            type="checkbox"
+                            id={`bulk-${d.id}`}
+                            disabled={alreadyDispatched}
+                            checked={sel?.selected ?? false}
+                            onChange={e => setBulkSelections(prev => ({
+                              ...prev,
+                              [d.id]: { ...prev[d.id]!, selected: e.target.checked },
+                            }))}
+                            className="h-4 w-4 rounded text-[var(--brand-primary)] accent-[var(--brand-primary)]"
+                          />
+                          <label htmlFor={`bulk-${d.id}`} className="flex-1 min-w-0 cursor-pointer">
+                            <p className="text-sm font-medium text-gray-900 truncate">{d.name}</p>
+                            {alreadyDispatched && <p className="text-[10px] text-amber-600">Already dispatched today</p>}
+                          </label>
+                          {sel?.selected && (
+                            <input
+                              type="text"
+                              value={sel.truckNumber}
+                              onChange={e => setBulkSelections(prev => ({
+                                ...prev,
+                                [d.id]: { ...prev[d.id]!, truckNumber: e.target.value },
+                              }))}
+                              placeholder="Truck #"
+                              className="w-20 h-8 px-2 rounded-lg border border-gray-200 text-xs focus:outline-none focus:border-[var(--brand-primary)]"
+                            />
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+                <p className="text-xs text-gray-400 mt-1">
+                  {drivers.filter(d => bulkSelections[d.id]?.selected).length} selected
+                </p>
+              </div>
+
+              {/* Notify Via */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Notify All Via</label>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {(['email', 'sms', 'both', 'none'] as const).map(val => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setBulkNotifyVia(val)}
+                      className={`py-2 rounded-xl text-xs font-medium border transition-all ${
+                        bulkNotifyVia === val
+                          ? 'bg-[var(--brand-dark)] text-white border-[#1e3a2a]'
+                          : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      {val === 'email' ? 'Email' : val === 'sms' ? 'Text' : val === 'both' ? 'Both' : 'Skip'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <button type="button" onClick={() => setShowBulkForm(false)} className="flex-1 h-11 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingBulk || drivers.filter(d => bulkSelections[d.id]?.selected).length === 0}
+                  className="flex-1 h-11 rounded-xl bg-[var(--brand-dark)] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[var(--brand-primary-hover)] disabled:opacity-60"
+                >
+                  {savingBulk && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {savingBulk
+                    ? 'Dispatching…'
+                    : `Dispatch ${drivers.filter(d => bulkSelections[d.id]?.selected).length} Driver${drivers.filter(d => bulkSelections[d.id]?.selected).length !== 1 ? 's' : ''}`}
                 </button>
               </div>
             </form>
