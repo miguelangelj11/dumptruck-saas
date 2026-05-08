@@ -6,6 +6,7 @@ import {
   Plus, Pencil, Trash2, Loader2, X, MapPin, Users, Truck,
   DollarSign, Calendar, ChevronDown, ChevronUp, Send,
   AlertTriangle, Clock, PackageOpen, TrendingUp, RefreshCw, Radio, Link2, Smartphone,
+  Mail, MessageSquare,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Job, Load, Dispatch, DispatchStatus, DriverRecommendation, RateInsight, DispatchOptimizationHint } from '@/lib/types'
@@ -14,7 +15,7 @@ import { logDispatchActivity, getRecommendedDriver, getRateInsights, getDispatch
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type DriverBasic = { id: string; name: string }
+type DriverBasic = { id: string; name: string; email: string | null; phone: string | null }
 type JobWithLoads = Job & { loads?: Load[] }
 type ContractorBasic = { id: string; name: string; phone: string | null; email: string | null }
 type ClientCompanyBasic = { id: string; name: string; address: string | null }
@@ -208,6 +209,7 @@ export default function DispatchPage() {
   const [savingDispatch,   setSavingDispatch]   = useState(false)
   const [dispFormType,     setDispFormType]     = useState<'driver' | 'subcontractor'>('driver')
   const [subcontractorId,  setSubcontractorId]  = useState('')
+  const [notifyVia,        setNotifyVia]        = useState<'email' | 'sms' | 'both' | 'none'>('email')
 
   // AI Dispatch Brain
   const [recommendation,    setRecommendation]    = useState<DriverRecommendation | null>(null)
@@ -242,7 +244,7 @@ export default function DispatchPage() {
 
     const [loadsRes, driversRes, jobsRes, dispRes, contractorsRes, clientCoRes, coRes] = await Promise.all([
       supabase.from('loads').select('id,job_name,driver_name,truck_number,date,status,rate,rate_type').eq('company_id', companyId).gte('date', cutoff),
-      supabase.from('drivers').select('id,name').eq('company_id', companyId).order('name'),
+      supabase.from('drivers').select('id,name,email,phone').eq('company_id', companyId).order('name'),
       supabase.from('jobs').select('*').eq('company_id', companyId).order('created_at', { ascending: false }),
       supabase.from('dispatches').select('*').eq('company_id', companyId).eq('dispatch_date', today).order('created_at', { ascending: false }),
       supabase.from('contractors').select('id,name,phone,email').eq('company_id', companyId).eq('status', 'active').order('name'),
@@ -519,6 +521,7 @@ export default function DispatchPage() {
     setEditingDispatch(null)
     setDispFormType('driver')
     setSubcontractorId('')
+    setNotifyVia('email')
     setDispForm({ ...EMPTY_DISPATCH, job_id: job.id })
     setShowDispForm(true)
   }
@@ -527,6 +530,7 @@ export default function DispatchPage() {
     setEditingDispatch(null)
     setDispFormType(type)
     setSubcontractorId('')
+    setNotifyVia('email')
     setDispForm(EMPTY_DISPATCH)
     setShowDispForm(true)
   }
@@ -589,47 +593,48 @@ export default function DispatchPage() {
         const jobLocation = jobs.find(j => j.id === dispForm.job_id)?.location ?? ''
         logDispatchActivity(companyId, displayName, jobName, data.id, supabase)
 
-        // Send email notification to driver or subcontractor
-        if (!isSub && dispForm.driver_id) {
-          const { data: driverRow } = await supabase
-            .from('drivers')
-            .select('email')
-            .eq('id', dispForm.driver_id)
-            .maybeSingle()
-          if (driverRow?.email) {
-            fetch('/api/dispatches/notify', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                driverEmail:  driverRow.email,
-                driverName:   displayName,
-                jobName:      jobName || undefined,
-                location:     jobLocation || undefined,
-                startTime:    dispForm.start_time || undefined,
-                truckNumber:  dispForm.truck_number || undefined,
-                instructions: dispForm.instructions || undefined,
-                dispatchId:   data.id,
-                companyId,
-              }),
-            }).catch(err => console.error('[dispatch notify]', err))
-          }
+        // Resolve contact info for the dispatched party
+        const driverFull = !isSub ? drivers.find(d => d.id === dispForm.driver_id) : null
+        const contactEmail = isSub ? sub?.email : driverFull?.email
+        const contactPhone = isSub ? sub?.phone : driverFull?.phone
+
+        const notifyPayload = {
+          driverName:   displayName,
+          jobName:      jobName || undefined,
+          location:     jobLocation || undefined,
+          startTime:    dispForm.start_time || undefined,
+          truckNumber:  dispForm.truck_number || undefined,
+          instructions: dispForm.instructions || undefined,
+          dispatchId:   data.id,
+          companyId,
         }
-        if (isSub && sub?.email) {
+
+        // Email notification
+        if ((notifyVia === 'email' || notifyVia === 'both') && contactEmail) {
           fetch('/api/dispatches/notify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              driverEmail:  sub.email,
-              driverName:   displayName,
-              jobName:      jobName || undefined,
-              location:     jobLocation || undefined,
-              startTime:    dispForm.start_time || undefined,
-              truckNumber:  dispForm.truck_number || undefined,
-              instructions: dispForm.instructions || undefined,
-              dispatchId:   data.id,
-              companyId,
-            }),
-          }).catch(err => console.error('[dispatch notify sub]', err))
+            body: JSON.stringify({ ...notifyPayload, driverEmail: contactEmail }),
+          }).catch(err => console.error('[dispatch notify email]', err))
+        }
+
+        // SMS notification — opens the device SMS app pre-filled
+        if (notifyVia === 'sms' || notifyVia === 'both') {
+          if (contactPhone) {
+            const msgLines = [
+              `🚛 You've been dispatched!`,
+              jobName      ? `Job: ${jobName}`                  : null,
+              jobLocation  ? `Location: ${jobLocation}`         : null,
+              dispForm.start_time   ? `Start: ${dispForm.start_time}`     : null,
+              dispForm.truck_number ? `Truck #${dispForm.truck_number}`   : null,
+              dispForm.instructions ? `Notes: ${dispForm.instructions}`   : null,
+              `\nSubmit ticket: https://dumptruckboss.com/portal?c=${companyId}`,
+            ].filter(Boolean).join('\n')
+            const cleanPhone = contactPhone.replace(/\D/g, '')
+            window.open(`sms:+${cleanPhone}?body=${encodeURIComponent(msgLines)}`, '_blank')
+          } else {
+            toast.warning('No phone number on file — add one in the Drivers page to send texts')
+          }
         }
       }
     }
@@ -1496,6 +1501,61 @@ export default function DispatchPage() {
                   className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
                 />
               </div>
+
+              {/* Notify Via — only for new dispatches */}
+              {!editingDispatch && (() => {
+                const contactEmail = dispFormType === 'driver'
+                  ? drivers.find(d => d.id === dispForm.driver_id)?.email
+                  : contractors.find(c => c.id === subcontractorId)?.email
+                const contactPhone = dispFormType === 'driver'
+                  ? drivers.find(d => d.id === dispForm.driver_id)?.phone
+                  : contractors.find(c => c.id === subcontractorId)?.phone
+                const hasContact = !!(contactEmail || contactPhone)
+                return (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Notify Driver Via</label>
+                    {hasContact && (
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 mb-2">
+                        {contactEmail && (
+                          <span className="flex items-center gap-1 text-xs text-gray-500">
+                            <Mail className="h-3 w-3" />{contactEmail}
+                          </span>
+                        )}
+                        {contactPhone && (
+                          <span className="flex items-center gap-1 text-xs text-gray-500">
+                            <MessageSquare className="h-3 w-3" />{contactPhone}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {!hasContact && (dispForm.driver_id || subcontractorId) && (
+                      <p className="text-xs text-amber-600 mb-2">No contact info on file — add email/phone in the Drivers page.</p>
+                    )}
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {([
+                        ['email', 'Email',     !contactEmail],
+                        ['sms',  'Text',       !contactPhone],
+                        ['both', 'Both',       !contactEmail && !contactPhone],
+                        ['none', 'Skip',       false],
+                      ] as [string, string, boolean][]).map(([val, label, disabled]) => (
+                        <button
+                          key={val}
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => setNotifyVia(val as 'email' | 'sms' | 'both' | 'none')}
+                          className={`py-2 rounded-xl text-xs font-medium border transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+                            notifyVia === val
+                              ? 'bg-[var(--brand-dark)] text-white border-[#1e3a2a]'
+                              : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
 
               <div className="flex gap-3 pt-1">
                 <button type="button" onClick={() => setShowDispForm(false)} className="flex-1 h-11 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
