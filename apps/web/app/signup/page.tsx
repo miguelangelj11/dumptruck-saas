@@ -226,29 +226,29 @@ export default function SignupPage() {
         {/* Plan selector */}
         <div style={{ marginBottom: '24px' }}>
           <p style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: '16px' }}>Which plan are you signing up for?</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', alignItems: 'stretch' }}>
             {PLANS.map((plan) => {
               const isSelected = selectedPlan === plan.id
               const isPopular = !!plan.badge
               return (
-                <div key={plan.id} style={{ position: 'relative' }}>
-                  {isPopular && (
-                    <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', zIndex: 10 }}>
+                <div key={plan.id} style={{ position: 'relative', paddingTop: '20px', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {isPopular && (
                       <span style={{ background: '#F5B731', color: '#1a1a1a', fontSize: '10px', fontWeight: 800, padding: '3px 10px', borderRadius: '100px', whiteSpace: 'nowrap' }}>
                         Most Popular
                       </span>
-                    </div>
-                  )}
+                    )}
+                  </div>
                   <button
                     type="button"
                     onClick={() => setSelectedPlan(plan.id)}
                     style={{
-                      width: '100%', padding: '14px', borderRadius: '12px', textAlign: 'left', cursor: 'pointer', outline: 'none', transition: 'all 0.15s',
+                      flex: 1, width: '100%', padding: '14px', borderRadius: '12px', textAlign: 'left', cursor: 'pointer', outline: 'none', transition: 'all 0.15s',
                       border: `2px solid ${isSelected ? '#F5B731' : isPopular ? 'rgba(245,183,49,0.5)' : 'rgba(255,255,255,0.12)'}`,
                       background: isSelected ? 'rgba(245,183,49,0.12)' : isPopular ? 'rgba(245,183,49,0.05)' : 'rgba(255,255,255,0.04)',
                     }}
                   >
-                    <p style={{ fontWeight: 700, fontSize: '12px', color: '#fff', marginBottom: '4px' }}>{plan.name}</p>
+                    <p style={{ fontWeight: 700, fontSize: '12px', color: '#fff', marginBottom: '4px', minHeight: '30px' }}>{plan.name}</p>
                     <p style={{ fontSize: '18px', fontWeight: 800, color: '#F5B731', marginBottom: '4px' }}>{plan.price}</p>
                     <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)' }}>{plan.desc}</p>
                   </button>
