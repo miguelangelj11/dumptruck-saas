@@ -3,6 +3,7 @@ import "@workspace/ui/globals.css"
 import { Toaster } from "sonner"
 import { NextIntlClientProvider } from "next-intl"
 import { getLocale, getMessages } from "next-intl/server"
+import { RegisterSW } from "@/components/pwa/RegisterSW"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
@@ -70,11 +71,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <meta name="msapplication-tap-highlight" content="no" />
         {/* Android */}
         <meta name="mobile-web-app-capable" content="yes" />
+        {/* iOS — Next.js 16 metadata API renders appleWebApp.capable as mobile-web-app-capable; add this manually */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
       </head>
       <body className="bg-white font-sans antialiased">
         <NextIntlClientProvider messages={messages}>
           {children}
           <Toaster position="top-right" richColors />
+          <RegisterSW />
         </NextIntlClientProvider>
       </body>
     </html>
