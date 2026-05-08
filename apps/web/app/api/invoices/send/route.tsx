@@ -88,7 +88,7 @@ export async function POST(request: Request) {
     try {
       const { data: loadsData } = await admin
         .from('loads')
-        .select('id, job_name, date, driver_name, truck_number, material, load_type, image_url, load_tickets(ticket_number, image_url, time_in, time_out)')
+        .select('id, job_name, date, driver_name, truck_number, material, load_type, image_url, load_tickets(ticket_number, image_url)')
         .eq('company_id', inv.company_id)
         .gte('date', inv.date_from)
         .lte('date', inv.date_to)
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
       const rawPhotos: RawPhoto[] = []
 
       for (const load of loadsData ?? []) {
-        const slips = (load.load_tickets ?? []) as { ticket_number: string | null; image_url: string | null; time_in?: string | null; time_out?: string | null }[]
+        const slips = (load.load_tickets ?? []) as { ticket_number: string | null; image_url: string | null }[]
         const slipPhotos = slips.filter(s => s.image_url)
         const mat = (load as { material?: string | null; load_type?: string | null }).material || (load as { load_type?: string | null }).load_type || null
         const truck = (load as { truck_number?: string | null }).truck_number || null
@@ -111,7 +111,7 @@ export async function POST(request: Request) {
               jobName: load.job_name,
               truckNumber: truck,
               material: mat,
-              timeWorked: slip.time_in && slip.time_out ? `${slip.time_in} – ${slip.time_out}` : null,
+              timeWorked: null,
             })
           }
         } else if ((load as { image_url?: string | null }).image_url) {
