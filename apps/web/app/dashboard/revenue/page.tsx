@@ -508,7 +508,7 @@ export default function RevenuePage() {
 
       {/* Date range filter + Export */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+        <div className="flex gap-1 bg-gray-100 rounded-lg p-1 overflow-x-auto">
           {(['week', 'month', 'quarter', 'year'] as DateRange[]).map(r => (
             <button
               key={r}
