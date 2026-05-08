@@ -1214,12 +1214,17 @@ export default function InvoicesPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[600px] text-sm">
+              <table className="w-full min-w-[380px] sm:min-w-[600px] text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
-                    {['Invoice #', 'Type', 'Bill To', 'Date Range', 'Total', 'Due Date', 'Status', ''].map(h => (
+                    {(['Invoice #', 'Type', 'Bill To'] as const).map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                     ))}
+                    <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date Range</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</th>
+                    <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Due Date</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -1238,11 +1243,11 @@ export default function InvoicesPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-700 font-medium">{inv.client_name}</td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">
+                      <td className="hidden sm:table-cell px-4 py-3 text-gray-500 text-xs">
                         {inv.date_from ? `${fmtDate(inv.date_from)} – ${fmtDate(inv.date_to)}` : '—'}
                       </td>
                       <td className="px-4 py-3 font-semibold text-gray-900">${fmt(inv.total)}</td>
-                      <td className="px-4 py-3 text-xs">
+                      <td className="hidden sm:table-cell px-4 py-3 text-xs">
                         <p className={inv.status === 'overdue' ? 'text-red-600 font-medium' : 'text-gray-500'}>{fmtDate(inv.due_date)}</p>
                         {daysOverdue > 0 && (
                           <p className="text-red-500 font-semibold mt-0.5">{daysOverdue}d overdue</p>

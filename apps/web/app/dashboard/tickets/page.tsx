@@ -808,12 +808,21 @@ export default function TicketsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px] text-sm">
+            <table className="w-full min-w-[500px] sm:min-w-[800px] text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  {['Photo', 'Date', 'Job / Company', 'Load Type', 'Driver', 'Truck', 'Origin → Dest', 'Jobs', 'Tons', 'Total Pay', 'Status', ''].map(h => (
+                  {(['Photo', 'Date', 'Job / Company'] as const).map(h => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
+                  <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Load Type</th>
+                  <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Driver</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Truck</th>
+                  <th className="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Origin → Dest</th>
+                  <th className="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Jobs</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Tons</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Total Pay</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Status</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -846,13 +855,13 @@ export default function TicketsPage() {
                         </div>
                         {l.client_company && <p className="text-xs text-gray-400">{l.client_company}</p>}
                       </td>
-                      <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{l.load_type || '—'}</td>
-                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{l.driver_name}</td>
+                      <td className="hidden sm:table-cell px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{l.load_type || '—'}</td>
+                      <td className="hidden sm:table-cell px-4 py-3 text-gray-600 whitespace-nowrap">{l.driver_name}</td>
                       <td className="px-4 py-3 text-gray-500 font-mono text-xs">{l.truck_number || '—'}</td>
-                      <td className="px-4 py-3 text-xs text-gray-500 max-w-[160px]">
+                      <td className="hidden md:table-cell px-4 py-3 text-xs text-gray-500 max-w-[160px]">
                         {l.origin || l.destination ? <span>{l.origin || '?'} → {l.destination || '?'}</span> : <span className="text-gray-300">—</span>}
                       </td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                      <td className="hidden md:table-cell px-4 py-3 text-sm font-medium text-gray-900">
                         {tickets.length > 0 ? tickets.length : <span className="text-gray-300">—</span>}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">
