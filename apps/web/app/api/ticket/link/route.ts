@@ -4,9 +4,9 @@ import { createClient as createBrowserClient } from '@/lib/supabase/server'
 import { generateDispatchToken } from '@/lib/dispatch-token'
 
 function getAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE env vars')
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+  const key = process.env.SUPABASE_SERVICE_KEY ?? ''
+  if (!url || !key) console.warn('[getAdmin] Missing SUPABASE env vars')
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 

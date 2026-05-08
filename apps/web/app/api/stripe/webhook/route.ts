@@ -54,7 +54,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 })
   }
 
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+  const stripeKey = process.env.STRIPE_SECRET_KEY
+  if (!stripeKey) {
+    console.error('[stripe-webhook] STRIPE_SECRET_KEY not configured')
+    return NextResponse.json({ error: 'Stripe not configured' }, { status: 500 })
+  }
+  const stripe = new Stripe(stripeKey)
 
   let event: Stripe.Event
   try {
