@@ -37,6 +37,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const organizationId = profile?.organization_id ?? null
   const isTeamMember   = !!profile && profile.role !== 'admin'
 
+  // Drivers have their own portal — prevent them from seeing company-wide data
+  if (profile?.role === 'driver') redirect('/driver')
+
   // Load company via organization_id (profiles path), falling back to owner lookup
   // so the sidebar shows correctly even before the profiles backfill SQL has been run.
   let coData: Record<string, unknown> | null = null
