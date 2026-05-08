@@ -248,9 +248,12 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
             {ticketPhotos.length} supporting ticket photo{ticketPhotos.length !== 1 ? 's' : ''} attached below.
           </Text>
         )}
-        <Text style={{ fontSize: 7.5, color: '#d1d5db', textAlign: 'center', marginTop: 16 }}>
-          Powered by DumpTruckBoss · dumptruckboss.com
-        </Text>
+        <View style={{ alignItems: 'center', marginTop: 16 }}>
+          <Image src="https://dumptruckboss.com/dtb-logo.png" style={{ width: 40, height: 40, objectFit: 'contain', marginBottom: 5 }} />
+          <Text style={{ fontSize: 7.5, color: '#d1d5db', textAlign: 'center' }}>
+            Powered by DumpTruckBoss · dumptruckboss.com
+          </Text>
+        </View>
 
       </Page>
 
