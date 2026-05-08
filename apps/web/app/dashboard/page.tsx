@@ -3,7 +3,7 @@ export const revalidate = 30
 import { createClient } from '@/lib/supabase/server'
 import {
   Truck, Radio,
-  Send, Plus, Users, FileText,
+  Send, Plus, Receipt, FileText,
   AlertTriangle, Clock, Activity, FolderOpen,
 } from 'lucide-react'
 import RecentDocuments from '@/components/dashboard/recent-documents'
@@ -429,7 +429,7 @@ export default async function DashboardPage() {
           { label: 'Dispatch Driver', icon: Send,      href: '/dashboard/dispatch',       bg: 'bg-[var(--brand-dark)] text-white hover:bg-[var(--brand-primary-hover)]' },
           { label: 'Add Ticket',      icon: Plus,      href: '/dashboard/tickets',        bg: 'bg-white text-gray-800 border border-gray-200 hover:border-[var(--brand-primary)] hover:bg-[#f0fdf4]' },
           { label: 'New Invoice',     icon: FileText,  href: '/dashboard/invoices?new=1', bg: 'bg-white text-gray-800 border border-gray-200 hover:border-[var(--brand-primary)] hover:bg-[#f0fdf4]' },
-          { label: 'Add Driver',      icon: Users,     href: '/dashboard/drivers',        bg: 'bg-white text-gray-800 border border-gray-200 hover:border-[var(--brand-primary)] hover:bg-[#f0fdf4]' },
+          { label: 'Add Expense',     icon: Receipt,   href: '/dashboard/revenue?new-expense=1', bg: 'bg-white text-gray-800 border border-gray-200 hover:border-[var(--brand-primary)] hover:bg-[#f0fdf4]' },
         ].map(({ label, icon: Icon, href, bg }) => (
           <Link
             key={label}
