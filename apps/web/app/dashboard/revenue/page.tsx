@@ -765,11 +765,11 @@ export default function RevenuePage() {
                     <td className="px-5 py-3 font-semibold text-red-500">-${exp.amount.toLocaleString()}</td>
                     <td className="px-5 py-3 text-gray-500 whitespace-nowrap">{new Date(exp.date + 'T00:00:00').toLocaleDateString()}</td>
                     <td className="px-5 py-3">
-                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => openEditExpense(exp)} className="text-gray-400 hover:text-gray-700 transition-colors" title="Edit">
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => openEditExpense(exp)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors" title="Edit">
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
-                        <button onClick={() => handleDeleteExpense(exp.id)} className="text-gray-400 hover:text-red-500 transition-colors" title="Delete">
+                        <button onClick={() => handleDeleteExpense(exp.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors" title="Delete">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
