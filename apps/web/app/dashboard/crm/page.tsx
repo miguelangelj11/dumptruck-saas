@@ -910,10 +910,10 @@ export default function CRMPage() {
                     <span className="font-bold text-green-700">{fmtFull(getEffectiveRevenue(selectedLead))}</span>
                   </div>
                   <div className="flex flex-wrap gap-3 text-xs text-green-600">
-                    {(selectedLead.estimated_loads ?? 0) > 0 && <span>🚛 {selectedLead.estimated_loads} loads</span>}
+                    {(selectedLead.estimated_loads ?? 0) > 0 && <span>🚛 {selectedLead.estimated_loads} jobs</span>}
                     {(selectedLead.estimated_trucks ?? 0) > 0 && <span>🚚 {selectedLead.estimated_trucks} trucks</span>}
                     {(selectedLead.estimated_tons ?? 0) > 0 && <span>⚖️ {selectedLead.estimated_tons}T</span>}
-                    {selectedLead.rate && <span>💲{selectedLead.rate}/{selectedLead.rate_type ?? 'load'}</span>}
+                    {selectedLead.rate && <span>💲{selectedLead.rate}/{selectedLead.rate_type ?? 'job'}</span>}
                   </div>
                 </div>
               )}
@@ -1106,7 +1106,7 @@ export default function CRMPage() {
                       <input type="number" min={0} value={leadForm.estimated_revenue} onChange={e => setLeadForm(p => ({ ...p, estimated_revenue: e.target.value }))} placeholder="5000" className={inp} />
                     </FF>
                     <div className="grid grid-cols-3 gap-3">
-                      <FF label="Est. Loads">
+                      <FF label="Est. Jobs">
                         <input type="number" min={0} value={leadForm.estimated_loads} onChange={e => setLeadForm(p => ({ ...p, estimated_loads: e.target.value }))} placeholder="30" className={inp} />
                       </FF>
                       <FF label="Est. Trucks">
@@ -1122,7 +1122,7 @@ export default function CRMPage() {
                       </FF>
                       <FF label="Per">
                         <select value={leadForm.rate_type} onChange={e => setLeadForm(p => ({ ...p, rate_type: e.target.value }))} className={inp}>
-                          <option value="per_load">Load</option>
+                          <option value="per_load">Job</option>
                           <option value="per_ton">Ton</option>
                           <option value="per_hour">Hour</option>
                         </select>
@@ -1199,14 +1199,14 @@ export default function CRMPage() {
                 </FF>
                 <FF label="Per">
                   <select value={quoteForm.rate_type} onChange={e => setQuoteForm(p => ({ ...p, rate_type: e.target.value }))} className={inp}>
-                    <option value="load">Load</option>
+                    <option value="load">Job</option>
                     <option value="ton">Ton</option>
                     <option value="hour">Hour</option>
                   </select>
                 </FF>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <FF label="Est. Loads">
+                <FF label="Est. Jobs">
                   <input type="number" min={0} value={quoteForm.est_loads} onChange={e => setQuoteForm(p => ({ ...p, est_loads: e.target.value }))} placeholder="30" className={inp} />
                 </FF>
                 <FF label="Status">
@@ -1389,8 +1389,8 @@ function QuoteCard({ quote, onEdit, onDelete }: {
         </span>
       </div>
       <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
-        {quote.rate && <span>${quote.rate}/{quote.rate_type ?? 'load'}</span>}
-        {quote.est_loads && <span>{quote.est_loads} loads</span>}
+        {quote.rate && <span>${quote.rate}/{quote.rate_type ?? 'job'}</span>}
+        {quote.est_loads && <span>{quote.est_loads} jobs</span>}
         {estTotal && <span className="font-semibold text-[var(--brand-primary)]">${estTotal.toLocaleString()}</span>}
       </div>
       {quote.material && <p className="text-xs text-gray-400 mt-1">{quote.material}{quote.location ? ` — ${quote.location}` : ''}</p>}

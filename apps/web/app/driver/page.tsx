@@ -123,7 +123,7 @@ export default async function DriverHomePage() {
                       isAccepted ? 'bg-blue-100 text-blue-700'   :
                                    'bg-gray-100 text-gray-600'
                     }`}>
-                      {isWorking  ? `Working · ${d.loads_completed} load${d.loads_completed !== 1 ? 's' : ''}` :
+                      {isWorking  ? `Working · ${d.loads_completed} job${d.loads_completed !== 1 ? 's' : ''}` :
                        isAccepted ? 'Accepted' :
                                     'New Job'}
                     </span>

@@ -1730,7 +1730,7 @@ export default function SettingsPage() {
           {/* Export cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {([
-              { key: 'tickets'  as const, icon: FileText,   title: 'Tickets / Loads',  desc: `${expStart} → ${expEnd}`,  iconColor: 'text-blue-600',   bg: 'bg-blue-50'   },
+              { key: 'tickets'  as const, icon: FileText,   title: 'Tickets / Jobs',   desc: `${expStart} → ${expEnd}`,  iconColor: 'text-blue-600',   bg: 'bg-blue-50'   },
               { key: 'invoices' as const, icon: CreditCard, title: 'Invoices',          desc: 'Full history',             iconColor: 'text-green-600',  bg: 'bg-green-50'  },
               { key: 'payments' as const, icon: Check,      title: 'Driver Payments',   desc: 'Full history',             iconColor: 'text-purple-600', bg: 'bg-purple-50' },
               { key: 'expenses' as const, icon: Building2,  title: 'Expenses',          desc: `${expStart} → ${expEnd}`,  iconColor: 'text-amber-600',  bg: 'bg-amber-50'  },

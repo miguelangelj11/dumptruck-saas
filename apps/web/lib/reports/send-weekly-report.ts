@@ -121,7 +121,7 @@ export async function sendWeeklyReport(
         <div style="background:#ffffff;border-radius:14px;border:1px solid #e5e7eb;overflow:hidden;margin-bottom:16px">
           <table style="width:100%;border-collapse:collapse">
             ${statRow('💰', 'Revenue Collected', fmtMoney(data.totalRevenue), '#166534', '#f0fdf4')}
-            ${statRow('📋', 'Loads Completed', String(data.totalLoads))}
+            ${statRow('📋', 'Jobs Completed', String(data.totalLoads))}
             ${statRow('📬', 'Outstanding Invoices', fmtMoney(data.outstandingAmount), data.outstandingAmount > 0 ? '#92400e' : '#111827')}
             ${overdueBlock}
             ${missingBlock}

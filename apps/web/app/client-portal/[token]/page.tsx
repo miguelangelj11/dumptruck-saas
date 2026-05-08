@@ -423,7 +423,7 @@ function ClientPortalContent({ params }: { params: { token: string } }) {
         <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
           {([
             ['invoices', 'Invoices', data.invoices.length],
-            ['loads',    'Loads',    data.loads.length],
+            ['loads',    'Jobs',     data.loads.length],
           ] as [string, string, number][]).map(([tab, label, count]) => (
             <button
               key={tab}
@@ -559,7 +559,7 @@ function ClientPortalContent({ params }: { params: { token: string } }) {
                     </div>
                     {load.rate != null && (
                       <p className="text-sm font-semibold text-gray-700">
-                        ${load.rate}/{load.rate_type ?? 'load'}
+                        ${load.rate}/{load.rate_type ?? 'job'}
                       </p>
                     )}
                   </div>

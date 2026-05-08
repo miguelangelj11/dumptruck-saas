@@ -471,7 +471,7 @@ export default function RevenuePage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left">
-                        {['Driver', 'Loads', 'Total Pay'].map(h => (
+                        {['Driver', 'Jobs', 'Total Pay'].map(h => (
                           <th key={h} className="px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                         ))}
                       </tr>

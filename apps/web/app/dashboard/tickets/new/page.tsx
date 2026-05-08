@@ -294,7 +294,7 @@ export default function QuickTicketPage() {
                 onChange={e => setRateType(e.target.value)}
                 className="h-14 px-2 rounded-2xl border-2 border-gray-200 bg-white text-sm font-medium focus:outline-none focus:border-[var(--brand-primary)]"
               >
-                <option value="load">/load</option>
+                <option value="load">/job</option>
                 <option value="ton">/ton</option>
                 <option value="hour">/hr</option>
               </select>

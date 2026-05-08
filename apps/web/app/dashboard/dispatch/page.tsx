@@ -756,7 +756,7 @@ export default function DispatchPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 px-6 pb-4">
           {[
             { icon: Send,          iconColor: 'text-blue-600',       bg: 'bg-blue-50',         label: 'Dispatched Today', value: String(dispatches.length),   alert: false },
-            { icon: Truck,         iconColor: 'text-[var(--brand-primary)]',      bg: 'bg-[var(--brand-primary)]/10',    label: "Loads Today",      value: String(todayLoads.length),    alert: false },
+            { icon: Truck,         iconColor: 'text-[var(--brand-primary)]',      bg: 'bg-[var(--brand-primary)]/10',    label: "Jobs Today",       value: String(todayLoads.length),    alert: false },
             { icon: TrendingUp,    iconColor: 'text-[var(--brand-primary)]',      bg: 'bg-[var(--brand-primary)]/10',    label: "Today's Revenue",  value: `$${fmtMoney(todayRevenue)}`, alert: false },
             { icon: AlertTriangle, iconColor: noResponseCount > 0 ? 'text-yellow-600' : 'text-gray-400', bg: noResponseCount > 0 ? 'bg-yellow-100' : 'bg-gray-50', label: 'No Response', value: String(noResponseCount), alert: noResponseCount > 0 },
           ].map(({ icon: Icon, iconColor, bg, label, value, alert }) => (
@@ -937,11 +937,11 @@ export default function DispatchPage() {
                             </div>
                             <div className="bg-green-50 rounded-xl p-2.5 text-center">
                               <p className="text-lg font-bold text-green-700">{todayJLoads.length}</p>
-                              <p className="text-[10px] text-gray-500 mt-0.5">Loads Today</p>
+                              <p className="text-[10px] text-gray-500 mt-0.5">Jobs Today</p>
                             </div>
                             <div className="bg-gray-50 rounded-xl p-2.5 text-center">
                               <p className="text-lg font-bold text-gray-900">{jobLoads.length}</p>
-                              <p className="text-[10px] text-gray-500 mt-0.5">Total Loads</p>
+                              <p className="text-[10px] text-gray-500 mt-0.5">Total Jobs</p>
                             </div>
                             <div className="bg-[var(--brand-primary)]/5 rounded-xl p-2.5 text-center">
                               <p className="text-base font-bold text-[var(--brand-primary)] leading-tight">${fmtMoney(jobRevenue)}</p>
@@ -1177,7 +1177,7 @@ export default function DispatchPage() {
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 border-b border-gray-100">
                     <tr>
-                      {['Driver', 'Truck', 'Job', 'Start', 'Loads', 'Last Ticket', 'Status', ''].map(h => (
+                      {['Driver', 'Truck', 'Job', 'Start', 'Jobs', 'Last Ticket', 'Status', ''].map(h => (
                         <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -1272,7 +1272,7 @@ export default function DispatchPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
-                    {['Subcontractor', 'Job', 'Start', 'Loads', 'Status', ''].map(h => (
+                    {['Subcontractor', 'Job', 'Start', 'Jobs', 'Status', ''].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>

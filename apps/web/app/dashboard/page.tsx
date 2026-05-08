@@ -365,7 +365,7 @@ export default async function DashboardPage() {
               <span className="text-sm font-bold text-green-700">{workingDrivers}</span>
             </Link>
             <Link href="/dashboard/tickets" className="flex items-center justify-between gap-2 group">
-              <span className="text-sm text-gray-700 group-hover:underline">Loads completed today</span>
+              <span className="text-sm text-gray-700 group-hover:underline">Jobs completed today</span>
               <span className="text-sm font-bold text-[var(--brand-primary)]">{loadsToday.length}</span>
             </Link>
           </div>

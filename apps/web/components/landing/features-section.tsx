@@ -10,7 +10,7 @@ const features = [
   {
     icon: Radio,
     title: 'Smart Dispatch Board',
-    description: 'See every truck and driver in real time. Assign jobs, track loads completed per shift, and manage subcontractors — all from one screen.',
+    description: 'See every truck and driver in real time. Assign jobs, track jobs completed per shift, and manage subcontractors — all from one screen.',
     color: 'bg-blue-500/10 text-blue-600',
   },
   {

@@ -152,7 +152,7 @@ export default function ImportReviewTable({ rows, onRowsChange, docMeta, importI
   const deleteSelected = () => onRowsChange(rows.filter(r => !r._include))
 
   const exportCSV = () => {
-    const headers = ['Date','Driver','Truck #','Job','Material','Ticket #','Loads','Tons','Hours','Start','End','Rate','Rate Type','Amount','Billing','Confidence']
+    const headers = ['Date','Driver','Truck #','Job','Material','Ticket #','Jobs','Tons','Hours','Start','End','Rate','Rate Type','Amount','Billing','Confidence']
     const body = rows
       .filter(r => r._include)
       .map(r => [r.date,r.driver_name,r.truck_number,r.job_name,r.material,r.ticket_number,r.loads,r.tons,r.hours,r.start_time,r.end_time,r.rate,r.rate_type,r.estimated_amount,r.billing_direction,r.confidence].map(v => `"${String(v ?? '').replace(/"/g,'""')}"`).join(','))
@@ -222,7 +222,7 @@ export default function ImportReviewTable({ rows, onRowsChange, docMeta, importI
         </div>
         {totalLoads > 0 && (
           <div>
-            <p className="text-xs text-gray-500 mb-0.5">Total Loads</p>
+            <p className="text-xs text-gray-500 mb-0.5">Total Jobs</p>
             <p className="text-2xl font-bold text-gray-900">{totalLoads}</p>
           </div>
         )}
@@ -316,7 +316,7 @@ export default function ImportReviewTable({ rows, onRowsChange, docMeta, importI
                     />
                   </th>
                   <th className="px-1 py-2.5 w-16 text-left font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Conf</th>
-                  {['Date','Driver','Truck #','Job','Material','Ticket #','Loads','Tons','Hrs','Rate','Type','Amount','Billing'].map(h => (
+                  {['Date','Driver','Truck #','Job','Material','Ticket #','Jobs','Tons','Hrs','Rate','Type','Amount','Billing'].map(h => (
                     <th key={h} className="px-1 py-2.5 text-left font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                   <th className="px-2 py-2.5 w-8" />
@@ -405,7 +405,7 @@ export default function ImportReviewTable({ rows, onRowsChange, docMeta, importI
                           onChange={e => updateRow(row._id, 'rate_type', e.target.value)}
                           className="w-full border border-gray-200 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:border-[var(--brand-primary)]"
                         >
-                          <option value="per_load">/load</option>
+                          <option value="per_load">/job</option>
                           <option value="per_hour">/hr</option>
                           <option value="per_ton">/ton</option>
                         </select>

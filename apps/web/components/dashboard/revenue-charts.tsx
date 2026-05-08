@@ -60,8 +60,8 @@ export function LoadsPerDayChart({ data }: { data: { label: string; loads: numbe
         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
         <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9ca3af' }} />
         <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} allowDecimals={false} />
-        <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }} formatter={(v) => [v, 'Loads']} />
-        <Line type="monotone" dataKey="loads" stroke="#2d7a4f" strokeWidth={2} dot={false} name="Loads" />
+        <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }} formatter={(v) => [v, 'Jobs']} />
+        <Line type="monotone" dataKey="loads" stroke="#2d7a4f" strokeWidth={2} dot={false} name="Jobs" />
       </LineChart>
     </ResponsiveContainer>
   )

@@ -11,7 +11,7 @@ function DashboardMockup() {
     <div className="flex-1 p-5 space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
         {[
-          { label: 'Total Loads', val: '1,284', color: 'bg-[#2d7a4f]/20' },
+          { label: 'Total Jobs', val: '1,284', color: 'bg-[#2d7a4f]/20' },
           { label: 'Revenue', val: '$84,320', color: 'bg-blue-500/20' },
           { label: 'Active Drivers', val: '12', color: 'bg-purple-500/20' },
           { label: 'Open Invoices', val: '34', color: 'bg-[#FFB800]/20' },
@@ -59,7 +59,7 @@ function DispatchMockup() {
       </div>
       <div className="rounded-lg bg-white/5 overflow-hidden">
         <div className="grid grid-cols-5 gap-2 px-3 py-2 border-b border-white/5">
-          {['Driver','Job','Truck','Loads','Status'].map((h) => (
+          {['Driver','Job','Truck','Jobs','Status'].map((h) => (
             <div key={h} className="text-[9px] text-white/30 font-medium">{h}</div>
           ))}
         </div>
@@ -134,7 +134,7 @@ function InvoicesMockup() {
       </div>
       <div className="rounded-lg bg-white/5 overflow-hidden">
         <div className="grid grid-cols-5 gap-2 px-3 py-2 border-b border-white/5">
-          {['Invoice','Client','Amount','Loads','Status'].map((h) => (
+          {['Invoice','Client','Amount','Jobs','Status'].map((h) => (
             <div key={h} className="text-[9px] text-white/30 font-medium">{h}</div>
           ))}
         </div>

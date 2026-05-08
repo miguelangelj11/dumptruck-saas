@@ -24,7 +24,7 @@ function DispatchMockup() {
       <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
         <div style={{ minWidth: '420px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px 1fr 50px', gap: '4px', padding: '0 6px 6px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-            {['Driver', 'Truck', 'Status', 'Job Site', 'Loads'].map(h => (
+            {['Driver', 'Truck', 'Status', 'Job Site', 'Jobs'].map(h => (
               <span key={h} style={{ fontSize: '9px', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
             ))}
           </div>

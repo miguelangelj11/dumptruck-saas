@@ -51,8 +51,8 @@ export function DriverProfitTable({ companyId }: { companyId: string }) {
               <th className="text-left px-5 py-2.5 font-medium">#</th>
               <th className="text-left px-5 py-2.5 font-medium">Driver</th>
               <th className="text-right px-5 py-2.5 font-medium">Revenue</th>
-              <th className="text-right px-5 py-2.5 font-medium">Per Load</th>
-              <th className="text-right px-5 py-2.5 font-medium">Loads</th>
+              <th className="text-right px-5 py-2.5 font-medium">Per Job</th>
+              <th className="text-right px-5 py-2.5 font-medium">Jobs</th>
               <th className="text-right px-5 py-2.5 font-medium"></th>
             </tr>
           </thead>
@@ -114,7 +114,7 @@ export function DriverProfitTable({ companyId }: { companyId: string }) {
                   <span className="text-[10px] text-red-600 font-medium">⚠️ Below avg</span>
                 )}
               </div>
-              <p className="text-xs text-gray-400">{d.loadsCount} loads · {fmt(d.profitPerLoad)}/load</p>
+              <p className="text-xs text-gray-400">{d.loadsCount} jobs · {fmt(d.profitPerLoad)}/job</p>
             </div>
             <span className="text-sm font-semibold text-[var(--brand-primary)] shrink-0">{fmt(d.totalRevenue)}</span>
           </div>

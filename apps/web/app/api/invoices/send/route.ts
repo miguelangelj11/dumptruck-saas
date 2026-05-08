@@ -69,7 +69,7 @@ export async function POST(request: Request) {
   const lineItemsHtml = lineItems.map((item: Record<string, unknown>) => {
     const amount = Number(item.amount ?? 0)
     const qty = item.quantity != null ? String(item.quantity) : '—'
-    const rate = item.rate != null ? `$${fmt(Number(item.rate))}/${item.rate_type ?? 'load'}` : '—'
+    const rate = item.rate != null ? `$${fmt(Number(item.rate))}/${item.rate_type ?? 'job'}` : '—'
     return `
       <tr style="border-bottom:1px solid #f3f4f6;">
         <td style="padding:10px 8px;font-size:13px;color:#374151;">${fmtDate(item.line_date as string | null)}</td>

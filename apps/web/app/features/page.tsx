@@ -25,7 +25,7 @@ const detailFeatures = [
     icon: Users,
     title: 'Driver Management',
     description: 'Keep every driver\'s info, history, and earnings in one place. See who\'s moving loads and who\'s outstanding at a glance.',
-    bullets: ['Driver cards with load history', 'Total loads & revenue per driver', 'Active / inactive status', 'One-click driver detail view'],
+    bullets: ['Driver cards with job history', 'Total jobs & revenue per driver', 'Active / inactive status', 'One-click driver detail view'],
   },
   {
     icon: TrendingUp,

@@ -307,7 +307,7 @@ export async function getProfitAlerts(
           id: `driver-${driverName.toLowerCase().replace(/\W+/g, '-')}`,
           type: 'driver_underperforming', severity: 'warning',
           title: `Driver ${driverName} is below average`,
-          description: `${pctBelow}% below average revenue per load`,
+          description: `${pctBelow}% below average revenue per job`,
           dollarImpact: Math.round((companyAvg - ppl) * stats.loads),
           entityId: driverName, entityType: 'driver',
         })
@@ -453,7 +453,7 @@ export async function getRecommendedDriver(
     const maxProfitPerLoad = Math.max(...allProfitPerLoad, 1)
     const profitScore = (profitPerLoad / maxProfitPerLoad) * 40
     score += profitScore
-    if (profitPerLoad > 0) explanations.push(`Avg $${profitPerLoad.toFixed(0)}/load (30d)`)
+    if (profitPerLoad > 0) explanations.push(`Avg $${profitPerLoad.toFixed(0)}/job (30d)`)
 
     // Availability weight (35 pts) — fewer loads today = higher score
     const maxLoadsToday = Math.max(...Array.from(dispatchMap.values()).map(v => v.loadsToday), 1)
@@ -563,7 +563,7 @@ export async function getDispatchOptimizationHints(
   if (idleDrivers.length > 0 && workingDrivers.size > 0) {
     hints.push({
       type: 'idle_driver',
-      message: `${idleDrivers.length} driver${idleDrivers.length !== 1 ? 's' : ''} ${idleDrivers.length !== 1 ? 'have' : 'has'} no loads today`,
+      message: `${idleDrivers.length} driver${idleDrivers.length !== 1 ? 's' : ''} ${idleDrivers.length !== 1 ? 'have' : 'has'} no jobs today`,
       affectedDrivers: idleDrivers,
       suggestion: `Consider assigning ${idleDrivers[0]} to a job to balance workload`,
     })

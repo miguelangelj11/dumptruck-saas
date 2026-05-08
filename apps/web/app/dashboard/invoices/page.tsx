@@ -1332,7 +1332,7 @@ export default function InvoicesPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {([
                 { type: 'client',     label: 'Client Invoice',        desc: 'Bill a client for work completed',          locked: false },
-                { type: 'paystub',    label: 'Driver Pay Invoice',    desc: 'Pay your drivers for loads completed',      locked: companyPlan === 'owner_operator' },
+                { type: 'paystub',    label: 'Driver Pay Invoice',    desc: 'Pay your drivers for jobs completed',       locked: companyPlan === 'owner_operator' },
                 { type: 'contractor', label: 'Subcontractor Invoice', desc: 'Pay a subcontractor for work completed',    locked: companyPlan === 'owner_operator' },
               ] as const).map(({ type, label, desc, locked }) => (
                 <div key={type} className="relative">
@@ -1491,7 +1491,7 @@ export default function InvoicesPage() {
                         />
                         <span className="flex items-center px-3 bg-gray-50 text-sm text-gray-500 border-l border-gray-200">%</span>
                       </div>
-                      <p className="text-xs text-gray-400 mt-1">Driver receives this % of total load revenue</p>
+                      <p className="text-xs text-gray-400 mt-1">Driver receives this % of total job revenue</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-3">
@@ -1645,7 +1645,7 @@ export default function InvoicesPage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2">
                               <p className="text-sm font-medium text-gray-900 truncate">{ticket.job_name}</p>
-                              <p className="text-sm font-semibold text-gray-700 shrink-0">${fmt(ticket.rate)}<span className="text-xs font-normal text-gray-400">/{ticket.rate_type ?? 'load'}</span></p>
+                              <p className="text-sm font-semibold text-gray-700 shrink-0">${fmt(ticket.rate)}<span className="text-xs font-normal text-gray-400">/{ticket.rate_type ?? 'job'}</span></p>
                             </div>
                             <div className="flex items-center gap-3 mt-0.5">
                               {ticket.material && <span className="text-xs text-gray-500">{ticket.material}</span>}
@@ -1715,7 +1715,7 @@ export default function InvoicesPage() {
                               {load.total_pay != null
                                 ? `$${fmt(load.total_pay)}`
                                 : `$${fmt(load.rate)}`}
-                              {load.total_pay == null && <span className="text-xs font-normal text-gray-400">/{load.rate_type ?? 'load'}</span>}
+                              {load.total_pay == null && <span className="text-xs font-normal text-gray-400">/{load.rate_type ?? 'job'}</span>}
                             </p>
                           </div>
                           <div className="flex items-center gap-3 mt-0.5 flex-wrap">
@@ -1764,7 +1764,7 @@ export default function InvoicesPage() {
                         <td className="px-3 py-2.5 font-mono text-gray-600">{item.ticket_number || '—'}</td>
                         <td className="px-3 py-2.5 text-gray-500 whitespace-nowrap">{item.time_worked || '—'}</td>
                         <td className="px-3 py-2.5 text-gray-600">{item.quantity != null ? item.quantity : '—'}</td>
-                        <td className="px-3 py-2.5 text-gray-600">${fmt(item.rate ?? 0)}<span className="text-gray-400">/{item.rate_type ?? 'load'}</span></td>
+                        <td className="px-3 py-2.5 text-gray-600">${fmt(item.rate ?? 0)}<span className="text-gray-400">/{item.rate_type ?? 'job'}</span></td>
                         <td className="px-3 py-2.5 font-semibold text-gray-900">${fmt(item.amount)}</td>
                       </tr>
                     ))}
@@ -2065,7 +2065,7 @@ export default function InvoicesPage() {
                       <td style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-gray-500 text-xs whitespace-nowrap">{item.time_worked || <span className="text-gray-300">—</span>}</td>
                       <td style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-gray-700 text-right tabular-nums">{item.quantity != null ? item.quantity : <span className="text-gray-300">—</span>}</td>
                       <td style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-gray-700 text-right whitespace-nowrap tabular-nums">
-                        ${fmt(item.rate ?? 0)}<span className="text-xs text-gray-400">/{item.rate_type ?? 'load'}</span>
+                        ${fmt(item.rate ?? 0)}<span className="text-xs text-gray-400">/{item.rate_type ?? 'job'}</span>
                       </td>
                       <td style={{paddingLeft:8,paddingRight:16,paddingTop:12,paddingBottom:12}} className="font-semibold text-gray-900 text-right tabular-nums whitespace-nowrap">${fmt(item.amount)}</td>
                     </tr>

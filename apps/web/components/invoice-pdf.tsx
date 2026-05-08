@@ -88,7 +88,7 @@ const fmtPdfDate = (d: string | null | undefined): string => {
 
 const fmtRate = (rate: number | null | undefined, rateType: string | null | undefined): string => {
   if (rate == null) return ''
-  const label = rateType === 'hr' ? 'hr' : rateType === 'ton' ? 'ton' : 'load'
+  const label = rateType === 'hr' ? 'hr' : rateType === 'ton' ? 'ton' : 'job'
   return `${fmt(rate)}/${label}`
 }
 

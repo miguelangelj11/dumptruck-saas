@@ -811,7 +811,7 @@ export default function TicketsPage() {
             <table className="w-full min-w-[800px] text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  {['Photo', 'Date', 'Job / Company', 'Load Type', 'Driver', 'Truck', 'Origin → Dest', 'Loads', 'Tons', 'Total Pay', 'Status', ''].map(h => (
+                  {['Photo', 'Date', 'Job / Company', 'Load Type', 'Driver', 'Truck', 'Origin → Dest', 'Jobs', 'Tons', 'Total Pay', 'Status', ''].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -1081,7 +1081,7 @@ export default function TicketsPage() {
                       placeholder="0.00"
                     />
                     <select value={form.rate_type} onChange={e => setForm(p => ({ ...p, rate_type: e.target.value, rate_quantity: '' }))} className="px-2 text-xs font-medium text-gray-600 bg-gray-50 border-l border-gray-200 focus:outline-none">
-                      <option value="load">/ load</option>
+                      <option value="load">/ job</option>
                       <option value="ton">/ ton</option>
                       <option value="hr">/ hr</option>
                     </select>
@@ -1090,7 +1090,7 @@ export default function TicketsPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
-                    {form.rate_type === 'hr' ? 'Hours Worked' : form.rate_type === 'ton' ? 'Total Tons' : '# of Loads'}
+                    {form.rate_type === 'hr' ? 'Hours Worked' : form.rate_type === 'ton' ? 'Total Tons' : '# of Jobs'}
                   </label>
                   <input
                     type="number" min="0" step="0.01"
@@ -1111,7 +1111,7 @@ export default function TicketsPage() {
                       return <p className="text-xs text-gray-400">${parseFloat(form.rate).toFixed(2)}/hr × {hrs} hrs = <span className="font-semibold text-gray-600">${(parseFloat(form.rate) * hrs).toFixed(2)}</span></p>
                     })()}
                     {form.rate_type === 'load' && parseFloat(form.rate_quantity) > 0 && (
-                      <p className="text-xs text-gray-400">${parseFloat(form.rate).toFixed(2)}/load × {form.rate_quantity} loads = <span className="font-semibold text-gray-600">${(parseFloat(form.rate) * parseFloat(form.rate_quantity)).toFixed(2)}</span></p>
+                      <p className="text-xs text-gray-400">${parseFloat(form.rate).toFixed(2)}/job × {form.rate_quantity} jobs = <span className="font-semibold text-gray-600">${(parseFloat(form.rate) * parseFloat(form.rate_quantity)).toFixed(2)}</span></p>
                     )}
                     {form.rate_type === 'ton' && parseFloat(form.rate_quantity) > 0 && (
                       <p className="text-xs text-gray-400">${parseFloat(form.rate).toFixed(2)}/ton × {form.rate_quantity} tons = <span className="font-semibold text-gray-600">${(parseFloat(form.rate) * parseFloat(form.rate_quantity)).toFixed(2)}</span></p>
@@ -1133,7 +1133,7 @@ export default function TicketsPage() {
                     />
                   </div>
                   <p className="text-xs text-gray-400 mt-1">
-                    {form.rate_type === 'hr' ? 'Auto-calculated from rate × hours (time in/out)' : form.rate_type === 'ton' ? 'Auto-calculated from rate × total tons' : 'Auto-calculated from rate × # of loads'}
+                    {form.rate_type === 'hr' ? 'Auto-calculated from rate × hours (time in/out)' : form.rate_type === 'ton' ? 'Auto-calculated from rate × total tons' : 'Auto-calculated from rate × # of jobs'}
                   </p>
                 </div>
 

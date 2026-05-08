@@ -383,7 +383,7 @@ export default function DriversPage() {
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-sm">
                     <div className="bg-gray-50 rounded-lg p-2.5">
-                      <p className="text-gray-400 text-xs mb-0.5">Loads</p>
+                      <p className="text-gray-400 text-xs mb-0.5">Jobs</p>
                       <p className="font-bold text-gray-900">{stats.loads}</p>
                     </div>
                     <div className="bg-gray-50 rounded-lg p-2.5">
@@ -632,7 +632,7 @@ export default function DriversPage() {
                   </div>
                   <div>
                     <h2 className="font-semibold text-gray-900">{viewingTicketsDriver.name}&apos;s Tickets</h2>
-                    <p className="text-xs text-gray-400">{driverTickets.length} total loads</p>
+                    <p className="text-xs text-gray-400">{driverTickets.length} total jobs</p>
                   </div>
                 </div>
                 <button onClick={() => { setViewingTicketsDriver(null); setDriverTickets([]) }} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
@@ -751,7 +751,7 @@ export default function DriversPage() {
               {/* Stats */}
               <div className="grid grid-cols-3 gap-2 mb-6">
                 <div className="bg-gray-50 rounded-xl p-3">
-                  <p className="text-xs text-gray-400 mb-1">Total Loads</p>
+                  <p className="text-xs text-gray-400 mb-1">Total Jobs</p>
                   <p className="text-xl font-bold text-gray-900">{driverLoads.length}</p>
                 </div>
                 <div className="bg-[var(--brand-primary)]/5 rounded-xl p-3">
@@ -820,9 +820,9 @@ export default function DriversPage() {
               )}
 
               {/* Load History */}
-              <h3 className="font-semibold text-sm text-gray-900 mb-3">Load History</h3>
+              <h3 className="font-semibold text-sm text-gray-900 mb-3">Job History</h3>
               {driverLoads.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-8">No loads recorded</p>
+                <p className="text-sm text-gray-400 text-center py-8">No jobs recorded</p>
               ) : (
                 <div className="space-y-2">
                   {driverLoads.map(l => (

@@ -183,7 +183,7 @@ export default function MobileTicketForm({
           <Row label="Job"     value={jobName} />
           {material && <Row label="Material" value={material} />}
           {startTime && <Row label="Start"    value={startTime} />}
-          {rate != null && <Row label="Rate" value={`$${rate}/${rateType ?? 'load'}`} />}
+          {rate != null && <Row label="Rate" value={`$${rate}/${rateType ?? 'job'}`} />}
           {instructions && (
             <div style={{ marginTop: 8, padding: '8px 10px', background: '#f9fafb', borderRadius: 8, fontSize: 13, color: '#6b7280' }}>
               {instructions}
@@ -230,7 +230,7 @@ export default function MobileTicketForm({
             <textarea
               value={notes}
               onChange={e => setNotes(e.target.value)}
-              placeholder="Any notes about this load"
+              placeholder="Any notes about this job"
               rows={2}
               style={{ ...inputStyle, resize: 'none' }}
             />
