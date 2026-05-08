@@ -9,6 +9,7 @@ import {
   Users,
   Receipt,
   TrendingUp,
+  Wallet,
   Settings,
   LogOut,
   Menu,
@@ -75,6 +76,7 @@ const DEFAULT_NAV_ORDER = [
   'drivers',
   'invoices',
   'revenue',
+  'expenses',
   'crm',
   'documents',
 ]
@@ -187,6 +189,7 @@ export default function Sidebar({ user, logoUrl, companyName: companyNameProp, p
       { id: 'drivers',      href: '/dashboard/drivers',     icon: Users,           label: t('drivers'),       locked: false },
       { id: 'invoices',     href: '/dashboard/invoices',    icon: Receipt,         label: t('invoices'),      locked: false },
       { id: 'revenue',      href: '/dashboard/revenue',     icon: TrendingUp,      label: t('revenue'),       locked: solo },
+      { id: 'expenses',     href: '/dashboard/expenses',    icon: Wallet,          label: t('expenses'),      locked: false },
       { id: 'crm',          href: '/dashboard/crm',         icon: Kanban,          label: t('crm'),           locked: !isSuperAdmin && plan !== 'growth' && plan !== 'enterprise' },
       { id: 'documents',    href: '/dashboard/documents',   icon: FolderOpen,      label: 'Documents',        locked: false },
     ]
