@@ -576,7 +576,7 @@ export default async function DashboardPage() {
             <table className="w-full min-w-[480px] text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  {['Job', 'Driver', 'Date', 'Rate', 'Status'].map(h => (
+                  {['Job', 'Driver', 'Date', 'Total', 'Status'].map(h => (
                     <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
@@ -587,7 +587,7 @@ export default async function DashboardPage() {
                     <td className="px-5 py-3 font-medium text-gray-900">{l.job_name}</td>
                     <td className="px-5 py-3 text-gray-600">{l.driver_name}</td>
                     <td className="px-5 py-3 text-gray-500">{l.date ? new Date(l.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}</td>
-                    <td className="px-5 py-3 font-medium text-gray-900">{l.rate != null ? fmt(l.rate) : '—'}</td>
+                    <td className="px-5 py-3 font-medium text-gray-900">{l.total_pay != null ? fmt(l.total_pay) : l.rate != null ? fmt(l.rate) : '—'}</td>
                     <td className="px-5 py-3">
                       <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${ticketStatusColor[l.status] ?? 'bg-gray-100 text-gray-600'}`}>
                         {l.status}
