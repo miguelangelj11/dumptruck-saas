@@ -612,13 +612,26 @@ export default function DispatchPage() {
       }
 
       if ((bulkNotifyVia === 'sms' || bulkNotifyVia === 'both') && d.phone) {
+        let acceptUrl = '', declineUrl = ''
+        if (row?.id) {
+          try {
+            const linksRes = await fetch(`/api/dispatches/sms-links?id=${encodeURIComponent(row.id as string)}`)
+            if (linksRes.ok) {
+              const links = await linksRes.json() as { acceptUrl: string; declineUrl: string }
+              acceptUrl  = links.acceptUrl
+              declineUrl = links.declineUrl
+            }
+          } catch { /* send without links if fetch fails */ }
+        }
         const msg = [
           `🚛 You've been dispatched!`,
-          jobName      ? `Job: ${jobName}`              : null,
-          jobLocation  ? `Location: ${jobLocation}`     : null,
-          bulkStartTime ? `Start: ${bulkStartTime}`     : null,
+          jobName       ? `Job: ${jobName}`              : null,
+          jobLocation   ? `Location: ${jobLocation}`     : null,
+          bulkStartTime ? `Start: ${bulkStartTime}`      : null,
           bulkSelections[d.id]?.truckNumber ? `Truck #${bulkSelections[d.id]?.truckNumber}` : null,
           `\nSubmit ticket: https://dumptruckboss.com/portal?c=${companyId}`,
+          acceptUrl  ? `\n✅ Accept: ${acceptUrl}`  : null,
+          declineUrl ? `❌ Decline: ${declineUrl}` : null,
         ].filter(Boolean).join('\n')
         window.open(toSmsHref(d.phone, msg), '_blank')
       }
@@ -723,6 +736,16 @@ export default function DispatchPage() {
         // SMS notification — opens the device SMS app pre-filled
         if (notifyVia === 'sms' || notifyVia === 'both') {
           if (contactPhone) {
+            let acceptUrl = '', declineUrl = ''
+            try {
+              const linksRes = await fetch(`/api/dispatches/sms-links?id=${encodeURIComponent(data.id)}`)
+              if (linksRes.ok) {
+                const links = await linksRes.json() as { acceptUrl: string; declineUrl: string }
+                acceptUrl  = links.acceptUrl
+                declineUrl = links.declineUrl
+              }
+            } catch { /* send without links if fetch fails */ }
+
             const msgLines = [
               `🚛 You've been dispatched!`,
               jobName      ? `Job: ${jobName}`                  : null,
@@ -731,6 +754,8 @@ export default function DispatchPage() {
               dispForm.truck_number ? `Truck #${dispForm.truck_number}`   : null,
               dispForm.instructions ? `Notes: ${dispForm.instructions}`   : null,
               `\nSubmit ticket: https://dumptruckboss.com/portal?c=${companyId}`,
+              acceptUrl  ? `\n✅ Accept: ${acceptUrl}`  : null,
+              declineUrl ? `❌ Decline: ${declineUrl}` : null,
             ].filter(Boolean).join('\n')
             window.open(toSmsHref(contactPhone, msgLines), '_blank')
           } else {
