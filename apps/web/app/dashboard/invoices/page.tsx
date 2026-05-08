@@ -1003,20 +1003,27 @@ export default function InvoicesPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[700px] text-sm">
+                  <table className="w-full min-w-[380px] sm:min-w-[700px] text-sm">
                     <thead className="bg-gray-50 border-b border-gray-100">
-                      <tr>{['Subcontractor', 'Their Invoice #', 'Amount', 'Date Received', 'Work Period', 'Status', 'Doc', ''].map(h => (
-                        <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
-                      ))}</tr>
+                      <tr>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Subcontractor</th>
+                        <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Their Invoice #</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
+                        <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date Received</th>
+                        <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Work Period</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Doc</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider"></th>
+                      </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                       {receivedInvoices.map(r => (
                         <tr key={r.id} className="hover:bg-gray-50/50">
                           <td className="px-4 py-3 font-medium text-gray-900">{r.subcontractor_name}</td>
-                          <td className="px-4 py-3 font-mono text-xs text-gray-500">{r.their_invoice_number || '—'}</td>
+                          <td className="hidden sm:table-cell px-4 py-3 font-mono text-xs text-gray-500">{r.their_invoice_number || '—'}</td>
                           <td className="px-4 py-3 font-semibold text-gray-900">${fmt(r.amount)}</td>
-                          <td className="px-4 py-3 text-gray-500 text-xs">{r.date_received ? fmtDate(r.date_received) : '—'}</td>
-                          <td className="px-4 py-3 text-gray-500 text-xs">
+                          <td className="hidden sm:table-cell px-4 py-3 text-gray-500 text-xs">{r.date_received ? fmtDate(r.date_received) : '—'}</td>
+                          <td className="hidden sm:table-cell px-4 py-3 text-gray-500 text-xs">
                             {r.work_start_date ? `${fmtDate(r.work_start_date)} – ${fmtDate(r.work_end_date)}` : '—'}
                           </td>
                           <td className="px-4 py-3">
