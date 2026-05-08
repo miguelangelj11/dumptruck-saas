@@ -62,6 +62,20 @@ function buildTimeWorked(load: { time_in: string | null; time_out: string | null
   if (t1) return t1
   return load.hours_worked ?? null
 }
+async function urlToBase64(url: string): Promise<string> {
+  try {
+    const res = await fetch(url)
+    const buf = await res.arrayBuffer()
+    const bytes = new Uint8Array(buf)
+    let bin = ''
+    for (let i = 0; i < bytes.byteLength; i++) bin += String.fromCharCode(bytes[i]!)
+    const ct = res.headers.get('content-type') ?? 'image/jpeg'
+    return `data:${ct};base64,${btoa(bin)}`
+  } catch {
+    return url
+  }
+}
+
 function buildMaterial(load: { material: string | null; load_type: string | null }): string | null {
   return load.material || load.load_type || null
 }
@@ -594,32 +608,45 @@ export default function InvoicesPage() {
     setDetailInvoice(sorted as InvoiceWithItems)
     setPayments(paymentsRes.data ?? [])
 
-    // Fetch ticket photos: find loads matching the invoice date/drivers, get their load_tickets with images
+    // Fetch ticket photos for all loads in the invoice date range
     if (uid && inv.date_from && inv.date_to) {
-      const driverNames = [...new Set(lineItems.map(li => li.driver_name).filter(Boolean))]
       const { data: loadsData } = await supabase
         .from('loads')
-        .select('id, job_name, date, driver_name, load_tickets(ticket_number, image_url)')
+        .select('id, job_name, date, driver_name, image_url, load_tickets(ticket_number, image_url)')
         .eq('company_id', uid)
         .gte('date', inv.date_from)
         .lte('date', inv.date_to)
-        .in('driver_name', driverNames.length > 0 ? driverNames : ['__none__'])
 
-      const photos: typeof detailTicketPhotos = []
+      const rawPhotos: typeof detailTicketPhotos = []
       for (const load of loadsData ?? []) {
         const slips = (load.load_tickets ?? []) as { ticket_number: string | null; image_url: string | null }[]
-        for (const slip of slips) {
-          if (slip.image_url) {
-            photos.push({
+        const slipPhotos = slips.filter(s => s.image_url)
+        if (slipPhotos.length > 0) {
+          for (const slip of slipPhotos) {
+            rawPhotos.push({
               ticketNumber: slip.ticket_number,
-              imageUrl: slip.image_url,
+              imageUrl: slip.image_url!,
               date: load.date,
               driverName: load.driver_name,
               jobName: load.job_name,
             })
           }
+        } else if ((load as { image_url?: string | null }).image_url) {
+          rawPhotos.push({
+            ticketNumber: null,
+            imageUrl: (load as { image_url?: string | null }).image_url!,
+            date: load.date,
+            driverName: load.driver_name,
+            jobName: load.job_name,
+          })
         }
       }
+
+      // Convert to base64 so react-pdf can embed images without CORS issues
+      const photos = await Promise.all(rawPhotos.map(async p => ({
+        ...p,
+        imageUrl: await urlToBase64(p.imageUrl),
+      })))
       setDetailTicketPhotos(photos)
     }
 

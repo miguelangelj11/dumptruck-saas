@@ -79,6 +79,13 @@ const s = StyleSheet.create({
 const fmt = (v: number) =>
   `$${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
+const fmtPdfDate = (d: string | null | undefined): string => {
+  if (!d) return ''
+  const parts = d.slice(0, 10).split('-')
+  if (parts.length !== 3) return d
+  return `${parts[1]}/${parts[2]}`
+}
+
 const fmtRate = (rate: number | null | undefined, rateType: string | null | undefined): string => {
   if (rate == null) return ''
   const label = rateType === 'hr' ? 'hr' : rateType === 'ton' ? 'ton' : 'load'
@@ -163,7 +170,7 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
                   ? <Image src={photoUrl} style={{ width: 24, height: 24, objectFit: 'cover', borderRadius: 2 }} />
                   : <View style={{ width: 24, height: 24, backgroundColor: '#f3f4f6', borderRadius: 2 }} />}
               </View>
-              <Text style={s.colDate}>{item.line_date ?? ''}</Text>
+              <Text style={s.colDate}>{fmtPdfDate(item.line_date)}</Text>
               <Text style={s.colTruck}>{item.truck_number ?? ''}</Text>
               <Text style={s.colDesc}>{item.material || '—'}</Text>
               <Text style={s.colLocation}>{item.driver_name ?? ''}</Text>
@@ -248,6 +255,10 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
             {ticketPhotos.length > 1 ? `–${exhibitLetters[ticketPhotos.length - 1]}` : ''} for supporting ticket photos.
           </Text>
         )}
+
+        <Text style={{ fontSize: 7.5, color: '#d1d5db', textAlign: 'center', marginTop: 16 }}>
+          Powered by DumpTruckBoss · dumptruckboss.com
+        </Text>
 
       </Page>
 
