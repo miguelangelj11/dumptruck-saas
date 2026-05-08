@@ -45,6 +45,10 @@ export default function QuickTicketPage() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [rate, setRate] = useState('')
   const [rateType, setRateType] = useState('load')
+  const [quantity, setQuantity] = useState('')
+  const [totalPay, setTotalPay] = useState('')
+  const [timeIn, setTimeIn] = useState('')
+  const [timeOut, setTimeOut] = useState('')
 
   const [slips, setSlips] = useState<SlipRow[]>([makeSlip()])
   const fileRefs = useRef<Map<string, HTMLInputElement>>(new Map())
@@ -77,6 +81,24 @@ export default function QuickTicketPage() {
     }
     load()
   }, [])
+
+  // Auto-fill hours when rate type is hourly and both times are set
+  useEffect(() => {
+    if (rateType !== 'hour' || !timeIn || !timeOut) return
+    const [sh, sm] = timeIn.split(':').map(Number)
+    const [eh, em] = timeOut.split(':').map(Number)
+    if (sh === undefined || sm === undefined || eh === undefined || em === undefined) return
+    let diff = (eh * 60 + em) - (sh * 60 + sm)
+    if (diff < 0) diff += 24 * 60
+    if (diff > 0) setQuantity((diff / 60).toFixed(2))
+  }, [rateType, timeIn, timeOut])
+
+  // Auto-calculate total pay whenever rate or quantity changes
+  useEffect(() => {
+    const r = parseFloat(rate) || 0
+    const q = parseFloat(quantity) || 0
+    setTotalPay(r > 0 && q > 0 ? (r * q).toFixed(2) : '')
+  }, [rate, quantity, rateType])
 
   function updateSlip(id: string, updates: Partial<SlipRow>) {
     setSlips(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s))
@@ -131,10 +153,12 @@ export default function QuickTicketPage() {
       driver_name: validation.data.driver_name,
       truck_number: validation.data.truck_number,
       date:        validation.data.date,
-      rate:        validation.data.rate ?? 0,
-      rate_type:   rateType,
-      status:      'pending',
-      source:      'office',
+      rate:         validation.data.rate ?? 0,
+      rate_type:    rateType,
+      rate_quantity: parseFloat(quantity) || null,
+      total_pay:    parseFloat(totalPay) || null,
+      status:       'pending',
+      source:       'office',
     })
     if (loadErr) {
       toast.error('Failed to save ticket')
@@ -268,39 +292,115 @@ export default function QuickTicketPage() {
           </div>
         </div>
 
-        {/* Date + Rate */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Date</label>
-            <input
-              type="date"
-              value={date}
-              onChange={e => setDate(e.target.value)}
-              className="w-full h-14 px-4 rounded-2xl border-2 border-gray-200 bg-white text-base font-medium focus:outline-none focus:border-[var(--brand-primary)]"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Rate</label>
-            <div className="flex gap-1.5">
-              <input
-                type="number"
-                value={rate}
-                onChange={e => setRate(e.target.value)}
-                placeholder="0.00"
-                className="flex-1 h-14 px-4 rounded-2xl border-2 border-gray-200 bg-white text-base font-medium focus:outline-none focus:border-[var(--brand-primary)] min-w-0"
-              />
-              <select
-                value={rateType}
-                onChange={e => setRateType(e.target.value)}
-                className="h-14 px-2 rounded-2xl border-2 border-gray-200 bg-white text-sm font-medium focus:outline-none focus:border-[var(--brand-primary)]"
+        {/* Date */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Date</label>
+          <input
+            type="date"
+            value={date}
+            onChange={e => setDate(e.target.value)}
+            className="w-full h-14 px-4 rounded-2xl border-2 border-gray-200 bg-white text-base font-medium focus:outline-none focus:border-[var(--brand-primary)]"
+          />
+        </div>
+
+        {/* Rate Type */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Rate Type</label>
+          <div className="flex gap-2">
+            {(['load', 'hour', 'ton'] as const).map(type => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => { setRateType(type); setQuantity(''); setTotalPay(''); setTimeIn(''); setTimeOut('') }}
+                className={`flex-1 rounded-2xl border-2 text-base font-semibold transition-all ${
+                  rateType === type
+                    ? 'bg-[var(--brand-dark)] border-[var(--brand-dark)] text-white'
+                    : 'bg-white border-gray-200 text-gray-700'
+                }`}
+                style={{ minHeight: 52 }}
               >
-                <option value="load">/job</option>
-                <option value="ton">/ton</option>
-                <option value="hour">/hr</option>
-              </select>
-            </div>
+                {type === 'load' ? '/job' : type === 'hour' ? '/hr' : '/ton'}
+              </button>
+            ))}
           </div>
         </div>
+
+        {/* Job Rate */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+            {rateType === 'hour' ? 'Hourly Rate' : rateType === 'ton' ? 'Rate per Ton' : 'Job Rate'}
+          </label>
+          <input
+            type="number"
+            inputMode="decimal"
+            value={rate}
+            onChange={e => setRate(e.target.value)}
+            placeholder="0.00"
+            className="w-full h-14 px-4 rounded-2xl border-2 border-gray-200 bg-white text-base font-medium focus:outline-none focus:border-[var(--brand-primary)]"
+          />
+        </div>
+
+        {/* Time In / Out — only shown for hourly */}
+        {rateType === 'hour' && (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Time In</label>
+              <input
+                type="time"
+                value={timeIn}
+                onChange={e => setTimeIn(e.target.value)}
+                className="w-full h-14 px-4 rounded-2xl border-2 border-gray-200 bg-white text-base font-medium focus:outline-none focus:border-[var(--brand-primary)]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Time Out</label>
+              <input
+                type="time"
+                value={timeOut}
+                onChange={e => setTimeOut(e.target.value)}
+                className="w-full h-14 px-4 rounded-2xl border-2 border-gray-200 bg-white text-base font-medium focus:outline-none focus:border-[var(--brand-primary)]"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Quantity */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+            {rateType === 'hour' ? 'Hours Worked' : rateType === 'ton' ? 'Tons / Qty' : '# of Jobs'}
+          </label>
+          <input
+            type="number"
+            inputMode="decimal"
+            value={quantity}
+            readOnly={rateType === 'hour' && !!(timeIn && timeOut)}
+            onChange={e => setQuantity(e.target.value)}
+            placeholder={rateType === 'hour' ? (timeIn && timeOut ? 'Auto from times' : '0.0') : rateType === 'ton' ? '0.00' : '0'}
+            className={`w-full h-14 px-4 rounded-2xl border-2 border-gray-200 bg-white text-base font-medium focus:outline-none focus:border-[var(--brand-primary)] ${rateType === 'hour' && timeIn && timeOut ? 'bg-gray-50 text-gray-500' : ''}`}
+          />
+          {rateType === 'hour' && timeIn && timeOut && (
+            <p className="text-xs text-green-600 mt-1 font-medium">✓ Auto-calculated from times</p>
+          )}
+        </div>
+
+        {/* Total Pay */}
+        {totalPay ? (
+          <div className="rounded-2xl bg-green-50 border-2 border-green-200 px-4 py-4">
+            <p className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-1">Total Pay</p>
+            <p className="text-3xl font-black text-green-800">${totalPay}</p>
+            <p className="text-xs text-green-600 mt-1">
+              {rateType === 'hour'
+                ? `$${rate}/hr × ${quantity} hrs`
+                : rateType === 'ton'
+                ? `$${rate}/ton × ${quantity} tons`
+                : `$${rate}/job × ${quantity} jobs`}
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-2xl bg-gray-50 border-2 border-dashed border-gray-200 px-4 py-4 text-center">
+            <p className="text-xs text-gray-400">Total Pay — enter rate &amp; quantity to calculate</p>
+          </div>
+        )}
 
         {/* Slips */}
         <div>
