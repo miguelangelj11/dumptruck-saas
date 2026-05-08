@@ -92,6 +92,17 @@ function fmtMoney(n: number) {
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : n.toLocaleString()
 }
 
+function toSmsHref(rawPhone: string, body: string): string {
+  const digits = rawPhone.replace(/\D/g, '')
+  // 10-digit → US number, prepend +1; 11-digit starting with 1 → already has country code
+  const e164 = digits.length === 10
+    ? `+1${digits}`
+    : digits.length === 11 && digits.startsWith('1')
+      ? `+${digits}`
+      : `+${digits}`
+  return `sms:${e164}?body=${encodeURIComponent(body)}`
+}
+
 async function copyMobileTicketLink(dispatchId: string) {
   const res = await fetch(`/api/ticket/link?id=${encodeURIComponent(dispatchId)}`)
   if (res.status === 403) {
@@ -609,8 +620,7 @@ export default function DispatchPage() {
           bulkSelections[d.id]?.truckNumber ? `Truck #${bulkSelections[d.id]?.truckNumber}` : null,
           `\nSubmit ticket: https://dumptruckboss.com/portal?c=${companyId}`,
         ].filter(Boolean).join('\n')
-        const clean = d.phone.replace(/\D/g, '')
-        window.open(`sms:+${clean}?body=${encodeURIComponent(msg)}`, '_blank')
+        window.open(toSmsHref(d.phone, msg), '_blank')
       }
     }
 
@@ -722,8 +732,7 @@ export default function DispatchPage() {
               dispForm.instructions ? `Notes: ${dispForm.instructions}`   : null,
               `\nSubmit ticket: https://dumptruckboss.com/portal?c=${companyId}`,
             ].filter(Boolean).join('\n')
-            const cleanPhone = contactPhone.replace(/\D/g, '')
-            window.open(`sms:+${cleanPhone}?body=${encodeURIComponent(msgLines)}`, '_blank')
+            window.open(toSmsHref(contactPhone, msgLines), '_blank')
           } else {
             toast.warning('No phone number on file — add one in the Drivers page to send texts')
           }
