@@ -3,7 +3,7 @@ export const revalidate = 30
 import { createClient } from '@/lib/supabase/server'
 import {
   Truck, Radio,
-  Send, Plus, Receipt, FileText,
+  Send, Plus, Receipt, Users, FileText,
   AlertTriangle, Clock, Activity, FolderOpen,
 } from 'lucide-react'
 import RecentDocuments from '@/components/dashboard/recent-documents'
