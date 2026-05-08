@@ -70,7 +70,7 @@ export async function POST(request: Request) {
 
   const { data: co } = await admin
     .from('companies')
-    .select('name, address, phone, email, logo_url')
+    .select('name, address, phone, notification_email, logo_url')
     .eq('id', inv.company_id)
     .maybeSingle()
 
@@ -149,7 +149,7 @@ export async function POST(request: Request) {
       name: companyName,
       address: co?.address ?? null,
       phone: co?.phone ?? null,
-      email: co?.email ?? null,
+      email: co?.notification_email ?? null,
       logo_url: co?.logo_url ?? null,
     }
 
