@@ -889,14 +889,37 @@ export default function InvoicesPage() {
   const printRef = useRef<HTMLDivElement>(null)
   function handlePrint() { window.print() }
 
-  function openSendModal(inv: InvoiceWithItems) {
+  async function openSendModal(inv: InvoiceWithItems) {
     const typeLabel = inv.invoice_type === 'paystub' ? 'Driver Pay Invoice' : inv.invoice_type === 'contractor' ? 'Subcontractor Invoice' : 'Invoice'
-    const hasEmail = !!(inv.client_email)
-    const hasPhone = !!(inv.client_phone)
+
+    // Fetch client companies if not loaded yet (detail view doesn't pre-fetch them)
+    let companies = clientCompanies
+    if (companies.length === 0) {
+      await fetchClientCompaniesForCreate()
+      // fetchClientCompaniesForCreate sets state async; read fresh from DB directly for immediate use
+      const uid = await getCompanyId()
+      if (uid) {
+        const { data } = await supabase
+          .from('client_companies')
+          .select('id, name, address, email, phone')
+          .eq('company_id', uid)
+          .order('name')
+        companies = data ?? []
+        setClientCompanies(companies)
+      }
+    }
+
+    // Auto-match by client_name to fill email/phone from saved client companies
+    const matched = companies.find(c => c.name === inv.client_name)
+    const toEmail = inv.client_email ?? matched?.email ?? ''
+    const toPhone = inv.client_phone ?? matched?.phone ?? ''
+
+    const hasEmail = !!toEmail
+    const hasPhone = !!toPhone
     setSendVia(hasPhone && !hasEmail ? 'sms' : hasPhone && hasEmail ? 'both' : 'email')
     setSendForm({
-      toEmail: inv.client_email ?? '',
-      toPhone: inv.client_phone ?? '',
+      toEmail,
+      toPhone,
       subject: `${typeLabel} ${inv.invoice_number} from ${companyName}`,
       message: `Hi ${inv.client_name},\n\nPlease find your ${typeLabel.toLowerCase()} attached below.\n\nTotal: $${fmt(inv.total)}\n\nThank you for your business!`,
     })
@@ -2237,7 +2260,7 @@ export default function InvoicesPage() {
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Client</label>
                     <select
-                      value={clientCompanies.find(c => c.email === sendForm.toEmail)?.id ?? ''}
+                      value={clientCompanies.find(c => c.name === detailInvoice?.client_name || c.email === sendForm.toEmail)?.id ?? ''}
                       onChange={e => {
                         const co = clientCompanies.find(c => c.id === e.target.value)
                         if (co) {
