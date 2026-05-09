@@ -10,7 +10,7 @@ import {
   Loader2, Plus, Trash2, Building2, Upload, X, Palette, Globe,
   FileText, Users, Bell, CreditCard, Shield, Download,
   Check, AlertTriangle, Mail, Lock, Eye, EyeOff, Truck, Clock,
-  Hash, Package, Link2,
+  Hash, Package, Link2, Pencil,
 } from 'lucide-react'
 import type { ClientCompany } from '@/lib/types'
 import LanguageSelector from '@/components/language-selector'
@@ -160,8 +160,13 @@ export default function SettingsPage() {
   const [clientCompanies, setClientCompanies] = useState<ClientCompany[]>([])
   const [newCompanyName,    setNewCompanyName]    = useState('')
   const [newCompanyAddress, setNewCompanyAddress] = useState('')
+  const [newCompanyEmail,   setNewCompanyEmail]   = useState('')
+  const [newCompanyPhone,   setNewCompanyPhone]   = useState('')
   const [addingCompany,   setAddingCompany]   = useState(false)
   const [deletingId,      setDeletingId]      = useState<string | null>(null)
+  const [editingCompany,  setEditingCompany]  = useState<ClientCompany | null>(null)
+  const [editForm, setEditForm] = useState({ name: '', address: '', email: '', phone: '' })
+  const [savingEdit, setSavingEdit] = useState(false)
 
   // ── Trucks state ────────────────────────────────────────────────────────
   const [trucks,          setTrucks]          = useState<TruckRow[]>([])
@@ -587,11 +592,13 @@ export default function SettingsPage() {
     setAddingCompany(true)
     const { error } = await supabase
       .from('client_companies')
-      .insert({ name: newCompanyName.trim(), address: newCompanyAddress.trim() || null, company_id: companyId })
+      .insert({ name: newCompanyName.trim(), address: newCompanyAddress.trim() || null, email: newCompanyEmail.trim() || null, phone: newCompanyPhone.trim() || null, company_id: companyId })
     if (error) { toast.error(error.message); setAddingCompany(false); return }
     toast.success(`"${newCompanyName.trim()}" added`)
     setNewCompanyName('')
     setNewCompanyAddress('')
+    setNewCompanyEmail('')
+    setNewCompanyPhone('')
     setAddingCompany(false)
     getCompanyId().then(orgId => { if (orgId) fetchClientCompanies(orgId) })
   }
@@ -606,6 +613,24 @@ export default function SettingsPage() {
       setClientCompanies(prev => prev.filter(c => c.id !== id))
     }
     setDeletingId(null)
+  }
+
+  async function handleSaveEditCompany(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editingCompany || !editForm.name.trim()) return
+    setSavingEdit(true)
+    const { error } = await supabase
+      .from('client_companies')
+      .update({ name: editForm.name.trim(), address: editForm.address.trim() || null, email: editForm.email.trim() || null, phone: editForm.phone.trim() || null })
+      .eq('id', editingCompany.id)
+    if (error) { toast.error(error.message); setSavingEdit(false); return }
+    toast.success(`"${editForm.name.trim()}" updated`)
+    setClientCompanies(prev => prev.map(c => c.id === editingCompany.id
+      ? { ...c, name: editForm.name.trim(), address: editForm.address.trim() || null, email: editForm.email.trim() || null, phone: editForm.phone.trim() || null }
+      : c
+    ))
+    setEditingCompany(null)
+    setSavingEdit(false)
   }
 
   async function handleAddTruck(e: React.FormEvent) {
@@ -887,6 +912,7 @@ export default function SettingsPage() {
   const btnPrimary = 'inline-flex items-center gap-2 rounded-lg bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors disabled:opacity-50'
 
   return (
+    <>
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 space-y-8">
 
       {/* Page header */}
@@ -992,6 +1018,22 @@ export default function SettingsPage() {
               placeholder="Address (optional) — auto-fills on invoices"
               className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
             />
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="email"
+                value={newCompanyEmail}
+                onChange={e => setNewCompanyEmail(e.target.value)}
+                placeholder="Email (for sending invoices)"
+                className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
+              />
+              <input
+                type="tel"
+                value={newCompanyPhone}
+                onChange={e => setNewCompanyPhone(e.target.value)}
+                placeholder="Phone (for SMS invoices)"
+                className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
+              />
+            </div>
           </form>
 
           {clientCompanies.length === 0 ? (
@@ -1004,16 +1046,20 @@ export default function SettingsPage() {
             <ul className="divide-y divide-gray-50 border border-gray-100 rounded-xl overflow-hidden">
               {clientCompanies.map(c => (
                 <li key={c.id} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="h-7 w-7 rounded-lg bg-[var(--brand-dark)]/10 flex items-center justify-center">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-7 w-7 rounded-lg bg-[var(--brand-dark)]/10 flex items-center justify-center shrink-0">
                       <Building2 className="h-3.5 w-3.5 text-[var(--brand-primary)]" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <span className="text-sm font-medium text-gray-900">{c.name}</span>
-                      {c.address && <p className="text-xs text-gray-400 mt-0.5">{c.address}</p>}
+                      {c.address && <p className="text-xs text-gray-400 mt-0.5 truncate">{c.address}</p>}
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                        {c.email && <p className="text-xs text-blue-500">{c.email}</p>}
+                        {c.phone && <p className="text-xs text-gray-400">{c.phone}</p>}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 shrink-0">
                     {c.portal_token && (
                       <button
                         onClick={() => {
@@ -1027,6 +1073,13 @@ export default function SettingsPage() {
                         <Link2 className="h-4 w-4" />
                       </button>
                     )}
+                    <button
+                      onClick={() => { setEditingCompany(c); setEditForm({ name: c.name, address: c.address ?? '', email: c.email ?? '', phone: c.phone ?? '' }) }}
+                      className="p-1.5 text-gray-400 hover:text-[var(--brand-primary)] transition-colors"
+                      aria-label={`Edit ${c.name}`}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
                     <button
                       onClick={() => handleDeleteCompany(c.id, c.name)}
                       disabled={deletingId === c.id}
@@ -2366,5 +2419,69 @@ export default function SettingsPage() {
       </div>
 
     </div>
+
+    {/* Edit Client Company Modal */}
+    {editingCompany && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+        <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+          <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
+            <h2 className="text-base font-bold text-gray-900">Edit Client Company</h2>
+            <button onClick={() => setEditingCompany(null)} className="h-7 w-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <form onSubmit={handleSaveEditCompany} className="p-5 space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Company Name *</label>
+              <input
+                required
+                value={editForm.name}
+                onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))}
+                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Address</label>
+              <input
+                value={editForm.address}
+                onChange={e => setEditForm(p => ({ ...p, address: e.target.value }))}
+                placeholder="123 Main St, City, ST 00000"
+                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+              <input
+                type="email"
+                value={editForm.email}
+                onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))}
+                placeholder="billing@client.com"
+                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
+              <input
+                type="tel"
+                value={editForm.phone}
+                onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))}
+                placeholder="+1 (555) 000-0000"
+                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
+              />
+            </div>
+            <div className="flex gap-3 pt-1">
+              <button type="button" onClick={() => setEditingCompany(null)} className="flex-1 h-10 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                Cancel
+              </button>
+              <button type="submit" disabled={savingEdit || !editForm.name.trim()} className="flex-1 h-10 rounded-xl bg-[var(--brand-primary)] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[var(--brand-primary-hover)] disabled:opacity-60">
+                {savingEdit && <Loader2 className="h-4 w-4 animate-spin" />}
+                {savingEdit ? 'Saving…' : 'Save Changes'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
+    </>
   )
 }

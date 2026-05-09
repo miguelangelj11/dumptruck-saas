@@ -215,6 +215,8 @@ export type ClientCompany = {
   company_id: string
   name: string
   address: string | null
+  email: string | null
+  phone: string | null
   portal_token: string | null
   created_at: string
 }

@@ -301,7 +301,7 @@ export default function InvoicesPage() {
     date_paid: '',
     payment_method: 'check',
   })
-  const [clientCompanies, setClientCompanies] = useState<{ id: string; name: string; address: string | null }[]>([])
+  const [clientCompanies, setClientCompanies] = useState<{ id: string; name: string; address: string | null; email: string | null; phone: string | null }[]>([])
   const [clientNameMode, setClientNameMode] = useState<'dropdown' | 'manual'>('dropdown')
   const [deductionPct, setDeductionPct] = useState('')
   // Driver Pay Invoice state
@@ -348,7 +348,8 @@ export default function InvoicesPage() {
   const [paymentForm, setPaymentForm] = useState({ amount: '', payment_date: localDatePlus(0), payment_method: 'Check', notes: '' })
   const [savingPayment, setSavingPayment] = useState(false)
   const [showSendModal, setShowSendModal] = useState(false)
-  const [sendForm, setSendForm] = useState({ toEmail: '', subject: '', message: '' })
+  const [sendForm, setSendForm] = useState({ toEmail: '', toPhone: '', subject: '', message: '' })
+  const [sendVia, setSendVia] = useState<'email' | 'sms' | 'both'>('email')
   const [sending, setSending] = useState(false)
   const [detailTicketPhotos, setDetailTicketPhotos] = useState<{ ticketNumber: string | null; imageUrl: string; date: string; driverName: string | null; jobName: string; truckNumber?: string | null; material?: string | null; timeWorked?: string | null }[]>([])
   const [includeTicketPhotos, setIncludeTicketPhotos] = useState(true)
@@ -465,7 +466,7 @@ export default function InvoicesPage() {
     if (!uid) return
     const { data } = await supabase
       .from('client_companies')
-      .select('id, name, address')
+      .select('id, name, address, email, phone')
       .eq('company_id', uid)
       .order('name')
     setClientCompanies(data ?? [])
@@ -889,8 +890,12 @@ export default function InvoicesPage() {
 
   function openSendModal(inv: InvoiceWithItems) {
     const typeLabel = inv.invoice_type === 'paystub' ? 'Driver Pay Invoice' : inv.invoice_type === 'contractor' ? 'Subcontractor Invoice' : 'Invoice'
+    const hasEmail = !!(inv.client_email)
+    const hasPhone = !!(inv.client_phone)
+    setSendVia(hasPhone && !hasEmail ? 'sms' : hasPhone && hasEmail ? 'both' : 'email')
     setSendForm({
       toEmail: inv.client_email ?? '',
+      toPhone: inv.client_phone ?? '',
       subject: `${typeLabel} ${inv.invoice_number} from ${companyName}`,
       message: `Hi ${inv.client_name},\n\nPlease find your ${typeLabel.toLowerCase()} attached below.\n\nTotal: $${fmt(inv.total)}\n\nThank you for your business!`,
     })
@@ -901,14 +906,32 @@ export default function InvoicesPage() {
     e.preventDefault()
     if (!detailInvoice) return
     setSending(true)
-    const res = await fetch('/api/invoices/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ invoiceId: detailInvoice.id, toEmail: sendForm.toEmail, subject: sendForm.subject, message: sendForm.message, includeTicketPhotos }),
-    })
-    const data = await res.json()
-    if (!res.ok) { toast.error(data.error ?? 'Failed to send'); setSending(false); return }
-    toast.success(`Invoice sent to ${sendForm.toEmail}`)
+
+    const sendEmail = sendVia === 'email' || sendVia === 'both'
+    const sendSms   = sendVia === 'sms'   || sendVia === 'both'
+
+    if (sendEmail) {
+      const res = await fetch('/api/invoices/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoiceId: detailInvoice.id, toEmail: sendForm.toEmail, subject: sendForm.subject, message: sendForm.message, includeTicketPhotos }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error ?? 'Failed to send email'); setSending(false); return }
+    }
+
+    if (sendSms) {
+      const res = await fetch('/api/invoices/send-sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoiceId: detailInvoice.id, toPhone: sendForm.toPhone, message: sendForm.message }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error ?? 'Failed to send SMS'); setSending(false); return }
+    }
+
+    const sentTo = [sendEmail && sendForm.toEmail, sendSms && sendForm.toPhone].filter(Boolean).join(' & ')
+    toast.success(`Invoice sent to ${sentTo}`)
     setShowSendModal(false)
     setSending(false)
     setDetailInvoice(prev => prev ? { ...prev, status: 'sent' } : prev)
@@ -1437,7 +1460,7 @@ export default function InvoicesPage() {
                             setCreateForm(p => ({ ...p, client_name: '', client_address: '' }))
                           } else {
                             const co = clientCompanies.find(c => c.name === val)
-                            setCreateForm(p => ({ ...p, client_name: val, client_address: co?.address ?? p.client_address }))
+                            setCreateForm(p => ({ ...p, client_name: val, client_address: co?.address ?? p.client_address, client_email: co?.email ?? p.client_email, client_phone: co?.phone ?? p.client_phone }))
                           }
                         }}
                         className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white"
@@ -2208,35 +2231,100 @@ export default function InvoicesPage() {
                 </button>
               </div>
               <form onSubmit={handleSendInvoice} className="p-5 space-y-4">
+                {/* Client dropdown — auto-fills email + phone */}
+                {clientCompanies.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Client</label>
+                    <select
+                      value={clientCompanies.find(c => c.email === sendForm.toEmail)?.id ?? ''}
+                      onChange={e => {
+                        const co = clientCompanies.find(c => c.id === e.target.value)
+                        if (co) {
+                          setSendForm(p => ({ ...p, toEmail: co.email ?? p.toEmail, toPhone: co.phone ?? p.toPhone }))
+                          if (co.email && co.phone) setSendVia('both')
+                          else if (co.phone && !co.email) setSendVia('sms')
+                          else setSendVia('email')
+                        }
+                      }}
+                      className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white"
+                    >
+                      <option value="">— Select a client —</option>
+                      {clientCompanies.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}{c.email ? ` · ${c.email}` : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Send via toggle */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">To *</label>
-                  <input
-                    required type="email"
-                    value={sendForm.toEmail}
-                    onChange={e => setSendForm(p => ({ ...p, toEmail: e.target.value }))}
-                    placeholder="client@example.com"
-                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
-                  />
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">Send Via</label>
+                  <div className="flex gap-2">
+                    {(['email', 'sms', 'both'] as const).map(mode => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setSendVia(mode)}
+                        className={`flex-1 h-9 rounded-lg text-xs font-semibold border transition-colors ${sendVia === mode ? 'bg-[var(--brand-primary)] text-white border-[var(--brand-primary)]' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                      >
+                        {mode === 'email' ? 'Email' : mode === 'sms' ? 'Text (SMS)' : 'Both'}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Subject *</label>
-                  <input
-                    required
-                    value={sendForm.subject}
-                    onChange={e => setSendForm(p => ({ ...p, subject: e.target.value }))}
-                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
-                  />
-                </div>
+
+                {/* Email fields */}
+                {(sendVia === 'email' || sendVia === 'both') && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Email To *</label>
+                      <input
+                        required={sendVia === 'email' || sendVia === 'both'}
+                        type="email"
+                        value={sendForm.toEmail}
+                        onChange={e => setSendForm(p => ({ ...p, toEmail: e.target.value }))}
+                        placeholder="client@example.com"
+                        className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Subject *</label>
+                      <input
+                        required
+                        value={sendForm.subject}
+                        onChange={e => setSendForm(p => ({ ...p, subject: e.target.value }))}
+                        className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* SMS phone field */}
+                {(sendVia === 'sms' || sendVia === 'both') && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Phone Number *</label>
+                    <input
+                      required={sendVia === 'sms' || sendVia === 'both'}
+                      type="tel"
+                      value={sendForm.toPhone}
+                      onChange={e => setSendForm(p => ({ ...p, toPhone: e.target.value }))}
+                      placeholder="+1 (555) 000-0000"
+                      className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
+                    />
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Message</label>
                   <textarea
                     value={sendForm.message}
                     onChange={e => setSendForm(p => ({ ...p, message: e.target.value }))}
-                    rows={5}
+                    rows={4}
                     className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] resize-none"
                   />
                 </div>
-                {detailTicketPhotos.length > 0 && (
+
+                {(sendVia === 'email' || sendVia === 'both') && detailTicketPhotos.length > 0 && (
                   <label className="flex items-start gap-2.5 cursor-pointer">
                     <input
                       type="checkbox"
