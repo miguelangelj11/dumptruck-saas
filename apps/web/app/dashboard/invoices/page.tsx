@@ -964,27 +964,50 @@ export default function InvoicesPage() {
   async function openSendModal(inv: InvoiceWithItems) {
     const typeLabel = inv.invoice_type === 'paystub' ? 'Driver Pay Invoice' : inv.invoice_type === 'contractor' ? 'Subcontractor Invoice' : 'Invoice'
 
-    // Fetch client companies if not loaded yet (detail view doesn't pre-fetch them)
-    let companies = clientCompanies
-    if (companies.length === 0) {
-      await fetchClientCompaniesForCreate()
-      // fetchClientCompaniesForCreate sets state async; read fresh from DB directly for immediate use
-      const uid = await getCompanyId()
-      if (uid) {
-        const { data } = await supabase
-          .from('client_companies')
-          .select('id, name, address, email, phone')
-          .eq('company_id', uid)
-          .order('name')
-        companies = data ?? []
-        setClientCompanies(companies)
-      }
-    }
+    let toEmail = inv.client_email ?? ''
+    let toPhone = inv.client_phone ?? ''
 
-    // Auto-match by client_name to fill email/phone from saved client companies
-    const matched = companies.find(c => c.name === inv.client_name)
-    const toEmail = inv.client_email ?? matched?.email ?? ''
-    const toPhone = inv.client_phone ?? matched?.phone ?? ''
+    if (inv.invoice_type === 'contractor') {
+      // For contractor invoices, match against contractors list
+      let contractorList = contractors
+      if (contractorList.length === 0) {
+        await fetchContractors()
+        const uid = await getCompanyId()
+        if (uid) {
+          const { data } = await supabase
+            .from('contractors')
+            .select('*')
+            .eq('company_id', uid)
+            .eq('status', 'active')
+            .order('name')
+          contractorList = data ?? []
+          setContractors(contractorList)
+        }
+      }
+      const matched = contractorList.find(c => c.name === inv.client_name)
+      toEmail = toEmail || matched?.email || ''
+      toPhone = toPhone || matched?.phone || ''
+    } else {
+      // Fetch client companies if not loaded yet (detail view doesn't pre-fetch them)
+      let companies = clientCompanies
+      if (companies.length === 0) {
+        await fetchClientCompaniesForCreate()
+        const uid = await getCompanyId()
+        if (uid) {
+          const { data } = await supabase
+            .from('client_companies')
+            .select('id, name, address, email, phone')
+            .eq('company_id', uid)
+            .order('name')
+          companies = data ?? []
+          setClientCompanies(companies)
+        }
+      }
+      // Auto-match by client_name to fill email/phone from saved client companies
+      const matched = companies.find(c => c.name === inv.client_name)
+      toEmail = toEmail || matched?.email || ''
+      toPhone = toPhone || matched?.phone || ''
+    }
 
     const hasEmail = !!toEmail
     const hasPhone = !!toPhone
@@ -2442,8 +2465,33 @@ export default function InvoicesPage() {
                 </button>
               </div>
               <form onSubmit={handleSendInvoice} className="p-5 space-y-4">
-                {/* Client dropdown — auto-fills email + phone */}
-                {clientCompanies.length > 0 && (
+                {/* Subcontractor dropdown for contractor invoices */}
+                {detailInvoice?.invoice_type === 'contractor' && contractors.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Subcontractor</label>
+                    <select
+                      value={contractors.find(c => c.name === detailInvoice?.client_name || c.email === sendForm.toEmail)?.id ?? ''}
+                      onChange={e => {
+                        const co = contractors.find(c => c.id === e.target.value)
+                        if (co) {
+                          setSendForm(p => ({ ...p, toEmail: co.email ?? p.toEmail, toPhone: co.phone ?? p.toPhone }))
+                          if (co.email && co.phone) setSendVia('both')
+                          else if (co.phone && !co.email) setSendVia('sms')
+                          else setSendVia('email')
+                        }
+                      }}
+                      className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white"
+                    >
+                      <option value="">— Select a subcontractor —</option>
+                      {contractors.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}{c.email ? ` · ${c.email}` : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Client dropdown for client invoices — auto-fills email + phone */}
+                {detailInvoice?.invoice_type !== 'contractor' && clientCompanies.length > 0 && (
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Client</label>
                     <select
