@@ -944,24 +944,19 @@ export default function InvoicesPage() {
       if (!res.ok) { toast.error(data.error ?? 'Failed to send email'); setSending(false); return }
     }
 
-    let smsFailed = false
-    if (sendSms) {
-      const res = await fetch('/api/invoices/send-sms', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ invoiceId: detailInvoice.id, toPhone: sendForm.toPhone, message: sendForm.message }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        // If only SMS was selected, hard fail. If both, warn but don't block email success.
-        if (!sendEmail) { toast.error(data.error ?? 'Failed to send SMS'); setSending(false); return }
-        smsFailed = true
-        toast.error(`SMS failed: ${data.error ?? 'Twilio not configured'}. Invoice was sent by email.`)
-      }
+    if (sendSms && sendForm.toPhone) {
+      // Open native SMS app — no backend needed, sends from the user's own phone
+      const smsBody = encodeURIComponent(sendForm.message || `Hi ${detailInvoice.client_name}, please find your invoice ${detailInvoice.invoice_number} for $${fmt(detailInvoice.total)} attached. Thank you!`)
+      const phone = sendForm.toPhone.replace(/\D/g, '')
+      window.open(`sms:${phone}?body=${smsBody}`, '_self')
     }
 
-    const sentTo = [sendEmail && sendForm.toEmail, sendSms && !smsFailed && sendForm.toPhone].filter(Boolean).join(' & ')
-    toast.success(`Invoice sent to ${sentTo}`)
+    if (sendEmail || sendSms) {
+      await supabase.from('invoices').update({ status: 'sent' }).eq('id', detailInvoice.id)
+    }
+
+    const sentTo = [sendEmail && sendForm.toEmail, sendSms && sendForm.toPhone].filter(Boolean).join(' & ')
+    toast.success(sendSms && !sendEmail ? 'Messages app opened — tap Send to deliver invoice' : `Invoice sent to ${sentTo}`)
     setShowSendModal(false)
     setSending(false)
     setDetailInvoice(prev => prev ? { ...prev, status: 'sent' } : prev)
@@ -2288,12 +2283,7 @@ export default function InvoicesPage() {
 
                 {/* Send via toggle */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                    Send Via
-                    {!process.env.NEXT_PUBLIC_SMS_ENABLED && (
-                      <span className="ml-2 text-xs text-gray-400 font-normal">(SMS requires Twilio setup)</span>
-                    )}
-                  </label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">Send Via</label>
                   <div className="flex gap-2">
                     {(['email', 'sms', 'both'] as const).map(mode => (
                       <button
