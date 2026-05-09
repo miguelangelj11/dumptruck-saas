@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Loader2, Receipt, ArrowLeft, Printer, Check, CreditCard, X, ChevronDown, FileText, Upload, Trash2, Mail, Lock } from 'lucide-react'
+import { Plus, Loader2, Receipt, ArrowLeft, Printer, Check, CreditCard, X, ChevronDown, FileText, Upload, Trash2, Mail, Lock, Pencil } from 'lucide-react'
 import InvoicePDFButton from '@/components/invoice-pdf-button'
 import CompanyAvatar from '@/components/dashboard/company-avatar'
 import { toast } from 'sonner'
@@ -356,6 +356,11 @@ export default function InvoicesPage() {
 
   const [uninvoicedCount, setUninvoicedCount] = useState(0)
   const [generatingInvoice, setGeneratingInvoice] = useState(false)
+
+  // Edit invoice modal
+  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null)
+  const [editInvForm, setEditInvForm] = useState({ client_name: '', client_address: '', client_phone: '', client_email: '', date_from: '', date_to: '', due_date: '', notes: '', payment_method: '' })
+  const [savingEdit, setSavingEdit] = useState(false)
 
   const supabase = createClient()
 
@@ -889,6 +894,44 @@ export default function InvoicesPage() {
   const printRef = useRef<HTMLDivElement>(null)
   function handlePrint() { window.print() }
 
+  function openEditModal(inv: Invoice) {
+    setEditingInvoice(inv)
+    setEditInvForm({
+      client_name:    inv.client_name    ?? '',
+      client_address: inv.client_address ?? '',
+      client_phone:   (inv as { client_phone?: string | null }).client_phone   ?? '',
+      client_email:   (inv as { client_email?: string | null }).client_email   ?? '',
+      date_from:      inv.date_from      ?? '',
+      date_to:        inv.date_to        ?? '',
+      due_date:       inv.due_date       ?? '',
+      notes:          inv.notes          ?? '',
+      payment_method: (inv as { payment_method?: string | null }).payment_method ?? '',
+    })
+  }
+
+  async function handleSaveEditInvoice(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editingInvoice) return
+    setSavingEdit(true)
+    const { error } = await supabase.from('invoices').update({
+      client_name:    editInvForm.client_name    || null,
+      client_address: editInvForm.client_address || null,
+      client_phone:   editInvForm.client_phone   || null,
+      client_email:   editInvForm.client_email   || null,
+      date_from:      editInvForm.date_from       || null,
+      date_to:        editInvForm.date_to         || null,
+      due_date:       editInvForm.due_date        || null,
+      notes:          editInvForm.notes           || null,
+      payment_method: editInvForm.payment_method  || null,
+    }).eq('id', editingInvoice.id)
+    if (error) { toast.error(error.message); setSavingEdit(false); return }
+    toast.success('Invoice updated')
+    setInvoices(prev => prev.map(i => i.id === editingInvoice.id ? { ...i, ...editInvForm } : i))
+    if (detailInvoice?.id === editingInvoice.id) setDetailInvoice(prev => prev ? { ...prev, ...editInvForm } : prev)
+    setEditingInvoice(null)
+    setSavingEdit(false)
+  }
+
   async function openSendModal(inv: InvoiceWithItems) {
     const typeLabel = inv.invoice_type === 'paystub' ? 'Driver Pay Invoice' : inv.invoice_type === 'contractor' ? 'Subcontractor Invoice' : 'Invoice'
 
@@ -1326,6 +1369,9 @@ export default function InvoicesPage() {
                           <button onClick={() => openDetail(inv)} className="text-xs text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] font-medium">
                             View →
                           </button>
+                          <button onClick={() => openEditModal(inv)} className="p-1 text-gray-300 hover:text-[var(--brand-primary)] transition-colors" title="Edit invoice">
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
                           {inv.status === 'overdue' && (
                             reminderCount >= maxReminders ? (
                               <span className="text-xs text-gray-400">Max reminders</span>
@@ -1377,6 +1423,84 @@ export default function InvoicesPage() {
             </div>
           )}
         </div>} {/* end invoiceTab === 'sent' */}
+
+      {/* Edit Invoice Modal */}
+      {editingInvoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
+              <div>
+                <h2 className="text-base font-bold text-gray-900">Edit Invoice</h2>
+                <p className="text-xs text-gray-400 mt-0.5">{editingInvoice.invoice_number}</p>
+              </div>
+              <button onClick={() => setEditingInvoice(null)} className="h-7 w-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <form onSubmit={handleSaveEditInvoice} className="p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Client / Bill To *</label>
+                  <input required value={editInvForm.client_name} onChange={e => setEditInvForm(p => ({ ...p, client_name: e.target.value }))}
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Address</label>
+                  <input value={editInvForm.client_address} onChange={e => setEditInvForm(p => ({ ...p, client_address: e.target.value }))}
+                    placeholder="123 Main St, City, ST"
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Client Email</label>
+                  <input type="email" value={editInvForm.client_email} onChange={e => setEditInvForm(p => ({ ...p, client_email: e.target.value }))}
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Client Phone</label>
+                  <input type="tel" value={editInvForm.client_phone} onChange={e => setEditInvForm(p => ({ ...p, client_phone: e.target.value }))}
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Period From</label>
+                  <input type="date" value={editInvForm.date_from} onChange={e => setEditInvForm(p => ({ ...p, date_from: e.target.value }))}
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Period To</label>
+                  <input type="date" value={editInvForm.date_to} onChange={e => setEditInvForm(p => ({ ...p, date_to: e.target.value }))}
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Due Date</label>
+                  <input type="date" value={editInvForm.due_date} onChange={e => setEditInvForm(p => ({ ...p, due_date: e.target.value }))}
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Payment Method</label>
+                  <select value={editInvForm.payment_method} onChange={e => setEditInvForm(p => ({ ...p, payment_method: e.target.value }))}
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white">
+                    <option value="">— Select —</option>
+                    {['Check','ACH / Bank Transfer','Zelle','Cash','Credit Card','Other'].map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
+                  <textarea rows={3} value={editInvForm.notes} onChange={e => setEditInvForm(p => ({ ...p, notes: e.target.value }))}
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] resize-none" />
+                </div>
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button type="button" onClick={() => setEditingInvoice(null)} className="flex-1 h-10 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                <button type="submit" disabled={savingEdit} className="flex-1 h-10 rounded-xl bg-[var(--brand-primary)] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[var(--brand-primary-hover)] disabled:opacity-60">
+                  {savingEdit && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {savingEdit ? 'Saving…' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       </div>
     )
   }
