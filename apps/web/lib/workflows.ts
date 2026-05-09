@@ -383,9 +383,9 @@ export async function getRecommendedDriver(
   const [driversRes, todayDispatchesRes, recentLoadsRes] = await Promise.all([
     supabase
       .from('drivers')
-      .select('id, name, is_active, status')
+      .select('id, name, status')
       .eq('company_id', companyId)
-      .eq('is_active', true),
+      .eq('status', 'active'),
     supabase
       .from('dispatches')
       .select('driver_name, status, loads_completed')
