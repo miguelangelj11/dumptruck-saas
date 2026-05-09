@@ -26,7 +26,7 @@ export async function POST(
   // Fetch invoice + company ownership check
   const { data: invoice, error: invErr } = await supabase
     .from('invoices')
-    .select('id, company_id, invoice_number, total, amount_paid, status')
+    .select('id, company_id, invoice_number, total, amount_paid, status, invoice_type')
     .eq('id', id)
     .single()
 
@@ -92,6 +92,16 @@ export async function POST(
 
   if (updErr) {
     return NextResponse.json({ error: 'Failed to update invoice: ' + updErr.message }, { status: 500 })
+  }
+
+  // Cascade ticket status when invoice reaches 'paid'
+  if (newStatus === 'paid') {
+    const invoiceType = (invoice as { invoice_type?: string | null }).invoice_type
+    if (invoiceType === 'contractor') {
+      await supabase.from('contractor_tickets').update({ status: 'paid' }).eq('invoice_id', id)
+    } else {
+      await supabase.from('loads').update({ status: 'paid' }).eq('invoice_id', id)
+    }
   }
 
   return NextResponse.json({

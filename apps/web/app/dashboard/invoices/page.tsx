@@ -775,9 +775,9 @@ export default function InvoicesPage() {
     if (itemErr) { toast.error(itemErr.message); setSaving(false); return }
 
     if (invoiceType === 'contractor') {
-      await supabase.from('contractor_tickets').update({ status: 'invoiced' }).in('id', [...selectedCTIds])
+      await supabase.from('contractor_tickets').update({ status: 'invoiced', invoice_id: invoiceId }).in('id', [...selectedCTIds])
     } else {
-      await supabase.from('loads').update({ status: 'invoiced' }).in('id', [...selectedLoadIds])
+      await supabase.from('loads').update({ status: 'invoiced', invoice_id: invoiceId }).in('id', [...selectedLoadIds])
     }
 
     toast.success('Invoice created')
@@ -897,7 +897,7 @@ export default function InvoicesPage() {
     setReceivedInvoices(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r))
   }
 
-  async function updateStatus(id: string, status: Invoice['status']) {
+  async function updateStatus(id: string, status: Invoice['status'], invoiceType?: string | null) {
     const today = new Date().toISOString().split('T')[0]!
     // When marking paid: stamp date_paid so dashboard revenue queries pick it up.
     // When un-marking paid: clear date_paid so it doesn't count as collected revenue.
@@ -910,13 +910,26 @@ export default function InvoicesPage() {
     const patch = { status, ...extra }
     setInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, ...patch } : inv))
     if (detailInvoice?.id === id) setDetailInvoice(prev => prev ? { ...prev, ...patch } : prev)
+
+    // Cascade ticket status when invoice is paid or reverted
+    const ticketStatus =
+      status === 'paid' ? 'paid' :
+      ['draft', 'sent', 'overdue'].includes(status) ? 'invoiced' :
+      null
+    if (ticketStatus) {
+      if (invoiceType === 'contractor') {
+        await supabase.from('contractor_tickets').update({ status: ticketStatus }).eq('invoice_id', id)
+      } else if (invoiceType === 'client' || invoiceType === null || invoiceType === undefined) {
+        await supabase.from('loads').update({ status: ticketStatus }).eq('invoice_id', id)
+      }
+    }
   }
 
   function handleStatusChange(inv: Invoice, newStatus: string) {
     if (newStatus === 'partially_paid' || newStatus === 'overpaid') {
       setPaymentModal({ open: true, invoice: inv })
     } else {
-      updateStatus(inv.id, newStatus as Invoice['status'])
+      updateStatus(inv.id, newStatus as Invoice['status'], inv.invoice_type)
     }
   }
 
