@@ -452,7 +452,7 @@ export default function QuickTicketPage() {
                     ref={el => { if (el) fileRefs.current.set(slip.id, el) }}
                     type="file"
                     accept="image/*"
-                    capture="environment"
+                   
                     className="hidden"
                     onChange={e => handlePhoto(slip.id, e)}
                   />

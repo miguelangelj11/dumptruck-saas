@@ -268,7 +268,7 @@ export default function DriverSubmitPage() {
             ref={photoRef}
             type="file"
             accept="image/*"
-            capture="environment"
+           
             className="hidden"
             onChange={handlePhotoChange}
           />

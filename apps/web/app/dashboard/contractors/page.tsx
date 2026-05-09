@@ -787,7 +787,7 @@ export default function ContractorsPage() {
                               </div>
                             </button>
                           )}
-                          <input ref={el => { if (el) fileInputRefs.current.set(main.id, el); else fileInputRefs.current.delete(main.id) }} type="file" accept="image/*" capture="environment" onChange={e => handleSlipImageChange(main.id, e)} className="hidden" />
+                          <input ref={el => { if (el) fileInputRefs.current.set(main.id, el); else fileInputRefs.current.delete(main.id) }} type="file" accept="image/*" onChange={e => handleSlipImageChange(main.id, e)} className="hidden" />
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Tonnage / Count</label>
@@ -821,7 +821,7 @@ export default function ContractorsPage() {
                               <Camera className="h-4 w-4 text-gray-400" />
                             </button>
                           )}
-                          <input ref={el => { if (el) fileInputRefs.current.set(row.id, el); else fileInputRefs.current.delete(row.id) }} type="file" accept="image/*" capture="environment" onChange={e => handleSlipImageChange(row.id, e)} className="hidden" />
+                          <input ref={el => { if (el) fileInputRefs.current.set(row.id, el); else fileInputRefs.current.delete(row.id) }} type="file" accept="image/*" onChange={e => handleSlipImageChange(row.id, e)} className="hidden" />
                         </div>
                       </div>
                     </div>

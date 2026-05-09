@@ -200,7 +200,7 @@ function PortalContent() {
               </>
             )}
           </button>
-          <input ref={photoRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoChange} />
+          <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
 
           {/* Driver Name */}
           <div>

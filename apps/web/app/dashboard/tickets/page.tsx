@@ -1205,7 +1205,7 @@ export default function TicketsPage() {
                             <p className="text-sm font-medium text-gray-500">Take photo or upload</p>
                           </button>
                         )}
-                        <input ref={el => { if (el) fileInputRefs.current.set(main.id, el); else fileInputRefs.current.delete(main.id) }} type="file" accept="image/*" capture="environment" onChange={e => handleTicketImageChange(main.id, e)} className="hidden" />
+                        <input ref={el => { if (el) fileInputRefs.current.set(main.id, el); else fileInputRefs.current.delete(main.id) }} type="file" accept="image/*" onChange={e => handleTicketImageChange(main.id, e)} className="hidden" />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
@@ -1247,7 +1247,7 @@ export default function TicketsPage() {
                             <Camera className="h-4 w-4 text-gray-400" />
                           </button>
                         )}
-                        <input ref={el => { if (el) fileInputRefs.current.set(row.id, el); else fileInputRefs.current.delete(row.id) }} type="file" accept="image/*" capture="environment" onChange={e => handleTicketImageChange(row.id, e)} className="hidden" />
+                        <input ref={el => { if (el) fileInputRefs.current.set(row.id, el); else fileInputRefs.current.delete(row.id) }} type="file" accept="image/*" onChange={e => handleTicketImageChange(row.id, e)} className="hidden" />
                       </div>
                     </div>
                   </div>
