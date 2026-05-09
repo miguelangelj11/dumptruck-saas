@@ -4,7 +4,7 @@ export type Plan = 'solo' | 'owner_operator' | 'fleet' | 'enterprise'
 const TIER: Record<Plan, number> = { solo: 0, owner_operator: 1, fleet: 2, enterprise: 3 }
 
 export function planTier(plan: string | null | undefined): number {
-  return TIER[(plan ?? 'owner_operator') as Plan] ?? 1
+  return TIER[normalizePlan(plan)]
 }
 
 export function normalizePlan(plan: string | null | undefined): Plan {

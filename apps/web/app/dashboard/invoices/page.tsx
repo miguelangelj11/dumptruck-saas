@@ -380,7 +380,7 @@ export default function InvoicesPage() {
     // Load company info from companies table (source of truth)
     const [invRes, coRes] = await Promise.all([
       supabase.from('invoices').select('*', { count: 'exact' }).eq('company_id', effectiveId).order('created_at', { ascending: false }).range(range0, range1),
-      supabase.from('companies').select('name, address, phone, logo_url, plan').eq('id', effectiveId).maybeSingle(),
+      supabase.from('companies').select('name, address, phone, logo_url, plan, is_super_admin, subscription_override').eq('id', effectiveId).maybeSingle(),
     ])
 
     if (invRes.error) toast.error('Failed to load invoices: ' + invRes.error.message)
@@ -389,7 +389,8 @@ export default function InvoicesPage() {
     setCompanyAddress((coRes.data as { address?: string | null } | null)?.address ?? '')
     setUserPhone((coRes.data as { phone?: string | null } | null)?.phone ?? user.user_metadata?.phone ?? '')
     setCompanyLogoUrl((coRes.data as { logo_url?: string | null } | null)?.logo_url ?? null)
-    setCompanyPlan((coRes.data as { plan?: string | null } | null)?.plan ?? null)
+    const coData = coRes.data as { plan?: string | null; is_super_admin?: boolean | null; subscription_override?: string | null } | null
+    setCompanyPlan(coData?.is_super_admin || coData?.subscription_override ? 'growth' : coData?.plan ?? null)
 
     // Load received invoices
     if (companyIdForQuery) {
