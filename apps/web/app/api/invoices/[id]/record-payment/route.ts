@@ -3,8 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -26,7 +27,7 @@ export async function POST(
   const { data: invoice, error: invErr } = await supabase
     .from('invoices')
     .select('id, company_id, invoice_number, total, amount_paid, status')
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (invErr || !invoice) {
@@ -68,7 +69,7 @@ export async function POST(
   // Insert payment record
   const { error: pmtErr } = await supabase.from('payments').insert({
     company_id: invoice.company_id,
-    invoice_id: params.id,
+    invoice_id: id,
     amount,
     payment_date,
     payment_method: payment_method || null,
@@ -87,7 +88,7 @@ export async function POST(
     status: newStatus,
     payment_notes: notes || null,
     ...(newStatus === 'paid' ? { date_paid: payment_date } : {}),
-  }).eq('id', params.id)
+  }).eq('id', id)
 
   if (updErr) {
     return NextResponse.json({ error: 'Failed to update invoice: ' + updErr.message }, { status: 500 })
