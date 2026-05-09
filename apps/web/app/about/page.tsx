@@ -35,25 +35,10 @@ export default function AboutPage() {
               </p>
             </div>
 
-            {/*
-              PHOTO NEEDED: Miguel on job site, in front of truck
-              Save as: /public/images/miguel-jobsite.jpg
-              Recommended: 800x1000px, Miguel in work gear on a real job site
-              Replace the placeholder div below with:
-              <img
-                src="/images/miguel-jobsite.jpg"
-                alt="Miguel Jimenez — DumpTruckBoss founder"
-                className="w-full h-full object-cover"
-              />
-            */}
             <div className="flex justify-center md:justify-end">
               <div className="relative">
                 <div className="w-80 h-96 rounded-2xl overflow-hidden border-4 border-[#F5B731]/30 bg-gray-800 flex items-center justify-center">
-                  <div className="text-center text-gray-500">
-                    <span className="text-6xl block mb-3">🚛</span>
-                    <p className="text-sm">Founder photo</p>
-                    <p className="text-xs">(add to /public/images/)</p>
-                  </div>
+                  <span className="text-8xl">🚛</span>
                 </div>
                 <div className="absolute -bottom-4 -left-4 bg-[#F5B731] text-black px-4 py-2 rounded-xl font-bold text-sm shadow-lg">
                   🚛 Active Operator Since 2020
@@ -203,11 +188,6 @@ export default function AboutPage() {
       </section>
 
       {/* ─── SECTION D — TEAM ─── */}
-      {/*
-        TEAM PHOTOS: Save as /public/images/team-miguel.jpg, team-[brother].jpg, team-[father].jpg
-        Replace the initials/emoji divs in each card with:
-        <img src="/images/team-[name].jpg" alt="[Name]" className="w-24 h-24 rounded-full object-cover" />
-      */}
       <section className="bg-white py-20 px-6">
         <div className="max-w-5xl mx-auto">
           <span className="text-[#F5B731] text-sm font-bold uppercase tracking-widest mb-4 block text-center">
@@ -233,12 +213,12 @@ export default function AboutPage() {
               </p>
             </div>
 
-            {/* Co-founder — UPDATE: Replace [Brother's Name] with real name */}
+            {/* Angelo */}
             <div className="text-center p-8 bg-gray-50 rounded-2xl border-2 border-gray-200 hover:border-[#F5B731] transition-colors">
-              <div className="w-24 h-24 rounded-full bg-[#1a1a1a] mx-auto mb-4 flex items-center justify-center text-3xl border-4 border-gray-600">
-                👨‍💻
+              <div className="w-24 h-24 rounded-full bg-[#1a1a1a] mx-auto mb-4 flex items-center justify-center text-white text-2xl font-black border-4 border-gray-600">
+                AJ
               </div>
-              <h3 className="text-xl font-bold text-gray-900">[Brother&apos;s Name]</h3>
+              <h3 className="text-xl font-bold text-gray-900">Angelo Jimenez</h3>
               <p className="text-[#F5B731] font-semibold text-sm mb-3">Co-founder &amp; Engineer</p>
               <p className="text-gray-600 text-sm leading-relaxed">
                 Software engineer. Built DumpTruckBoss with me from
@@ -247,12 +227,12 @@ export default function AboutPage() {
               </p>
             </div>
 
-            {/* Father — UPDATE: Replace [Father's Name] with real name */}
+            {/* Angel */}
             <div className="text-center p-8 bg-gray-50 rounded-2xl border-2 border-gray-200 hover:border-[#F5B731] transition-colors">
-              <div className="w-24 h-24 rounded-full bg-[#1a1a1a] mx-auto mb-4 flex items-center justify-center text-3xl border-4 border-gray-600">
-                👷
+              <div className="w-24 h-24 rounded-full bg-[#1a1a1a] mx-auto mb-4 flex items-center justify-center text-white text-2xl font-black border-4 border-gray-600">
+                AJ
               </div>
-              <h3 className="text-xl font-bold text-gray-900">[Father&apos;s Name]</h3>
+              <h3 className="text-xl font-bold text-gray-900">Angel Jimenez</h3>
               <p className="text-[#F5B731] font-semibold text-sm mb-3">Operations Partner</p>
               <p className="text-gray-600 text-sm leading-relaxed">
                 Decades in the hauling business. The reason I know
