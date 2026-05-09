@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { getCompanyId } from '@/lib/get-company-id'
 import Image from 'next/image'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -10,7 +11,7 @@ import {
   Loader2, Plus, Trash2, Building2, Upload, X, Palette, Globe,
   FileText, Users, Bell, CreditCard, Shield, Download,
   Check, AlertTriangle, Mail, Lock, Eye, EyeOff, Truck, Clock,
-  Hash, Package, Link2, Pencil,
+  Hash, Package, Link2, Pencil, Database, ChevronRight,
 } from 'lucide-react'
 import type { ClientCompany } from '@/lib/types'
 import LanguageSelector from '@/components/language-selector'
@@ -2354,6 +2355,30 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Data Backups — owner only */}
+      {isSuperAdmin && (
+        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+            <Database className="h-4 w-4 text-[var(--brand-primary)]" />
+            <h2 className="font-semibold text-sm text-gray-900">Data Backups</h2>
+            <span className="ml-1 text-xs bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] font-semibold px-2 py-0.5 rounded-full">Owner Only</span>
+          </div>
+          <div className="p-6">
+            <p className="text-xs text-gray-500 mb-4">
+              Your data is automatically backed up every night at midnight. Each backup is a complete snapshot of all tickets, invoices, drivers, dispatches, expenses, and client companies — kept permanently and encrypted. You can download any backup or restore missing records at any time.
+            </p>
+            <Link
+              href="/dashboard/backups"
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors"
+            >
+              <Database className="h-4 w-4" />
+              Manage Backups
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Danger Zone */}
       <div className="bg-white rounded-xl border-2 border-red-200 overflow-hidden">
