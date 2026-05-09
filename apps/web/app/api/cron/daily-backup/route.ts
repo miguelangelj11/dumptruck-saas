@@ -95,13 +95,7 @@ export async function GET(request: Request) {
 
       if (upErr) throw new Error(upErr.message)
 
-      // Keep only last 30 days — list and prune older files
-      const { data: files } = await admin.storage.from('backups').list(co.id, { sortBy: { column: 'name', order: 'asc' } })
-      if (files && files.length > 30) {
-        const toDelete = files.slice(0, files.length - 30).map(f => `${co.id}/${f.name}`)
-        await admin.storage.from('backups').remove(toDelete)
-      }
-
+      // Backups are kept forever — never auto-deleted
       results.push({ company: co.name, ok: true })
     } catch (err) {
       results.push({ company: co.name, ok: false, error: String(err) })

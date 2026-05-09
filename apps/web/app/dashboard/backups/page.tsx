@@ -153,7 +153,7 @@ export default function BackupsPage() {
           </div>
           <div>
             <h1 className="text-lg font-bold text-gray-900">Data Backups</h1>
-            <p className="text-xs text-gray-400">Encrypted · Owner-only · 30-day retention</p>
+            <p className="text-xs text-gray-400">Encrypted · Owner-only · Permanent retention</p>
           </div>
         </div>
         <button
@@ -171,7 +171,7 @@ export default function BackupsPage() {
         <Shield className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
         <div className="text-sm text-blue-700">
           <p className="font-semibold">Automatic daily backups at midnight</p>
-          <p className="text-xs text-blue-600 mt-0.5">All data is stored in a private, encrypted storage bucket. Only you (the account owner) can access or download these files. Backups include tickets, invoices, drivers, dispatches, expenses, and client companies. Last 30 days are kept.</p>
+          <p className="text-xs text-blue-600 mt-0.5">All data is stored in a private, encrypted storage bucket. Only you (the account owner) can access or download these files. Backups include tickets, invoices, drivers, dispatches, expenses, and client companies. Each backup is a complete snapshot — backups are kept permanently and never auto-deleted.</p>
         </div>
       </div>
 
