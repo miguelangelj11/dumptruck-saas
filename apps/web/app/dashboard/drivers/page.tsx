@@ -620,7 +620,7 @@ export default function DriversPage() {
         const filtered = driverTicketFilter === 'all'
           ? driverTickets
           : driverTickets.filter(t => t.status === driverTicketFilter)
-        const totalAmt = filtered.reduce((s, t) => s + (t.rate ?? 0), 0)
+        const totalAmt = filtered.reduce((s, t) => s + ((t as {total_pay?: number|null}).total_pay ?? t.rate ?? 0), 0)
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
             <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl flex flex-col max-h-[90vh]">
