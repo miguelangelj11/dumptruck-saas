@@ -148,7 +148,39 @@ export type Job = {
   driver_cost: number | null
   fuel_cost: number | null
   other_costs: number | null
+  share_token: string | null
+  is_shared: boolean | null
+  share_expires_at: string | null
   created_at: string
+}
+
+export type ReceivedDispatch = {
+  id: string
+  company_id: string
+  sender_company_id: string | null
+  sender_company_name: string | null
+  sender_contact_name: string | null
+  sender_phone: string | null
+  sender_email: string | null
+  job_name: string
+  job_location: string | null
+  material: string | null
+  trucks_needed: number | null
+  rate: number | null
+  rate_type: string | null
+  start_date: string | null
+  end_date: string | null
+  shift: string | null
+  notes: string | null
+  share_token: string
+  status: 'pending' | 'accepted' | 'declined' | 'converted' | 'expired'
+  responded_at: string | null
+  response_notes: string | null
+  converted_job_id: string | null
+  converted_at: string | null
+  expires_at: string | null
+  created_at: string
+  updated_at: string
 }
 
 export interface JobProfitMetrics {

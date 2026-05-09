@@ -9,7 +9,8 @@ import {
   Mail, MessageSquare,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import type { Job, Load, Dispatch, DispatchStatus, DriverRecommendation, RateInsight, DispatchOptimizationHint } from '@/lib/types'
+import type { Job, Load, Dispatch, DispatchStatus, DriverRecommendation, RateInsight, DispatchOptimizationHint, ReceivedDispatch } from '@/lib/types'
+import ReceivedDispatchCard from '@/components/dispatch/ReceivedDispatchCard'
 import { getCompanyId } from '@/lib/get-company-id'
 import LockedFeature from '@/components/dashboard/locked-feature'
 import { logDispatchActivity, getRecommendedDriver, getRateInsights, getDispatchOptimizationHints } from '@/lib/workflows'
@@ -204,7 +205,10 @@ export default function DispatchPage() {
   useEffect(() => { dispatchesRef.current = dispatches }, [dispatches])
   const lastToastRef  = useRef(0)
 
-  const [mainTab,     setMainTab]     = useState<'board' | 'today' | 'subs'>('board')
+  const [receivedDispatches, setReceivedDispatches] = useState<ReceivedDispatch[]>([])
+  const [sharingJobId,       setSharingJobId]       = useState<string | null>(null)
+
+  const [mainTab,     setMainTab]     = useState<'board' | 'today' | 'subs' | 'received'>('board')
   const [jobFilter,   setJobFilter]   = useState<'active' | 'on_hold' | 'completed' | 'all'>('active')
   const [expandedJob, setExpandedJob] = useState<string | null>(null)
 
@@ -275,7 +279,7 @@ export default function DispatchPage() {
     if (!companyId) { setLoading(false); return }
     setOrgId(companyId)
 
-    const [loadsRes, driversRes, jobsRes, dispRes, contractorsRes, clientCoRes, coRes] = await Promise.all([
+    const [loadsRes, driversRes, jobsRes, dispRes, contractorsRes, clientCoRes, coRes, rdRes] = await Promise.all([
       supabase.from('loads').select('id,job_name,driver_name,truck_number,date,status,rate,rate_type').eq('company_id', companyId).gte('date', cutoff),
       supabase.from('drivers').select('id,name,email,phone').eq('company_id', companyId).eq('status', 'active').order('name'),
       supabase.from('jobs').select('*').eq('company_id', companyId).order('created_at', { ascending: false }),
@@ -283,6 +287,7 @@ export default function DispatchPage() {
       supabase.from('contractors').select('id,name,phone,email').eq('company_id', companyId).eq('status', 'active').order('name'),
       supabase.from('client_companies').select('id,name,address').eq('company_id', companyId).order('name'),
       supabase.from('companies').select('plan').eq('id', companyId).maybeSingle(),
+      supabase.from('received_dispatches').select('*').eq('company_id', companyId).order('created_at', { ascending: false }),
     ])
 
     if (jobsRes.error && !jobsRes.error.message.includes('schema cache'))
@@ -300,6 +305,7 @@ export default function DispatchPage() {
     setCompanyPlan((coRes.data as Record<string, unknown> | null)?.plan as string | null ?? null)
     if (!dispRes.error || dispRes.error.message.includes('schema cache'))
       setDispatches((dispRes.data ?? []) as Dispatch[])
+    if (!rdRes.error) setReceivedDispatches((rdRes.data ?? []) as ReceivedDispatch[])
 
     // Auto-complete dispatches from previous days that are still in 'working' state
     if (companyId && !dispRes.error) {
@@ -468,6 +474,39 @@ export default function DispatchPage() {
         (driverLoadCountMap.get(a.name) ?? 0) - (driverLoadCountMap.get(b.name) ?? 0)
       )[0]?.id
     : null
+
+  // ── Share job ────────────────────────────────────────────────────────────────
+
+  async function shareJob(job: Job) {
+    setSharingJobId(job.id)
+    try {
+      // Enable sharing if not already on
+      let token = job.share_token
+      if (!job.is_shared || !token) {
+        const expires = new Date()
+        expires.setDate(expires.getDate() + 30)
+        const { data } = await supabase
+          .from('jobs')
+          .update({ is_shared: true, share_expires_at: expires.toISOString() })
+          .eq('id', job.id)
+          .select('share_token')
+          .single()
+        token = (data as { share_token: string | null } | null)?.share_token ?? token
+        setJobs(prev => prev.map(j => j.id === job.id ? { ...j, is_shared: true, share_expires_at: expires.toISOString() } : j))
+      }
+      const url = `${window.location.origin}/dispatch/${token}`
+      if (navigator.share) {
+        await navigator.share({ title: `Dispatch: ${job.job_name}`, url })
+      } else {
+        await navigator.clipboard.writeText(url)
+        toast.success('Share link copied to clipboard!')
+      }
+    } catch {
+      toast.error('Failed to generate share link')
+    } finally {
+      setSharingJobId(null)
+    }
+  }
 
   // ── Job CRUD ────────────────────────────────────────────────────────────────
 
@@ -942,15 +981,16 @@ export default function DispatchPage() {
       )}
 
       {/* Main tabs */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit mx-6 mb-5">
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit mx-6 mb-5 flex-wrap">
         {([
-          ['board', 'Dispatch Board', null],
-          ['today', 'Your Drivers',   driverDispatches.length],
-          ['subs',  'Subcontractors', subDispatches.length],
+          ['board',    'Dispatch Board', null],
+          ['today',    'Your Drivers',   driverDispatches.length],
+          ['subs',     'Subcontractors', subDispatches.length],
+          ['received', 'Received',       receivedDispatches.filter(r => r.status === 'pending').length],
         ] as [string, string, number | null][]).map(([tab, label, count]) => (
           <button
             key={tab}
-            onClick={() => setMainTab(tab as 'board' | 'today' | 'subs')}
+            onClick={() => setMainTab(tab as 'board' | 'today' | 'subs' | 'received')}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
               mainTab === tab ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
             }`}
@@ -1072,6 +1112,14 @@ export default function DispatchPage() {
                                 className="flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors"
                               >
                                 <Users className="h-3 w-3" /> Multi
+                              </button>
+                              <button
+                                onClick={() => shareJob(job)}
+                                disabled={sharingJobId === job.id}
+                                title="Share dispatch link"
+                                className="h-8 w-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600"
+                              >
+                                {sharingJobId === job.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
                               </button>
                               <button onClick={e => openEditJob(job, e)} className="h-8 w-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600">
                                 <Pencil className="h-3.5 w-3.5" />
@@ -1402,7 +1450,7 @@ export default function DispatchPage() {
           )}
         </div>
 
-      ) : (
+      ) : mainTab === 'subs' ? (
         /* ══════════════════════════════════════════════════════════════
            SUBCONTRACTORS VIEW
         ══════════════════════════════════════════════════════════════ */
@@ -1477,7 +1525,37 @@ export default function DispatchPage() {
             </div>
           )}
         </div>
-      )}
+      ) : mainTab === 'received' ? (
+        /* ══════════════════════════════════════════════════════════════
+           RECEIVED DISPATCHES INBOX
+        ══════════════════════════════════════════════════════════════ */
+        <div className="px-6 pb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-sm text-gray-500">{receivedDispatches.length} received dispatch{receivedDispatches.length !== 1 ? 'es' : ''}</p>
+              <p className="text-xs text-gray-400 mt-0.5">Jobs sent to you by other companies via share link</p>
+            </div>
+          </div>
+
+          {receivedDispatches.length === 0 ? (
+            <div className="text-center py-20 bg-white rounded-2xl border border-gray-100">
+              <Link2 className="h-10 w-10 mx-auto mb-3 text-gray-200" />
+              <p className="font-medium text-gray-400">No received dispatches</p>
+              <p className="text-sm text-gray-300 mt-1">When another company shares a job with you, it will appear here</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-w-2xl">
+              {receivedDispatches.map(rd => (
+                <ReceivedDispatchCard
+                  key={rd.id}
+                  dispatch={rd}
+                  onUpdate={updated => setReceivedDispatches(prev => prev.map(r => r.id === updated.id ? updated : r))}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
 
       {/* ══════════════════════════════════════════════════════════════
           DISPATCH MODAL

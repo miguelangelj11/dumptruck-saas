@@ -58,6 +58,7 @@ type Props = {
   plan?: string | null
   isSuperAdmin?: boolean
   navOrder?: string[] | null
+  pendingReceivedCount?: number
 }
 
 type NavItem = {
@@ -66,6 +67,7 @@ type NavItem = {
   icon: LucideIcon
   label: string
   locked: boolean
+  badge?: number
 }
 
 const DEFAULT_NAV_ORDER = [
@@ -153,7 +155,12 @@ function SortableNavItem({
         } ${draggingId ? 'pointer-events-none' : ''}`}
       >
         <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-[#F5B731]' : ''}`} />
-        {item.label}
+        <span className="flex-1">{item.label}</span>
+        {item.badge != null && item.badge > 0 && (
+          <span className="inline-flex items-center justify-center h-4 min-w-[1rem] px-1 text-[10px] font-bold bg-[#F5B731] text-[#1e3a2a] rounded-full">
+            {item.badge}
+          </span>
+        )}
       </Link>
     </div>
   )
@@ -170,7 +177,7 @@ function DragGhostItem({ item }: { item: NavItem }) {
   )
 }
 
-export default function Sidebar({ user, logoUrl, companyName: companyNameProp, profileName, plan, isSuperAdmin, navOrder }: Props) {
+export default function Sidebar({ user, logoUrl, companyName: companyNameProp, profileName, plan, isSuperAdmin, navOrder, pendingReceivedCount }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -183,7 +190,7 @@ export default function Sidebar({ user, logoUrl, companyName: companyNameProp, p
     const solo = !isSuperAdmin && plan === 'solo'
     return [
       { id: 'dashboard',    href: '/dashboard',             icon: LayoutDashboard, label: t('dashboard'),     locked: false },
-      { id: 'dispatch',     href: '/dashboard/dispatch',    icon: Clipboard,       label: t('dispatch'),      locked: solo },
+      { id: 'dispatch',     href: '/dashboard/dispatch',    icon: Clipboard,       label: t('dispatch'),      locked: solo, badge: pendingReceivedCount && pendingReceivedCount > 0 ? pendingReceivedCount : undefined },
       { id: 'tickets',      href: '/dashboard/tickets',     icon: FileText,        label: t('tickets'),       locked: false },
       { id: 'contractors',  href: '/dashboard/contractors', icon: Truck,           label: t('subcontractors'),locked: !isSuperAdmin && (plan === 'owner_operator' || plan === 'solo') },
       { id: 'drivers',      href: '/dashboard/drivers',     icon: Users,           label: t('drivers'),       locked: false },

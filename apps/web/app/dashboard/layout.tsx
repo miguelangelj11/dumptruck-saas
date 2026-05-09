@@ -176,6 +176,34 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const accentColor  = (co?.accent_color  as string | null | undefined) ?? '#2d7a4f'
   const plan         = (co?.plan          as string | null | undefined) ?? null
 
+  // Pending received dispatches count for sidebar badge
+  let pendingReceivedCount = 0
+  const companyIdForBadge = organizationId ?? null
+  if (companyIdForBadge) {
+    const { count } = await admin
+      .from('received_dispatches')
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', companyIdForBadge)
+      .eq('status', 'pending')
+    pendingReceivedCount = count ?? 0
+  } else {
+    // fallback: look up by owner_id
+    const { data: ownerCo } = await admin
+      .from('companies')
+      .select('id')
+      .eq('owner_id', user.id)
+      .limit(1)
+      .maybeSingle()
+    if (ownerCo) {
+      const { count } = await admin
+        .from('received_dispatches')
+        .select('id', { count: 'exact', head: true })
+        .eq('company_id', ownerCo.id)
+        .eq('status', 'pending')
+      pendingReceivedCount = count ?? 0
+    }
+  }
+
   return (
     <>
       <ThemeInjector primaryColor={primaryColor} accentColor={accentColor} />
@@ -188,6 +216,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           plan={plan}
           isSuperAdmin={isSuperAdmin}
           navOrder={(co?.nav_order as string[] | null | undefined) ?? null}
+          pendingReceivedCount={pendingReceivedCount}
         />
         <main className="flex-1 overflow-y-auto pt-14 md:pt-0 flex flex-col">
           <Suspense fallback={null}>

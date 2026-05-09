@@ -136,7 +136,7 @@ export default async function DashboardPage() {
   // ── Batch 2 (needs companyId) ─────────────────────────────────────────────
   const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString()
 
-  const [dispTodayRes, dispDetailRes, missingRes, noResponseRes, missingRevenueRes, workingRes] = companyId
+  const [dispTodayRes, dispDetailRes, missingRes, noResponseRes, missingRevenueRes, workingRes, pendingRDRes] = companyId
     ? await Promise.all([
         supabase.from('dispatches').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('dispatch_date', todayStr).neq('status', 'completed').neq('status', 'cancelled'),
         supabase.from('dispatches').select('id, driver_name, status, start_time, jobs(job_name)').eq('company_id', companyId).eq('dispatch_date', todayStr).neq('status', 'cancelled').order('created_at', { ascending: false }).limit(6),
@@ -146,6 +146,8 @@ export default async function DashboardPage() {
         supabase.from('dispatches').select('loads_completed, jobs(rate, rate_type)').eq('company_id', companyId).lt('dispatch_date', todayStr).neq('status', 'completed').neq('status', 'cancelled').gt('loads_completed', 0).limit(100),
         // Drivers currently in 'working' status today
         supabase.from('dispatches').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('dispatch_date', todayStr).eq('status', 'working'),
+        // Pending received dispatches (incoming work from other companies)
+        supabase.from('received_dispatches').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('status', 'pending'),
       ])
     : [
         { count: 0, error: null },
@@ -154,13 +156,15 @@ export default async function DashboardPage() {
         { count: 0, error: null },
         { data: [],  error: null },
         { count: 0, error: null },
+        { count: 0, error: null },
       ] as const
 
-  const dispatchedToday   = dispTodayRes.count  ?? 0
-  const todayDispatches   = (dispDetailRes.data ?? []) as unknown as TodayDispatch[]
-  const missingTickets    = missingRes.count    ?? 0
-  const noResponseCount   = noResponseRes.count ?? 0
-  const workingDrivers    = workingRes.count    ?? 0
+  const dispatchedToday      = dispTodayRes.count  ?? 0
+  const todayDispatches      = (dispDetailRes.data ?? []) as unknown as TodayDispatch[]
+  const missingTickets       = missingRes.count    ?? 0
+  const noResponseCount      = noResponseRes.count ?? 0
+  const workingDrivers       = workingRes.count    ?? 0
+  const pendingReceivedCount = (pendingRDRes as { count?: number | null }).count ?? 0
 
   // Estimate missing revenue from dispatches with unclaimed loads
   const missingRevenueEst: number = ((missingRevenueRes as { data: unknown[] | null }).data ?? []).reduce((sum: number, d: unknown) => {
@@ -356,6 +360,12 @@ export default async function DashboardPage() {
               </Link>
             ) : (
               <p className="text-sm text-gray-400">All drivers responded ✓</p>
+            )}
+            {pendingReceivedCount > 0 && (
+              <Link href="/dashboard/dispatch" className="flex items-center justify-between gap-2 group">
+                <span className="text-sm text-blue-700 font-medium group-hover:underline">{pendingReceivedCount} incoming dispatch offer{pendingReceivedCount !== 1 ? 's' : ''}</span>
+                <span className="text-xs text-blue-600 shrink-0">Review →</span>
+              </Link>
             )}
           </div>
         </div>
