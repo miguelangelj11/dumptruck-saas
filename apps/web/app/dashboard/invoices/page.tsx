@@ -898,10 +898,18 @@ export default function InvoicesPage() {
   }
 
   async function updateStatus(id: string, status: Invoice['status']) {
-    const { error } = await supabase.from('invoices').update({ status }).eq('id', id)
+    const today = new Date().toISOString().split('T')[0]!
+    // When marking paid: stamp date_paid so dashboard revenue queries pick it up.
+    // When un-marking paid: clear date_paid so it doesn't count as collected revenue.
+    const extra: Partial<Invoice> =
+      status === 'paid' ? { date_paid: today } :
+      ['draft', 'sent', 'overdue'].includes(status) ? { date_paid: null } :
+      {}
+    const { error } = await supabase.from('invoices').update({ status, ...extra }).eq('id', id)
     if (error) { toast.error('Status update failed: ' + error.message); return }
-    setInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, status } : inv))
-    if (detailInvoice?.id === id) setDetailInvoice(prev => prev ? { ...prev, status } : prev)
+    const patch = { status, ...extra }
+    setInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, ...patch } : inv))
+    if (detailInvoice?.id === id) setDetailInvoice(prev => prev ? { ...prev, ...patch } : prev)
   }
 
   function handleStatusChange(inv: Invoice, newStatus: string) {
