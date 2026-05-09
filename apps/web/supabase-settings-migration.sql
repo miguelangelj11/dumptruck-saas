@@ -25,4 +25,6 @@ ALTER TABLE companies
   ADD COLUMN IF NOT EXISTS notify_payment_received       boolean DEFAULT true,
   ADD COLUMN IF NOT EXISTS notify_invoice_overdue        boolean DEFAULT true,
   ADD COLUMN IF NOT EXISTS notify_document_expiring      boolean DEFAULT false,
-  ADD COLUMN IF NOT EXISTS notify_missing_tickets        boolean DEFAULT true;
+  ADD COLUMN IF NOT EXISTS notify_missing_tickets        boolean DEFAULT true,
+  ADD COLUMN IF NOT EXISTS auto_send_reminders           boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS weekly_report_enabled         boolean DEFAULT true;
