@@ -944,6 +944,7 @@ export default function InvoicesPage() {
       if (!res.ok) { toast.error(data.error ?? 'Failed to send email'); setSending(false); return }
     }
 
+    let smsFailed = false
     if (sendSms) {
       const res = await fetch('/api/invoices/send-sms', {
         method: 'POST',
@@ -951,10 +952,15 @@ export default function InvoicesPage() {
         body: JSON.stringify({ invoiceId: detailInvoice.id, toPhone: sendForm.toPhone, message: sendForm.message }),
       })
       const data = await res.json()
-      if (!res.ok) { toast.error(data.error ?? 'Failed to send SMS'); setSending(false); return }
+      if (!res.ok) {
+        // If only SMS was selected, hard fail. If both, warn but don't block email success.
+        if (!sendEmail) { toast.error(data.error ?? 'Failed to send SMS'); setSending(false); return }
+        smsFailed = true
+        toast.error(`SMS failed: ${data.error ?? 'Twilio not configured'}. Invoice was sent by email.`)
+      }
     }
 
-    const sentTo = [sendEmail && sendForm.toEmail, sendSms && sendForm.toPhone].filter(Boolean).join(' & ')
+    const sentTo = [sendEmail && sendForm.toEmail, sendSms && !smsFailed && sendForm.toPhone].filter(Boolean).join(' & ')
     toast.success(`Invoice sent to ${sentTo}`)
     setShowSendModal(false)
     setSending(false)
@@ -2282,7 +2288,12 @@ export default function InvoicesPage() {
 
                 {/* Send via toggle */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1.5">Send Via</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                    Send Via
+                    {!process.env.NEXT_PUBLIC_SMS_ENABLED && (
+                      <span className="ml-2 text-xs text-gray-400 font-normal">(SMS requires Twilio setup)</span>
+                    )}
+                  </label>
                   <div className="flex gap-2">
                     {(['email', 'sms', 'both'] as const).map(mode => (
                       <button
