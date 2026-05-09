@@ -1,182 +1,371 @@
 import Nav from '@/components/landing/nav'
 import Footer from '@/components/landing/footer'
-import { Truck, Target, Heart, Zap, Users } from 'lucide-react'
 
 export const metadata = {
   title: 'About — DumpTruckBoss',
-  description: 'Built for the operators who get it done. Learn about our mission and team.',
+  description: 'Built by dump truck operators for dump truck operators. The real story behind DumpTruckBoss.',
 }
-
-const values = [
-  {
-    icon: Target,
-    title: 'Built for the field',
-    body: 'Every feature is designed around how hauling actually works — on job sites, in cabs, and in dispatch offices — not how software engineers imagine it works.',
-  },
-  {
-    icon: Zap,
-    title: 'Speed over ceremony',
-    body: 'Operators are busy. Our job is to get out of your way. We ship fast, keep the UI tight, and never add clicks without a reason.',
-  },
-  {
-    icon: Heart,
-    title: 'Operators first',
-    body: 'We don\'t take VC money and optimize for growth metrics. We take customer feedback and optimize for operators running profitable businesses.',
-  },
-  {
-    icon: Users,
-    title: 'Small team, big output',
-    body: 'We\'re a lean team of builders. That means fast decisions, no red tape, and the ability to ship a feature request within days — not quarters.',
-  },
-]
-
-const team = [
-  {
-    name: 'Marcus Rivera',
-    role: 'Co-founder & CEO',
-    bio: 'Former owner-operator who ran a 12-truck hauling business for 8 years. Built DumpTruckBoss after spending too many Sunday nights reconciling paper tickets.',
-    initials: 'MR',
-    color: '#2d7a4f',
-  },
-  {
-    name: 'Jordan Tate',
-    role: 'Co-founder & CTO',
-    bio: 'Software engineer who spent 3 years embedded with construction and logistics companies building dispatch software before starting DumpTruckBoss.',
-    initials: 'JT',
-    color: '#1e3a2a',
-  },
-  {
-    name: 'Priya Nair',
-    role: 'Head of Product',
-    bio: 'Former operations manager at a regional aggregate company. Responsible for making sure every product decision actually solves a real problem.',
-    initials: 'PN',
-    color: '#4a6741',
-  },
-]
 
 export default function AboutPage() {
   return (
-    <div className="bg-[#0f1923] min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col">
       <Nav />
 
-      {/* Hero */}
-      <div className="pt-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 text-center">
-          <p className="text-sm font-semibold text-[#4ade80] uppercase tracking-wider mb-4">Our Story</p>
-          <h1 className="text-4xl sm:text-5xl font-bold text-white mb-6 leading-tight">
-            Built for the operators<br className="hidden sm:block" /> who get it done
-          </h1>
-          <p className="text-white/60 text-lg max-w-2xl mx-auto leading-relaxed">
-            DumpTruckBoss started because running a hauling business still meant paper tickets, missed invoices,
-            and Friday night spreadsheets. We decided to fix that.
-          </p>
-        </div>
-      </div>
+      {/* ─── SECTION A — HERO ─── */}
+      <section className="bg-[#1a1a1a] pt-32 pb-20 px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
 
-      {/* Story */}
-      <div className="bg-white">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-20">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="h-10 w-10 rounded-xl bg-[#2d7a4f] flex items-center justify-center shrink-0">
-              <Truck className="h-5 w-5 text-white" />
+            {/* Copy side */}
+            <div>
+              <span className="text-[#F5B731] text-sm font-bold uppercase tracking-widest mb-4 block">
+                About DumpTruckBoss
+              </span>
+              <h1 className="text-4xl md:text-5xl font-black text-white leading-tight mb-6">
+                Built by dump truck operators.{' '}
+                <span className="text-[#F5B731]">
+                  For dump truck operators.
+                </span>
+              </h1>
+              <p className="text-xl text-gray-300 leading-relaxed">
+                I&apos;m Miguel Jimenez. I drive dump trucks for a living,
+                run a fleet with my father in Atlanta, and built
+                DumpTruckBoss because nothing else was made for the
+                way we actually work.
+              </p>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">How we got started</h2>
-          </div>
 
-          <div className="prose prose-gray max-w-none space-y-5 text-gray-600 leading-relaxed">
+            {/*
+              PHOTO NEEDED: Miguel on job site, in front of truck
+              Save as: /public/images/miguel-jobsite.jpg
+              Recommended: 800x1000px, Miguel in work gear on a real job site
+              Replace the placeholder div below with:
+              <img
+                src="/images/miguel-jobsite.jpg"
+                alt="Miguel Jimenez — DumpTruckBoss founder"
+                className="w-full h-full object-cover"
+              />
+            */}
+            <div className="flex justify-center md:justify-end">
+              <div className="relative">
+                <div className="w-80 h-96 rounded-2xl overflow-hidden border-4 border-[#F5B731]/30 bg-gray-800 flex items-center justify-center">
+                  <div className="text-center text-gray-500">
+                    <span className="text-6xl block mb-3">🚛</span>
+                    <p className="text-sm">Founder photo</p>
+                    <p className="text-xs">(add to /public/images/)</p>
+                  </div>
+                </div>
+                <div className="absolute -bottom-4 -left-4 bg-[#F5B731] text-black px-4 py-2 rounded-xl font-bold text-sm shadow-lg">
+                  🚛 Active Operator Since 2020
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* ─── SECTION B — THE REAL STORY ─── */}
+      <section className="bg-white py-20 px-6">
+        <div className="max-w-3xl mx-auto">
+
+          <span className="text-[#F5B731] text-sm font-bold uppercase tracking-widest mb-4 block">
+            The Origin
+          </span>
+          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-10">
+            How DumpTruckBoss got built
+            <span className="block text-gray-500 font-normal text-xl mt-2">
+              The real story
+            </span>
+          </h2>
+
+          <div className="space-y-6 text-lg text-gray-700 leading-relaxed">
+
             <p>
-              Marcus Rivera ran a 12-truck hauling operation out of Phoenix for eight years. He was good at the
-              work — managing jobs, keeping drivers on schedule, building relationships with contractors. What
-              he wasn't good at was the paperwork, and the industry hadn't given him any reason to get better
-              at it. Invoices were handwritten. Load counts were tracked on job-site slips that drivers would
-              lose, smudge, or forget entirely. Every week ended with a pile of paper and a set of numbers that
-              never quite added up.
+              I grew up around dump trucks. My father has been hauling
+              for years, and the business runs in our family the way
+              some families have a restaurant or a farm. I started
+              driving full-time at 22. Four years later, I&apos;m a partner
+              in our company, and we still do what we&apos;ve always done —
+              hauling and transporting aggregates. Asphalt, dirt,
+              milling, rock, anything construction sites need moved.
+            </p>
+
+            <p>
+              Over the past few years we&apos;ve worked some of the biggest
+              highway projects on the East Coast — pieces of I-85,
+              I-285, and right now we&apos;re on a contract for I-20.
+              The work is good.
+            </p>
+
+            {/* Pullquote — problem */}
+            <blockquote className="border-l-4 border-[#F5B731] pl-6 py-2 my-8 bg-amber-50 rounded-r-xl pr-6">
+              <p className="text-xl font-semibold text-gray-800 italic">
+                &ldquo;The business of running the business?
+                That part was killing us.&rdquo;
+              </p>
+            </blockquote>
+
+            <p>
+              Driving the trucks was only half my job. The other half
+              was the back end — dispatching our drivers, dispatching
+              the subcontractors who run trucks under us, chasing
+              tickets, building invoices, trying to figure out which
+              jobs actually made money. Every single one of those tasks
+              lived in its own system: a notebook, a text thread, a
+              spreadsheet, a stack of paper tickets in the cab.
+            </p>
+
+            <p>
+              As we grew, the duct tape stopped holding. Tickets went
+              missing. Invoices went out late or never went out at all.
+              I&apos;d spend Sunday nights in front of a stack of paper
+              trying to reconcile the week. Family dinners got
+              interrupted by phone calls about a load that didn&apos;t get
+              logged or a truck that didn&apos;t get paid.
+            </p>
+
+            <p>
+              I started realizing I&apos;d built a business that owned me,
+              not the other way around.
+            </p>
+
+            {/* Turning point callout */}
+            <div className="bg-[#1a1a1a] text-white p-8 rounded-2xl my-8">
+              <p className="text-lg leading-relaxed">
+                So my brother and I started building DumpTruckBoss.
+                He&apos;s a software guy. I&apos;m the one who knew exactly what
+                was broken. We built it for our company first — every
+                feature solves a problem I&apos;d hit personally that
+                morning, that week, that month.
+              </p>
+            </div>
+
+            <p>
+              Dispatching from one screen. Drivers submitting tickets
+              from their phones with photos. Invoices generating
+              themselves. Knowing in real time which trucks and which
+              drivers were actually making us money.
+            </p>
+
+            <p>
+              Once it was running, something I didn&apos;t expect happened:
+              I got my time back. Sundays stopped being paperwork days.
+              Dinners stopped getting interrupted. I could see exactly
+              what was happening across the whole operation without
+              driving to the yard.
+            </p>
+
+            {/* Pullquote — resolution */}
+            <blockquote className="border-l-4 border-green-400 pl-6 py-2 my-8 bg-green-50 rounded-r-xl pr-6">
+              <p className="text-xl font-semibold text-gray-800 italic">
+                &ldquo;That was the moment I realized this needed to exist
+                for every dump truck operator who&apos;s been duct-taping
+                their business together the way we were.&rdquo;
+              </p>
+            </blockquote>
+
+          </div>
+        </div>
+      </section>
+
+      {/* ─── SECTION C — WHY IT MATTERS ─── */}
+      <section className="bg-gray-50 py-20 px-6">
+        <div className="max-w-3xl mx-auto">
+          <span className="text-[#F5B731] text-sm font-bold uppercase tracking-widest mb-4 block">
+            The Mission
+          </span>
+          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-8">
+            Why DumpTruckBoss exists
+          </h2>
+          <div className="space-y-6 text-lg text-gray-700 leading-relaxed">
+            <p>
+              DumpTruckBoss isn&apos;t software built by people who studied
+              trucking from a distance. It&apos;s software built by an
+              operator, in an operator&apos;s voice, for the way operators
+              actually run.
             </p>
             <p>
-              He'd tried generic tools — QuickBooks, spreadsheets, even a few trucking apps built for long-haul
-              fleets. Nothing fit. Dump truck and hauling is a different business: high-volume, short-haul,
-              measured in loads and tons, with drivers who aren't sitting at a desk and contractors who need
-              invoices fast. The tools that existed were either too complex or too simple.
+              Every screen, every workflow, every alert is something I
+              personally needed and now use every day in our own fleet.
             </p>
             <p>
-              In 2024, Marcus connected with Jordan Tate, a software engineer who had spent three years building
-              dispatch tools for logistics companies. They spent six months riding along with operators, sitting
-              in dispatch offices, and watching how the business actually ran. The result was DumpTruckBoss — a
-              platform designed specifically for the way hauling companies work.
-            </p>
-            <p>
-              Today, DumpTruckBoss is used by owner-operators and fleet managers across the country to dispatch
-              drivers, capture load tickets on mobile, generate invoices automatically, and track every dollar
-              from the first load to the final payment.
+              If you&apos;re a one-truck owner-operator trying to keep paper
+              tickets straight, or you&apos;re running a small fleet and
+              your dispatcher is your wife&apos;s iPhone — this was built
+              for you. The whole point of it is to give you back the
+              thing you actually went into business for: the freedom to
+              run your shop your way, and the time to actually live
+              your life when the trucks are parked.
             </p>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Values */}
-      <div className="bg-gray-50 border-t border-gray-100">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-3">What we stand for</h2>
-            <p className="text-gray-500 max-w-xl mx-auto">
-              These aren't values we put on a wall. They're the decisions we make every day.
-            </p>
+      {/* ─── SECTION D — TEAM ─── */}
+      {/*
+        TEAM PHOTOS: Save as /public/images/team-miguel.jpg, team-[brother].jpg, team-[father].jpg
+        Replace the initials/emoji divs in each card with:
+        <img src="/images/team-[name].jpg" alt="[Name]" className="w-24 h-24 rounded-full object-cover" />
+      */}
+      <section className="bg-white py-20 px-6">
+        <div className="max-w-5xl mx-auto">
+          <span className="text-[#F5B731] text-sm font-bold uppercase tracking-widest mb-4 block text-center">
+            The Team
+          </span>
+          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-12 text-center">
+            Who&apos;s behind it
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+            {/* Miguel */}
+            <div className="text-center p-8 bg-gray-50 rounded-2xl border-2 border-[#F5B731]/20 hover:border-[#F5B731] transition-colors">
+              <div className="w-24 h-24 rounded-full bg-[#1a1a1a] mx-auto mb-4 flex items-center justify-center text-white text-2xl font-black border-4 border-[#F5B731]">
+                MJ
+              </div>
+              <h3 className="text-xl font-bold text-gray-900">Miguel Jimenez</h3>
+              <p className="text-[#F5B731] font-semibold text-sm mb-3">Founder &amp; Operator</p>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                Second-generation dump truck operator and partner in
+                our family hauling business in Atlanta. Built
+                DumpTruckBoss because I needed it.
+              </p>
+            </div>
+
+            {/* Co-founder — UPDATE: Replace [Brother's Name] with real name */}
+            <div className="text-center p-8 bg-gray-50 rounded-2xl border-2 border-gray-200 hover:border-[#F5B731] transition-colors">
+              <div className="w-24 h-24 rounded-full bg-[#1a1a1a] mx-auto mb-4 flex items-center justify-center text-3xl border-4 border-gray-600">
+                👨‍💻
+              </div>
+              <h3 className="text-xl font-bold text-gray-900">[Brother&apos;s Name]</h3>
+              <p className="text-[#F5B731] font-semibold text-sm mb-3">Co-founder &amp; Engineer</p>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                Software engineer. Built DumpTruckBoss with me from
+                the ground up. The reason every screen actually works
+                the way it should.
+              </p>
+            </div>
+
+            {/* Father — UPDATE: Replace [Father's Name] with real name */}
+            <div className="text-center p-8 bg-gray-50 rounded-2xl border-2 border-gray-200 hover:border-[#F5B731] transition-colors">
+              <div className="w-24 h-24 rounded-full bg-[#1a1a1a] mx-auto mb-4 flex items-center justify-center text-3xl border-4 border-gray-600">
+                👷
+              </div>
+              <h3 className="text-xl font-bold text-gray-900">[Father&apos;s Name]</h3>
+              <p className="text-[#F5B731] font-semibold text-sm mb-3">Operations Partner</p>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                Decades in the hauling business. The reason I know
+                what real operators need — and the first one to test
+                every feature in the real world.
+              </p>
+            </div>
+
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {values.map(({ icon: Icon, title, body }) => (
-              <div key={title} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-                <div className="h-10 w-10 rounded-xl bg-[#dcfce7] flex items-center justify-center mb-4">
-                  <Icon className="h-5 w-5 text-[#2d7a4f]" />
-                </div>
-                <h3 className="font-semibold text-gray-900 mb-2">{title}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">{body}</p>
+        </div>
+      </section>
+
+      {/* ─── SECTION E — REAL WORK REAL RESULTS ─── */}
+      <section className="bg-[#1a1a1a] py-20 px-6">
+        <div className="max-w-5xl mx-auto">
+          <span className="text-[#F5B731] text-sm font-bold uppercase tracking-widest mb-4 block text-center">
+            Real Work
+          </span>
+          <h2 className="text-3xl md:text-4xl font-black text-white mb-4 text-center">
+            Real projects. Real results.
+          </h2>
+          <p className="text-gray-400 text-center mb-12 max-w-xl mx-auto">
+            We don&apos;t just build software. We run trucks on these
+            projects every week.
+          </p>
+
+          <div className="flex flex-wrap justify-center gap-3 mb-16">
+            {['I-85 Resurfacing', 'I-285 Infrastructure', 'I-20 Active Contract', 'Atlanta Metro Projects'].map(p => (
+              <span key={p} className="px-4 py-2 bg-white/10 border border-white/20 rounded-full text-white text-sm font-medium">
+                🛣️ {p}
+              </span>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {[
+              { number: '4+',   label: 'Years Operating',  sub: 'active hauling'    },
+              { number: '3',    label: 'Major Highways',   sub: 'I-85, I-285, I-20' },
+              { number: '500+', label: 'Tickets Logged',   sub: 'in our own fleet'  },
+              { number: '10+',  label: 'Hours/Week Saved', sub: 'on admin work'     },
+            ].map(stat => (
+              <div key={stat.label} className="text-center p-6 bg-white/5 rounded-2xl border border-white/10">
+                <p className="text-4xl font-black text-[#F5B731] mb-1">{stat.number}</p>
+                <p className="text-white font-semibold text-sm">{stat.label}</p>
+                <p className="text-gray-500 text-xs mt-1">{stat.sub}</p>
               </div>
             ))}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Team */}
-      <div className="bg-white border-t border-gray-100">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-3">The team</h2>
-            <p className="text-gray-500 max-w-xl mx-auto">
-              A small group of people who've worked in this industry and are obsessed with making it better.
-            </p>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-4xl mx-auto">
-            {team.map((member) => (
-              <div key={member.name} className="flex flex-col items-center text-center">
-                <div
-                  className="h-20 w-20 rounded-2xl flex items-center justify-center text-white text-xl font-bold mb-4"
-                  style={{ backgroundColor: member.color }}
-                >
-                  {member.initials}
-                </div>
-                <h3 className="font-semibold text-gray-900">{member.name}</h3>
-                <p className="text-sm text-[#2d7a4f] font-medium mb-3">{member.role}</p>
-                <p className="text-sm text-gray-500 leading-relaxed">{member.bio}</p>
+      {/* ─── SECTION F — THE PROMISE ─── */}
+      <section className="bg-white py-20 px-6">
+        <div className="max-w-4xl mx-auto">
+          <span className="text-[#F5B731] text-sm font-bold uppercase tracking-widest mb-4 block text-center">
+            What We Stand For
+          </span>
+          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-12 text-center">
+            The promise
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                icon: '🔧',
+                title: 'Built by operators.',
+                body: "Every feature comes from a real problem we hit running our own fleet. If it doesn't solve something real, it doesn't ship.",
+              },
+              {
+                icon: '🎯',
+                title: 'No fluff.',
+                body: "We don't add buttons because they look cool. We add them because they save you a phone call, a Sunday, or a missed invoice.",
+              },
+              {
+                icon: '👨‍👩‍👧‍👦',
+                title: 'Family-first.',
+                body: 'We built this to take time back. To get off the phone at dinner. We hope it does the same for you.',
+              },
+            ].map(item => (
+              <div key={item.title} className="p-8 bg-gray-50 rounded-2xl border-b-4 border-[#F5B731]">
+                <span className="text-4xl block mb-4">{item.icon}</span>
+                <h3 className="text-xl font-bold text-gray-900 mb-3">{item.title}</h3>
+                <p className="text-gray-600 leading-relaxed">{item.body}</p>
               </div>
             ))}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* CTA */}
-      <div className="bg-[#0f1923] border-t border-white/10">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 text-center">
-          <h2 className="text-2xl font-bold text-white mb-3">Ready to ditch the paper?</h2>
-          <p className="text-white/50 mb-8">7-day free trial. No credit card required.</p>
+      {/* ─── SECTION G — CLOSING CTA ─── */}
+      <section className="bg-[#1a1a1a] py-24 px-6 text-center">
+        <div className="max-w-2xl mx-auto">
+          <h2 className="text-4xl md:text-5xl font-black text-white mb-4">
+            Try DumpTruckBoss free.
+          </h2>
+          <p className="text-xl text-gray-400 mb-3">
+            Set up in under 15 minutes.
+            Send your first invoice today.
+          </p>
+          <p className="text-sm text-gray-500 mb-10">
+            No credit card required to start.
+          </p>
           <a
             href="/signup"
-            className="inline-block px-8 py-3 rounded-xl font-semibold text-white transition-colors"
-            style={{ backgroundColor: '#2d7a4f' }}
+            className="inline-block px-12 py-5 bg-[#F5B731] text-black font-black text-xl rounded-2xl hover:bg-yellow-400 transition-colors shadow-2xl shadow-amber-900/30"
           >
-            Start Free Trial →
+            Start Free 7-Day Trial →
           </a>
+          <p className="text-gray-600 text-sm mt-6">
+            Join operators running real fleets on DumpTruckBoss today.
+          </p>
         </div>
-      </div>
+      </section>
 
       <Footer />
     </div>
