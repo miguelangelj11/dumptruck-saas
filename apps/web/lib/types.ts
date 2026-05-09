@@ -88,7 +88,7 @@ export type Invoice = {
   client_email: string | null
   total: number
   tax_rate: number | null
-  status: "draft" | "sent" | "partially_paid" | "paid" | "overdue"
+  status: "draft" | "sent" | "partially_paid" | "paid" | "overdue" | "overpaid"
   due_date: string | null
   date_paid: string | null
   date_from: string | null
@@ -98,6 +98,10 @@ export type Invoice = {
   notes: string | null
   last_reminder_sent_at: string | null
   reminder_count: number
+  amount_paid: number | null
+  amount_remaining: number | null
+  overpaid_amount: number | null
+  payment_notes: string | null
   created_at: string
 }
 
@@ -124,6 +128,7 @@ export type Payment = {
   payment_date: string
   payment_method: string | null
   notes: string | null
+  payment_type: string | null
   created_at: string
 }
 

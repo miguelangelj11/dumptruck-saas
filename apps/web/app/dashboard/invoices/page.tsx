@@ -3,8 +3,9 @@
 import { useEffect, useState, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Loader2, Receipt, ArrowLeft, Printer, Check, CreditCard, X, ChevronDown, FileText, Upload, Trash2, Mail, Lock, Pencil } from 'lucide-react'
+import { Plus, Loader2, Receipt, ArrowLeft, Printer, Check, CreditCard, X, ChevronDown, FileText, Upload, Trash2, Mail, Lock, Pencil, DollarSign } from 'lucide-react'
 import InvoicePDFButton from '@/components/invoice-pdf-button'
+import RecordPaymentModal from '@/components/invoices/RecordPaymentModal'
 import CompanyAvatar from '@/components/dashboard/company-avatar'
 import { toast } from 'sonner'
 import type { Invoice, InvoiceLineItem, Load, LoadTicket, Contractor, ContractorTicket, ContractorTicketSlip, Payment, ReceivedInvoice } from '@/lib/types'
@@ -23,9 +24,10 @@ type InvoiceWithItems = Invoice & { invoice_line_items: InvoiceLineItem[] }
 const statusColor = {
   draft: 'bg-gray-100 text-gray-600',
   sent: 'bg-green-100 text-green-700',
-  partially_paid: 'bg-yellow-100 text-yellow-700',
+  partially_paid: 'bg-orange-100 text-orange-700',
   paid: 'bg-green-100 text-green-700',
   overdue: 'bg-red-100 text-red-700',
+  overpaid: 'bg-purple-100 text-purple-700',
 }
 
 function fmt(n: number) {
@@ -362,6 +364,9 @@ export default function InvoicesPage() {
   const [editInvForm, setEditInvForm] = useState({ client_name: '', client_address: '', client_phone: '', client_email: '', date_from: '', date_to: '', due_date: '', notes: '', payment_method: '' })
   const [savingEdit, setSavingEdit] = useState(false)
 
+  // Record payment modal (triggered from status dropdown)
+  const [paymentModal, setPaymentModal] = useState<{ open: boolean; invoice: Invoice | null }>({ open: false, invoice: null })
+
   const supabase = createClient()
 
   async function getUid(): Promise<string | null> {
@@ -680,14 +685,16 @@ export default function InvoicesPage() {
     const invoiceTotal = detailInvoice.total
     const remaining = invoiceTotal - alreadyPaid
 
-    if (amount > remaining + 0.01) {
-      toast.error(`Amount $${fmt(amount)} exceeds remaining balance $${fmt(remaining)}`)
-      return
-    }
-
     setSavingPayment(true)
     const uid = await getCompanyId()
     if (!uid) { toast.error('Not authenticated'); setSavingPayment(false); return }
+
+    const newPaidTotal = alreadyPaid + amount
+    const newRemaining = invoiceTotal - newPaidTotal
+    const isOverpaid = newPaidTotal > invoiceTotal + 0.01
+    const overpaidAmt = isOverpaid ? newPaidTotal - invoiceTotal : 0
+    const newStatus: Invoice['status'] = isOverpaid ? 'overpaid' : newPaidTotal >= invoiceTotal - 0.01 ? 'paid' : 'partially_paid'
+    const resolvedType = isOverpaid ? 'overpayment' : newStatus === 'paid' ? 'full' : 'partial'
 
     const { error } = await supabase.from('payments').insert({
       company_id: uid,
@@ -696,14 +703,20 @@ export default function InvoicesPage() {
       payment_date: paymentForm.payment_date,
       payment_method: paymentForm.payment_method || null,
       notes: paymentForm.notes || null,
+      payment_type: resolvedType,
     })
     if (error) { toast.error('Failed to record payment: ' + error.message); setSavingPayment(false); return }
 
-    const newPaidTotal = alreadyPaid + amount
-    const newStatus: Invoice['status'] = newPaidTotal >= invoiceTotal - 0.01 ? 'paid' : 'partially_paid'
-    await supabase.from('invoices').update({ status: newStatus }).eq('id', detailInvoice.id)
-    setDetailInvoice(prev => prev ? { ...prev, status: newStatus } : prev)
-    setInvoices(prev => prev.map(i => i.id === detailInvoice.id ? { ...i, status: newStatus } : i))
+    await supabase.from('invoices').update({
+      status: newStatus,
+      amount_paid: newPaidTotal,
+      amount_remaining: Math.max(0, newRemaining),
+      overpaid_amount: overpaidAmt,
+      ...(newStatus === 'paid' ? { date_paid: paymentForm.payment_date } : {}),
+    }).eq('id', detailInvoice.id)
+    const invUpdate = { status: newStatus, amount_paid: newPaidTotal, amount_remaining: Math.max(0, newRemaining), overpaid_amount: overpaidAmt }
+    setDetailInvoice(prev => prev ? { ...prev, ...invUpdate } : prev)
+    setInvoices(prev => prev.map(i => i.id === detailInvoice.id ? { ...i, ...invUpdate } : i))
 
     // Refetch real payments list
     const { data } = await supabase
@@ -711,7 +724,7 @@ export default function InvoicesPage() {
       .eq('invoice_id', detailInvoice.id)
       .order('payment_date', { ascending: false })
     setPayments(data ?? [])
-    toast.success(newStatus === 'paid' ? 'Invoice fully paid!' : 'Partial payment recorded')
+    toast.success(newStatus === 'paid' ? 'Invoice fully paid!' : newStatus === 'overpaid' ? `Overpayment recorded — $${fmt(overpaidAmt)} over` : 'Partial payment recorded')
     setShowPaymentForm(false)
     setPaymentForm({ amount: '', payment_date: localDatePlus(0), payment_method: 'Check', notes: '' })
     setSavingPayment(false)
@@ -889,6 +902,22 @@ export default function InvoicesPage() {
     if (error) { toast.error('Status update failed: ' + error.message); return }
     setInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, status } : inv))
     if (detailInvoice?.id === id) setDetailInvoice(prev => prev ? { ...prev, status } : prev)
+  }
+
+  function handleStatusChange(inv: Invoice, newStatus: string) {
+    if (newStatus === 'partially_paid' || newStatus === 'overpaid') {
+      setPaymentModal({ open: true, invoice: inv })
+    } else {
+      updateStatus(inv.id, newStatus as Invoice['status'])
+    }
+  }
+
+  function handlePaymentSaved(updated: Partial<Invoice> & { id: string }) {
+    setInvoices(prev => prev.map(inv => inv.id === updated.id ? { ...inv, ...updated } : inv))
+    if (detailInvoice?.id === updated.id) {
+      setDetailInvoice(prev => prev ? { ...prev, ...updated } : prev)
+    }
+    setPaymentModal({ open: false, invoice: null })
   }
 
   const printRef = useRef<HTMLDivElement>(null)
@@ -1269,6 +1298,7 @@ export default function InvoicesPage() {
                 ['overdue', 'Overdue'],
                 ['sent', 'Sent'],
                 ['partially_paid', 'Partial'],
+                ['overpaid', 'Overpaid'],
                 ['paid', 'Paid'],
                 ['draft', 'Draft'],
               ] as [string, string][]).map(([val, label]) => {
@@ -1352,17 +1382,34 @@ export default function InvoicesPage() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <select
-                          value={inv.status}
-                          onChange={e => updateStatus(inv.id, e.target.value as Invoice['status'])}
-                          className={`rounded-full px-2.5 py-0.5 text-xs font-medium border-0 cursor-pointer focus:outline-none ${statusColor[inv.status as keyof typeof statusColor]}`}
-                        >
-                          <option value="draft">Draft</option>
-                          <option value="sent">Sent</option>
-                          <option value="partially_paid">Partially Paid</option>
-                          <option value="paid">Paid</option>
-                          <option value="overdue">Overdue</option>
-                        </select>
+                        <div className="space-y-1">
+                          <select
+                            value={inv.status}
+                            onChange={e => handleStatusChange(inv, e.target.value)}
+                            className={`rounded-full px-2.5 py-0.5 text-xs font-medium border-0 cursor-pointer focus:outline-none ${statusColor[inv.status as keyof typeof statusColor] ?? 'bg-gray-100 text-gray-600'}`}
+                          >
+                            <option value="draft">Draft</option>
+                            <option value="sent">Sent</option>
+                            <option value="partially_paid">Partially Paid</option>
+                            <option value="overpaid">Overpaid</option>
+                            <option value="paid">Paid</option>
+                            <option value="overdue">Overdue</option>
+                          </select>
+                          {(inv.status === 'partially_paid' || inv.status === 'overpaid') && (inv.amount_paid ?? 0) > 0 && (
+                            <div className="w-24">
+                              <div className="flex justify-between text-[10px] text-gray-400 mb-0.5">
+                                <span>${fmt(inv.amount_paid ?? 0)}</span>
+                                <span>${fmt(inv.amount_remaining ?? 0)}</span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-1">
+                                <div
+                                  className={`h-1 rounded-full ${inv.status === 'overpaid' ? 'bg-purple-400' : 'bg-orange-400'}`}
+                                  style={{ width: `${Math.min(100, ((inv.amount_paid ?? 0) / inv.total) * 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3 flex-wrap">
@@ -1500,6 +1547,13 @@ export default function InvoicesPage() {
           </div>
         </div>
       )}
+
+      <RecordPaymentModal
+        isOpen={paymentModal.open}
+        onClose={() => setPaymentModal({ open: false, invoice: null })}
+        invoice={paymentModal.invoice}
+        onSave={handlePaymentSaved}
+      />
 
       </div>
     )
@@ -2074,12 +2128,13 @@ export default function InvoicesPage() {
           <div className="flex items-center gap-2 flex-wrap">
             <select
               value={inv.status}
-              onChange={e => updateStatus(inv.id, e.target.value as Invoice['status'])}
+              onChange={e => handleStatusChange(inv, e.target.value)}
               className="rounded-lg border border-gray-200 px-2 py-2 text-xs text-gray-700 bg-white focus:outline-none"
             >
               <option value="draft">Draft</option>
               <option value="sent">Sent</option>
               <option value="partially_paid">Partially Paid</option>
+              <option value="overpaid">Overpaid</option>
               <option value="paid">Paid</option>
               <option value="overdue">Overdue</option>
             </select>
@@ -2138,13 +2193,20 @@ export default function InvoicesPage() {
               ) : (
                 <div className="divide-y divide-gray-100">
                   {payments.map(p => (
-                    <div key={p.id} className="flex items-center justify-between py-2">
-                      <div className="flex items-center gap-4">
+                    <div key={p.id} className="flex items-start justify-between py-2 gap-2">
+                      <div className="flex items-center gap-3 flex-wrap">
                         <span className="text-sm font-semibold text-green-700">${fmt(p.amount)}</span>
                         <span className="text-xs text-gray-500">{fmtDate(p.payment_date)}</span>
-                        {p.payment_method && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{p.payment_method}</span>}
+                        {p.payment_method && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full capitalize">{p.payment_method}</span>}
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          p.payment_type === 'full' ? 'bg-green-100 text-green-700' :
+                          p.payment_type === 'overpayment' ? 'bg-purple-100 text-purple-700' :
+                          'bg-orange-100 text-orange-700'
+                        }`}>
+                          {p.payment_type === 'full' ? 'Full' : p.payment_type === 'overpayment' ? 'Overpaid' : 'Partial'}
+                        </span>
                       </div>
-                      {p.notes && <span className="text-xs text-gray-400 truncate max-w-xs">{p.notes}</span>}
+                      {p.notes && <span className="text-xs text-gray-400 truncate max-w-[140px]">{p.notes}</span>}
                     </div>
                   ))}
                 </div>

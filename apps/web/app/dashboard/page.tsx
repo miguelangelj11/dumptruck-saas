@@ -197,6 +197,8 @@ export default async function DashboardPage() {
   // Panel stats
   const overdueInvs     = invoices.filter(i => i.status === 'overdue')
   const overdueTotal    = overdueInvs.reduce((s, i) => s + (i.total ?? 0), 0)
+  const partialInvs     = invoices.filter(i => i.status === 'partially_paid')
+  const partialTotal    = partialInvs.reduce((s, i) => s + ((i as { amount_remaining?: number | null }).amount_remaining ?? i.total ?? 0), 0)
   const loadsToday      = loads.filter(l => l.date === todayStr)
   const weekRevCollected = clientPaidInvs
     .filter(i => i.date_paid >= thisWeekStartStr && i.date_paid <= todayStr)
@@ -340,6 +342,12 @@ export default async function DashboardPage() {
               </Link>
             ) : (
               <p className="text-sm text-gray-400">No overdue invoices ✓</p>
+            )}
+            {partialInvs.length > 0 && (
+              <Link href="/dashboard/revenue" className="flex items-center justify-between gap-2 group">
+                <span className="text-sm text-amber-700 font-medium group-hover:underline">{partialInvs.length} partially paid invoice{partialInvs.length !== 1 ? 's' : ''}</span>
+                <span className="text-xs font-bold text-amber-600 shrink-0">${fmt(partialTotal)} outstanding</span>
+              </Link>
             )}
             {noResponseCount > 0 ? (
               <Link href="/dashboard/dispatch" className="flex items-center justify-between gap-2 group">

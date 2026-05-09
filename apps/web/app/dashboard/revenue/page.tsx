@@ -332,6 +332,21 @@ export default function RevenuePage() {
   const outstandingInvoices = filteredInvoices.filter(i => ['draft', 'sent'].includes(i.status))
   const outstandingTotal = outstandingInvoices.reduce((s, i) => s + (i.total ?? 0), 0)
 
+  // Lost / at-risk revenue: partially_paid + overdue with remaining balance (all-time, not date-filtered)
+  const partialInvoices = invoices.filter(i => i.status === 'partially_paid' && (i.amount_remaining ?? 0) > 0)
+  const overdueWithBalance = invoices.filter(i => i.status === 'overdue')
+  const lostRevenueItems = [
+    ...partialInvoices,
+    ...overdueWithBalance.filter(i => !partialInvoices.some(p => p.id === i.id)),
+  ].sort((a, b) => (b.amount_remaining ?? b.total) - (a.amount_remaining ?? a.total))
+  const partiallyPaidRemaining = partialInvoices.reduce((s, i) => s + (i.amount_remaining ?? 0), 0)
+  const overdueTotal = overdueWithBalance.reduce((s, i) => s + ((i.amount_remaining ?? i.total) ?? 0), 0)
+  const totalLostRevenue = partiallyPaidRemaining + overdueWithBalance.reduce((s, i) => s + (i.amount_remaining ?? i.total ?? 0), 0)
+
+  // Overpayments
+  const overpaidInvoices = invoices.filter(i => i.status === 'overpaid' && (i.overpaid_amount ?? 0) > 0)
+  const totalOverpaid = overpaidInvoices.reduce((s, i) => s + (i.overpaid_amount ?? 0), 0)
+
   const totalExpenses = filteredExpenses.reduce((s, e) => s + (e.amount ?? 0), 0)
 
   // Driver costs = paystub invoices (what we pay drivers)
@@ -706,6 +721,121 @@ export default function RevenuePage() {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* Lost Revenue / At-Risk Tracking */}
+      {(lostRevenueItems.length > 0 || overpaidInvoices.length > 0) && (
+        <div className="mb-6 space-y-4">
+          {/* Summary cards */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-red-500 mb-1">Outstanding / Lost</p>
+              <p className="text-xl font-black text-red-700">${totalLostRevenue.toLocaleString()}</p>
+              <p className="text-xs text-red-400 mt-0.5">{lostRevenueItems.length} invoice{lostRevenueItems.length !== 1 ? 's' : ''}</p>
+            </div>
+            <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-orange-500 mb-1">Partially Paid</p>
+              <p className="text-xl font-black text-orange-700">${partiallyPaidRemaining.toLocaleString()}</p>
+              <p className="text-xs text-orange-400 mt-0.5">{partialInvoices.length} with balance remaining</p>
+            </div>
+            <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-purple-500 mb-1">Overpayments</p>
+              <p className="text-xl font-black text-purple-700">${totalOverpaid.toLocaleString()}</p>
+              <p className="text-xs text-purple-400 mt-0.5">{overpaidInvoices.length} invoice{overpaidInvoices.length !== 1 ? 's' : ''}</p>
+            </div>
+          </div>
+
+          {/* Lost revenue table */}
+          {lostRevenueItems.length > 0 && (
+            <div className="bg-white rounded-xl border border-red-100 overflow-hidden">
+              <div className="px-5 py-4 border-b border-red-100 bg-red-50/40">
+                <h2 className="font-semibold text-sm text-red-800">At-Risk Revenue</h2>
+                <p className="text-xs text-red-500">Partially paid &amp; overdue invoices with outstanding balances</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[520px] text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      {['Invoice #', 'Client', 'Total', 'Paid', 'Outstanding', 'Status'].map(h => (
+                        <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {lostRevenueItems.map(inv => {
+                      const amtPaid = inv.amount_paid ?? 0
+                      const amtRemaining = inv.amount_remaining ?? inv.total ?? 0
+                      const pct = inv.total > 0 ? Math.min(100, (amtPaid / inv.total) * 100) : 0
+                      return (
+                        <tr key={inv.id} className="hover:bg-gray-50/50">
+                          <td className="px-4 py-3 font-mono text-xs text-gray-500">{inv.invoice_number}</td>
+                          <td className="px-4 py-3 font-medium text-gray-900">{inv.client_name}</td>
+                          <td className="px-4 py-3 text-gray-700">${(inv.total ?? 0).toLocaleString()}</td>
+                          <td className="px-4 py-3">
+                            <div>
+                              <span className="text-green-600 font-medium">${amtPaid.toLocaleString()}</span>
+                              {amtPaid > 0 && (
+                                <div className="w-16 h-1 bg-gray-200 rounded-full mt-1 overflow-hidden">
+                                  <div className="h-full bg-orange-400 rounded-full" style={{ width: `${pct}%` }} />
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 font-bold text-red-600">${amtRemaining.toLocaleString()}</td>
+                          <td className="px-4 py-3">
+                            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                              inv.status === 'partially_paid' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'
+                            }`}>
+                              {inv.status === 'partially_paid' ? 'Partial' : 'Overdue'}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-gray-200 bg-gray-50">
+                      <td colSpan={4} className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Total Outstanding:</td>
+                      <td className="px-4 py-3 font-black text-red-700 text-base">${totalLostRevenue.toLocaleString()}</td>
+                      <td />
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Overpayments table */}
+          {overpaidInvoices.length > 0 && (
+            <div className="bg-white rounded-xl border border-purple-100 overflow-hidden">
+              <div className="px-5 py-4 border-b border-purple-100 bg-purple-50/40">
+                <h2 className="font-semibold text-sm text-purple-800">Overpayments to Reconcile</h2>
+                <p className="text-xs text-purple-500">${totalOverpaid.toLocaleString()} received above invoice total</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[400px] text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      {['Invoice #', 'Client', 'Total', 'Overpaid By'].map(h => (
+                        <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {overpaidInvoices.map(inv => (
+                      <tr key={inv.id} className="hover:bg-gray-50/50">
+                        <td className="px-4 py-3 font-mono text-xs text-gray-500">{inv.invoice_number}</td>
+                        <td className="px-4 py-3 font-medium text-gray-900">{inv.client_name}</td>
+                        <td className="px-4 py-3 text-gray-700">${(inv.total ?? 0).toLocaleString()}</td>
+                        <td className="px-4 py-3 font-bold text-purple-700">${(inv.overpaid_amount ?? 0).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
