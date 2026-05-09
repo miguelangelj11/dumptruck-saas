@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { getCompanyId } from '@/lib/get-company-id'
 import { Loader2, Plus, DollarSign, TrendingUp, TrendingDown, AlertCircle, CreditCard, Download, Percent, Pencil, Trash2 } from 'lucide-react'
+import LockedFeature from '@/components/dashboard/locked-feature'
 import { toast } from 'sonner'
 import {
   RevenueByDriverChart,
@@ -169,6 +170,7 @@ function getWeekBounds(offset: 0 | -1) {
 }
 
 export default function RevenuePage() {
+  const [planLocked, setPlanLocked] = useState<null | { plan: string; price: number }>(null)
   const [loads, setLoads] = useState<Load[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [contractorTickets, setContractorTickets] = useState<ContractorTicket[]>([])
@@ -189,6 +191,20 @@ export default function RevenuePage() {
   const [payWeek, setPayWeek] = useState<0 | -1>(0)
   const [dateRange, setDateRange] = useState<DateRange>('month')
   const supabase = createClient()
+
+  // Plan gate: Revenue/profit tracking requires Fleet+
+  useEffect(() => {
+    getCompanyId().then(async id => {
+      if (!id) return
+      const supaClient = createClient()
+      const { data } = await supaClient.from('companies').select('plan, is_super_admin, subscription_override').eq('id', id).maybeSingle()
+      if (data?.is_super_admin || data?.subscription_override) return
+      const p = (data?.plan as string | null) ?? 'owner_operator'
+      if (p === 'solo' || p === 'owner_operator') {
+        setPlanLocked({ plan: 'Fleet', price: 200 })
+      }
+    })
+  }, [])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -429,6 +445,10 @@ export default function RevenuePage() {
 
   const rangeLabels: Record<DateRange, string> = {
     week: 'This Week', month: 'This Month', quarter: 'This Quarter', year: 'This Year',
+  }
+
+  if (planLocked) {
+    return <LockedFeature title="Revenue & Profit Tracking" description="Get a full picture of your revenue, profit, and expenses. See what each driver and job is making you." plan={planLocked.plan} price={planLocked.price} />
   }
 
   return (

@@ -6,6 +6,9 @@ import {
   FileText, Image as ImageIcon, Bot, Receipt, Truck,
   RefreshCw, Download,
 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import { getCompanyId } from '@/lib/get-company-id'
+import LockedFeature from '@/components/dashboard/locked-feature'
 type Category = 'all' | 'ai_import' | 'ticket_photo' | 'subcontractor_photo' | 'received_invoice'
 
 type DocumentItem = {
@@ -65,12 +68,24 @@ function fmtDate(iso: string) {
 type PreviewModal = { doc: DocumentItem; loaded: boolean }
 
 export default function DocumentsPage() {
+  const [planLocked, setPlanLocked] = useState<null | { plan: string; price: number }>(null)
   const [docs, setDocs]           = useState<DocumentItem[]>([])
   const [loading, setLoading]     = useState(true)
   const [category, setCategory]   = useState<Category>('all')
   const [search, setSearch]       = useState('')
   const [view, setView]           = useState<ViewMode>('grid')
   const [preview, setPreview]     = useState<PreviewModal | null>(null)
+
+  useEffect(() => {
+    const supaClient = createClient()
+    getCompanyId().then(async id => {
+      if (!id) return
+      const { data } = await supaClient.from('companies').select('plan, is_super_admin, subscription_override').eq('id', id).maybeSingle()
+      if (data?.is_super_admin || data?.subscription_override) return
+      const p = (data?.plan as string | null) ?? 'owner_operator'
+      if (p === 'solo' || p === 'owner_operator') setPlanLocked({ plan: 'Fleet', price: 200 })
+    })
+  }, [])
 
   const fetchDocs = useCallback(async (cat: Category, q: string) => {
     setLoading(true)
@@ -95,6 +110,10 @@ export default function DocumentsPage() {
     acc[d.category] = (acc[d.category] ?? 0) + 1
     return acc
   }, { all: 0, ai_import: 0, ticket_photo: 0, subcontractor_photo: 0, received_invoice: 0 })
+
+  if (planLocked) {
+    return <LockedFeature title="Documents Hub" description="All your AI-imported tickets, ticket photos, subcontractor photos, and received invoices in one place. Includes AI document reader." plan={planLocked.plan} price={planLocked.price} />
+  }
 
   return (
     <div className="p-6 md:p-8 max-w-7xl">

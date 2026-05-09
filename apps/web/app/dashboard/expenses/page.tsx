@@ -6,6 +6,7 @@ import { getCompanyId } from '@/lib/get-company-id'
 import { Plus, Pencil, Trash2, Wallet, Loader2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Expense } from '@/lib/types'
+import LockedFeature from '@/components/dashboard/locked-feature'
 
 const CATEGORIES = ['Fuel', 'DEF', 'Tires', 'Maintenance', 'Insurance', 'Labor', 'Equipment', 'Tolls', 'Other']
 
@@ -35,6 +36,7 @@ const emptyForm = () => ({
 })
 
 export default function ExpensesPage() {
+  const [planLocked, setPlanLocked] = useState<null | { plan: string; price: number }>(null)
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -44,6 +46,18 @@ export default function ExpensesPage() {
   const [categoryFilter, setCategoryFilter] = useState('')
   const [orgId, setOrgId] = useState('')
   const supabase = createClient()
+
+  // Plan gate: Expenses requires Owner Operator+
+  useEffect(() => {
+    getCompanyId().then(async id => {
+      if (!id) return
+      const supaClient = createClient()
+      const { data } = await supaClient.from('companies').select('plan, is_super_admin, subscription_override').eq('id', id).maybeSingle()
+      if (data?.is_super_admin || data?.subscription_override) return
+      const p = (data?.plan as string | null) ?? 'owner_operator'
+      if (p === 'solo') setPlanLocked({ plan: 'Owner Operator', price: 80 })
+    })
+  }, [])
 
   // Auto-open from dashboard "Add Expense" button
   useEffect(() => {
@@ -134,6 +148,10 @@ export default function ExpensesPage() {
     cat,
     total: expenses.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0),
   })).filter(r => r.total > 0).sort((a, b) => b.total - a.total)
+
+  if (planLocked) {
+    return <LockedFeature title="Expense Tracking" description="Log and categorize your business costs — fuel, tires, maintenance, and more. See exactly where your money is going." plan={planLocked.plan} price={planLocked.price} />
+  }
 
   return (
     <div className="space-y-6">

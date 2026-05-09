@@ -155,7 +155,7 @@ export type FeatureKey =
   | 'customer_invoicing'
 
 export const FEATURE_GATES: Record<FeatureKey, PlanId[]> = {
-  // Owner Operator + above (solo cannot dispatch or use driver portal features)
+  // Owner Operator + above
   realtime_dispatch: ['owner_operator', 'fleet', 'growth'],
   driver_portal:     ['owner_operator', 'fleet', 'growth'],
 

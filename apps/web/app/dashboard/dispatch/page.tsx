@@ -11,6 +11,7 @@ import {
 import { toast } from 'sonner'
 import type { Job, Load, Dispatch, DispatchStatus, DriverRecommendation, RateInsight, DispatchOptimizationHint } from '@/lib/types'
 import { getCompanyId } from '@/lib/get-company-id'
+import LockedFeature from '@/components/dashboard/locked-feature'
 import { logDispatchActivity, getRecommendedDriver, getRateInsights, getDispatchOptimizationHints } from '@/lib/workflows'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -185,6 +186,7 @@ export default function DispatchPage() {
   const supabase = createClient()
   const today = new Date().toISOString().split('T')[0]!
 
+  const [planLocked, setPlanLocked] = useState<null | { plan: string; price: number }>(null)
   const [jobs,           setJobs]           = useState<JobWithLoads[]>([])
   const [dispatches,     setDispatches]     = useState<Dispatch[]>([])
   const [drivers,        setDrivers]        = useState<DriverBasic[]>([])
@@ -237,6 +239,18 @@ export default function DispatchPage() {
   const [optimizationHints, setOptimizationHints] = useState<DispatchOptimizationHint[]>([])
   const [hintsDismissed,    setHintsDismissed]    = useState(false)
   const rateInsightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Plan gate: Dispatch requires Owner Operator+
+  useEffect(() => {
+    getCompanyId().then(async id => {
+      if (!id) return
+      const { data } = await supabase.from('companies').select('plan, is_super_admin, subscription_override').eq('id', id).maybeSingle()
+      if (data?.is_super_admin || data?.subscription_override) return
+      const p = (data?.plan as string | null) ?? 'owner_operator'
+      if (p === 'solo') setPlanLocked({ plan: 'Owner Operator', price: 80 })
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // ── Data ────────────────────────────────────────────────────────────────────
 
@@ -841,6 +855,10 @@ export default function DispatchPage() {
   }
 
   // ── Render ───────────────────────────────────────────────────────────────────
+
+  if (planLocked) {
+    return <LockedFeature title="Dispatch & Job Management" description="Create jobs, dispatch drivers, and track your entire operation in real time. Upgrade to start dispatching." plan={planLocked.plan} price={planLocked.price} />
+  }
 
   return (
     <div className="flex flex-col min-h-full">
