@@ -1,84 +1,166 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
-import { usePathname } from 'next/navigation'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { getCompanyId } from '@/lib/get-company-id'
-import { X, ChevronDown, ChevronUp, Check, ArrowRight } from 'lucide-react'
-
-const STEPS = [
-  { key: 'companyInfo', emoji: '🏢', title: 'Add your company info',   href: '/dashboard/settings', cta: 'Open Settings' },
-  { key: 'logo',        emoji: '🖼️', title: 'Upload your company logo', href: '/dashboard/settings', cta: 'Open Settings' },
-  { key: 'client',      emoji: '🤝', title: 'Add your first client',    href: '/dashboard/settings', cta: 'Open Settings' },
-  { key: 'driver',      emoji: '👷', title: 'Add your first driver',    href: '/dashboard/drivers',  cta: 'Add a Driver'  },
-  { key: 'truck',       emoji: '🚛', title: 'Add your first truck',     href: '/dashboard/settings', cta: 'Open Settings' },
-  { key: 'job',         emoji: '📋', title: 'Create your first job',    href: '/dashboard/dispatch', cta: 'Go to Dispatch'},
-  { key: 'ticket',      emoji: '🎫', title: 'Create your first ticket', href: '/dashboard/tickets',  cta: 'Go to Tickets' },
-  { key: 'invoice',     emoji: '💰', title: 'Create your first invoice',href: '/dashboard/invoices', cta: 'Go to Invoices'},
-] as const
-
-type StepKey = typeof STEPS[number]['key']
+import {
+  X, ChevronDown, ChevronUp, Check, ArrowRight,
+  ChevronRight, Lightbulb, AlertCircle, Loader2,
+} from 'lucide-react'
+import {
+  MASTER_STEPS,
+  getStepsForPlan,
+  estimatedMinutes,
+  type OnboardingStep,
+  type StepStatus,
+} from '@/lib/onboarding-steps'
+import { normalizePlan } from '@/lib/plan-gate'
 
 const DISMISS_KEY = 'dtb_checklist_dismissed'
 
-const EMPTY_DONE: Record<StepKey, boolean> = {
-  companyInfo: false, logo: false, client: false, driver: false,
-  truck: false, job: false, ticket: false, invoice: false,
+// Event name for the re-summon ? button in the sidebar
+export const OPEN_CHECKLIST_EVENT = 'open-onboarding-checklist'
+
+type StepStates = Record<string, StepStatus>
+
+// ── Confetti ────────────────────────────────────────────────────────────────────
+function Confetti() {
+  const count = typeof window !== 'undefined' && window.innerWidth < 768 ? 20 : 40
+  const pieces = useMemo(() => Array.from({ length: count }, (_, i) => ({
+    id: i,
+    left: Math.random() * 100,
+    delay: Math.random() * 1.2,
+    duration: 2 + Math.random() * 2,
+    color: ['#F5B731','#4ade80','#3b82f6','#f97316','#ec4899','#8b5cf6','#2d7a4f'][i % 7]!,
+    size: 6 + Math.random() * 8,
+    rotate: Math.random() > 0.5,
+  })), [count])
+
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-[60]">
+      {pieces.map(p => (
+        <div
+          key={p.id}
+          className={`absolute ${p.rotate ? 'rounded-sm' : 'rounded-full'}`}
+          style={{
+            left: `${p.left}%`,
+            top: '-20px',
+            width: p.size,
+            height: p.size,
+            backgroundColor: p.color,
+            animation: `confettiFall ${p.duration}s ${p.delay}s linear forwards`,
+          }}
+        />
+      ))}
+      <style>{`
+        @keyframes confettiFall {
+          0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+          100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+        }
+      `}</style>
+    </div>
+  )
 }
 
+// ── Main component ──────────────────────────────────────────────────────────────
 export default function OnboardingChecklist() {
-  const pathname = usePathname()
-  // Stable supabase reference — createClient() is lightweight but we don't want
-  // it to be a new object every render (would break useCallback deps)
   const supabase = useRef(createClient()).current
 
-  const [ready,       setReady]       = useState(false)
-  const [dismissed,   setDismissed]   = useState(false)
-  const [minimized,   setMinimized]   = useState(false)
-  const [done,        setDone]        = useState<Record<StepKey, boolean>>(EMPTY_DONE)
-  const [celebrating, setCelebrating] = useState(false)
+  const [ready,         setReady]         = useState(false)
+  const [dismissed,     setDismissed]     = useState(false)
+  const [minimized,     setMinimized]     = useState(false)
+  const [plan,          setPlan]          = useState<string | null>(null)
+  const [stepStates,    setStepStates]    = useState<StepStates>({})
+  const [validatedDone, setValidatedDone] = useState<Set<string>>(new Set())
+  const [activeIdx,     setActiveIdx]     = useState(0)
+  const [showProTip,    setShowProTip]    = useState(false)
+  const [validating,    setValidating]    = useState(false)
+  const [validateError, setValidateError] = useState<string | null>(null)
+  const [celebrating,   setCelebrating]   = useState(false)
+  const [invoiceBoom,   setInvoiceBoom]   = useState(false)
 
-  const companyIdRef  = useRef<string | null>(null)
-  const celebratedRef = useRef(false)
-  const dismissedRef  = useRef(false)
+  const companyIdRef   = useRef<string | null>(null)
+  const celebratedRef  = useRef(false)
+  const dismissedRef   = useRef(false)
+  const prevDoneRef    = useRef<Set<string>>(new Set())
 
-  // ── Re-usable status check (called on mount + on every realtime event) ───────
-  const checkStatus = useCallback(async () => {
+  // Derived: steps filtered by plan
+  const steps = useMemo(() => getStepsForPlan(plan), [plan])
+
+  // A step is "done" if validated from DB OR manually marked complete/skipped in JSONB
+  const doneIds = useMemo(() => {
+    const s = new Set<string>()
+    for (const step of steps) {
+      if (validatedDone.has(step.id)) s.add(step.id)
+      if (stepStates[step.id] === 'completed' || stepStates[step.id] === 'skipped') s.add(step.id)
+    }
+    return s
+  }, [steps, validatedDone, stepStates])
+
+  const doneCount  = doneIds.size
+  const totalSteps = steps.length
+  const pct        = totalSteps > 0 ? Math.round((doneCount / totalSteps) * 100) : 0
+  const minsLeft   = steps
+    .filter(s => !doneIds.has(s.id))
+    .reduce((sum, s) => sum + s.estimatedMinutes, 0)
+
+  const currentStep: OnboardingStep | undefined = steps[activeIdx]
+
+  // ── Sync active index to first incomplete step ──────────────────────────────
+  useEffect(() => {
+    if (!ready) return
+    const firstIncomplete = steps.findIndex(s => !doneIds.has(s.id))
+    if (firstIncomplete === -1) {
+      // All done — celebrate
+      if (!celebratedRef.current && !dismissedRef.current) {
+        celebratedRef.current = true
+        setCelebrating(true)
+      }
+    } else if (activeIdx >= steps.length || doneIds.has(steps[activeIdx]?.id ?? '')) {
+      setActiveIdx(Math.max(0, firstIncomplete))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doneIds, steps, ready])
+
+  // ── Detect first_invoice completion for special boom ───────────────────────
+  useEffect(() => {
+    if (!ready) return
+    const wasInvoiceDone = prevDoneRef.current.has('first_invoice')
+    const isInvoiceDone  = doneIds.has('first_invoice')
+    if (!wasInvoiceDone && isInvoiceDone && !celebratedRef.current) {
+      setInvoiceBoom(true)
+      setTimeout(() => setInvoiceBoom(false), 4000)
+    }
+    prevDoneRef.current = new Set(doneIds)
+  }, [doneIds, ready])
+
+  // ── Run validate() for all steps and update validatedDone ──────────────────
+  const refreshValidations = useCallback(async () => {
     const cid = companyIdRef.current
     if (!cid) return
-
-    const [coRes, c1, c2, c3, c4, c5, c6] = await Promise.all([
-      supabase.from('companies').select('name, phone, logo_url').eq('id', cid).maybeSingle(),
-      supabase.from('client_companies').select('id', { count: 'exact', head: true }).eq('company_id', cid),
-      supabase.from('drivers').select('id',  { count: 'exact', head: true }).eq('company_id', cid),
-      supabase.from('trucks').select('id',   { count: 'exact', head: true }).eq('company_id', cid),
-      supabase.from('jobs').select('id',     { count: 'exact', head: true }).eq('company_id', cid),
-      supabase.from('loads').select('id',    { count: 'exact', head: true }).eq('company_id', cid),
-      supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('company_id', cid),
-    ])
-
-    const co   = coRes.data as Record<string, unknown> | null
-    const name = String(co?.name ?? '').trim()
-
-    // Bug 3 debug log — remove once confirmed working
-    console.log('[onboarding] company fields:', { name, phone: co?.phone, logo_url: co?.logo_url })
-
-    setDone({
-      // Bug 3 fix: only require name (not phone) — phone may be added later
-      companyInfo: name.length > 0,
-      logo:        !!co?.logo_url,
-      client:      (c1.count ?? 0) > 0,
-      driver:      (c2.count ?? 0) > 0,
-      truck:       (c3.count ?? 0) > 0,
-      job:         (c4.count ?? 0) > 0,
-      ticket:      (c5.count ?? 0) > 0,
-      invoice:     (c6.count ?? 0) > 0,
-    })
-    setReady(true)
+    const results = await Promise.all(
+      MASTER_STEPS.map(async s => ({
+        id: s.id,
+        done: s.manualComplete ? false : await s.validate(supabase, cid).catch(() => false),
+      }))
+    )
+    setValidatedDone(new Set(results.filter(r => r.done).map(r => r.id)))
   }, [supabase])
 
-  // ── Permanent dismiss — writes to DB + localStorage ──────────────────────────
+  // ── Write step state to Supabase JSONB ─────────────────────────────────────
+  const persistStepState = useCallback(async (stepId: string, status: StepStatus) => {
+    const cid = companyIdRef.current
+    if (!cid) return
+    const next = { ...stepStates, [stepId]: status }
+    setStepStates(next)
+    await supabase
+      .from('companies')
+      .update({ onboarding_steps: next })
+      .eq('id', cid)
+  }, [supabase, stepStates])
+
+  // ── Permanent dismiss ───────────────────────────────────────────────────────
   const dismiss = useCallback(async () => {
     if (dismissedRef.current) return
     dismissedRef.current = true
@@ -93,12 +175,47 @@ export default function OnboardingChecklist() {
     setDismissed(true)
   }, [supabase])
 
-  // ── Init: early-exit check, first load, then realtime subscriptions ──────────
+  // ── Handle "Mark complete" button ───────────────────────────────────────────
+  const handleMarkComplete = useCallback(async () => {
+    if (!currentStep) return
+    setValidating(true)
+    setValidateError(null)
+
+    let isValid = false
+    if (currentStep.manualComplete) {
+      isValid = true
+    } else {
+      isValid = await currentStep.validate(supabase, companyIdRef.current ?? '').catch(() => false)
+    }
+
+    if (isValid) {
+      await persistStepState(currentStep.id, 'completed')
+      setValidatedDone(prev => new Set([...prev, currentStep.id]))
+      setShowProTip(false)
+      // Advance
+      const nextIdx = steps.findIndex((s, i) => i > activeIdx && !doneIds.has(s.id))
+      if (nextIdx !== -1) setActiveIdx(nextIdx)
+    } else {
+      setValidateError("Looks like that step isn't done yet — complete the action first, then come back.")
+    }
+    setValidating(false)
+  }, [currentStep, supabase, persistStepState, steps, activeIdx, doneIds])
+
+  // ── Handle "Skip" button ────────────────────────────────────────────────────
+  const handleSkip = useCallback(async () => {
+    if (!currentStep) return
+    await persistStepState(currentStep.id, 'skipped')
+    setValidateError(null)
+    setShowProTip(false)
+    const nextIdx = steps.findIndex((s, i) => i > activeIdx && !doneIds.has(s.id))
+    if (nextIdx !== -1) setActiveIdx(nextIdx)
+  }, [currentStep, persistStepState, steps, activeIdx, doneIds])
+
+  // ── Init ────────────────────────────────────────────────────────────────────
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null
 
     async function init() {
-      // Fast local check first
       if (typeof window !== 'undefined' && localStorage.getItem(DISMISS_KEY)) {
         setDismissed(true)
         return
@@ -108,94 +225,139 @@ export default function OnboardingChecklist() {
       if (!cid) return
       companyIdRef.current = cid
 
-      // Check DB dismiss flag
+      // Load company fields
       const { data: co } = await supabase
         .from('companies')
-        .select('onboarding_dismissed_at')
+        .select('onboarding_dismissed_at, onboarding_completed, plan, onboarding_steps, onboarding_tier')
         .eq('id', cid)
         .maybeSingle()
 
-      if ((co as Record<string, unknown> | null)?.onboarding_dismissed_at) {
+      const coData = co as Record<string, unknown> | null
+
+      if (coData?.onboarding_dismissed_at || coData?.onboarding_completed === true) {
         if (typeof window !== 'undefined') localStorage.setItem(DISMISS_KEY, '1')
         setDismissed(true)
         return
       }
 
-      // Initial status check
-      await checkStatus()
+      const companyPlan = (coData?.plan as string | null) ?? null
+      setPlan(companyPlan)
 
-      // Bug 1 fix: Supabase realtime subscriptions — re-check on any relevant change
-      const recheck = () => { if (!dismissedRef.current) checkStatus() }
+      // Restore step states from JSONB
+      const savedStates = (coData?.onboarding_steps as StepStates | null) ?? {}
+      setStepStates(savedStates)
 
+      // If tier changed, persist the new tier
+      const savedTier = coData?.onboarding_tier as string | null
+      const currentTier = normalizePlan(companyPlan)
+      if (savedTier !== currentTier) {
+        await supabase
+          .from('companies')
+          .update({ onboarding_tier: currentTier })
+          .eq('id', cid)
+      }
+
+      await refreshValidations()
+      setReady(true)
+
+      // Realtime: re-validate on any relevant table change
+      const recheck = () => { if (!dismissedRef.current) refreshValidations() }
       channel = supabase
-        .channel('onboarding-checks')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'client_companies' }, recheck)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers'          }, recheck)
+        .channel('onboarding-checklist')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'trucks'           }, recheck)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers'          }, recheck)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'client_companies' }, recheck)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs'             }, recheck)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'loads'            }, recheck)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices'         }, recheck)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'contractors'      }, recheck)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'leads'            }, recheck)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'documents'        }, recheck)
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'companies'   }, recheck)
         .subscribe()
     }
 
     init()
-
     return () => { if (channel) supabase.removeChannel(channel) }
-  }, [checkStatus, supabase])
+  }, [supabase, refreshValidations])
 
-  // ── Bug 2 fix: auto-celebrate + dismiss when all steps complete ──────────────
+  // ── Re-summon via window event (triggered by sidebar ? button) ─────────────
   useEffect(() => {
-    if (!ready || dismissedRef.current || celebratedRef.current) return
-    const allDone = Object.values(done).every(Boolean)
-    if (!allDone) return
+    const handler = () => {
+      dismissedRef.current = false
+      setDismissed(false)
+      setMinimized(false)
+    }
+    window.addEventListener(OPEN_CHECKLIST_EVENT, handler)
+    return () => window.removeEventListener(OPEN_CHECKLIST_EVENT, handler)
+  }, [])
 
-    celebratedRef.current = true
-    setCelebrating(true)
-
-    const t = setTimeout(() => dismiss(), 3000)
+  // ── Auto-dismiss when all done ──────────────────────────────────────────────
+  useEffect(() => {
+    if (!celebrating) return
+    const t = setTimeout(() => dismiss(), 4000)
     return () => clearTimeout(t)
-  }, [done, ready, dismiss])
+  }, [celebrating, dismiss])
 
-  // ── Guards ───────────────────────────────────────────────────────────────────
-  if (pathname?.startsWith('/dashboard/settings')) return null
-  if (dismissed) return null
-  if (!ready) return null
+  // ── Guards ──────────────────────────────────────────────────────────────────
+  if (dismissed || !ready || steps.length === 0) return null
 
-  const doneCount          = Object.values(done).filter(Boolean).length
-  const total              = STEPS.length
-  const pct                = Math.round((doneCount / total) * 100)
-  const firstIncompleteIdx = STEPS.findIndex(s => !done[s.key])
-
-  // ── Bug 2: Celebration screen — auto-closes after 3 s ───────────────────────
-  if (celebrating) {
+  // ── Invoice Boom celebration ─────────────────────────────────────────────────
+  if (invoiceBoom) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 sm:bottom-6 sm:left-auto sm:right-6 z-50 w-full sm:w-80 bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
-        <div style={{ background: 'var(--brand-dark)' }} className="px-4 py-3 flex items-center justify-between">
-          <span className="text-sm font-bold text-white">Setup Complete!</span>
-          <button onClick={dismiss} className="text-white/60 hover:text-white transition-colors">
-            <X className="h-4 w-4" />
-          </button>
+      <>
+        <Confetti />
+        <div className="fixed bottom-0 left-0 right-0 sm:bottom-6 sm:left-auto sm:right-6 z-50 w-full sm:w-80 bg-[#1a1a1a] rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden border-2 border-[#F5B731]">
+          <div className="p-6 text-center">
+            <div className="text-5xl mb-3">💥</div>
+            <p className="text-2xl font-black text-[#F5B731] mb-2">Boom.</p>
+            <p className="text-white font-bold text-base mb-1">First invoice sent.</p>
+            <p className="text-gray-400 text-sm leading-relaxed">
+              That&apos;s a real invoice to a real customer. That&apos;s the whole point of this system.
+            </p>
+          </div>
         </div>
-        <div className="p-6 text-center">
-          <div className="text-5xl mb-3">🎉</div>
-          <p className="text-base font-bold text-gray-900 mb-1">You&apos;re all set!</p>
-          <p className="text-sm text-gray-500 leading-relaxed">Your account is fully configured. Time to run your business!</p>
-          <p className="text-xs text-gray-400 mt-4">Closing automatically in 3 seconds…</p>
-        </div>
-      </div>
+      </>
     )
   }
 
-  // ── Main checklist ───────────────────────────────────────────────────────────
+  // ── All-done celebration ─────────────────────────────────────────────────────
+  if (celebrating) {
+    return (
+      <>
+        <Confetti />
+        <div className="fixed bottom-0 left-0 right-0 sm:bottom-6 sm:left-auto sm:right-6 z-50 w-full sm:w-80 bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+          <div className="bg-[#1a1a1a] px-4 py-3 flex items-center justify-between">
+            <span className="text-sm font-bold text-white">Setup Complete!</span>
+            <button onClick={dismiss} className="text-white/60 hover:text-white transition-colors">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="p-6 text-center">
+            <div className="text-5xl mb-3">🎉</div>
+            <p className="text-base font-bold text-gray-900 mb-1">You&apos;re set up.</p>
+            <p className="text-sm text-gray-500 leading-relaxed">
+              The hard part is done. Now go run the business.
+            </p>
+            <p className="text-xs text-gray-400 mt-4">Closing in a few seconds…</p>
+          </div>
+        </div>
+      </>
+    )
+  }
+
+  // ── Main checklist panel ─────────────────────────────────────────────────────
   return (
     <div className="fixed bottom-0 left-0 right-0 sm:bottom-6 sm:left-auto sm:right-6 z-50 w-full sm:w-80 bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
 
       {/* Header */}
-      <div style={{ background: 'var(--brand-dark)' }} className="px-4 py-3">
+      <div className="bg-[#1a1a1a] px-4 py-3">
         <div className="flex items-center justify-between mb-2.5">
-          <span className="text-sm font-bold text-white">🚀 Get Started with DumpTruckBoss</span>
-          <div className="flex items-center gap-1 shrink-0 ml-2">
+          <span className="text-sm font-bold text-white">🚀 Get set up</span>
+          <div className="flex items-center gap-1">
+            {minsLeft > 0 && (
+              <span className="text-[10px] text-white/50 mr-1">~{minsLeft} min left</span>
+            )}
             <button
               onClick={() => setMinimized(m => !m)}
               className="text-white/60 hover:text-white p-0.5 transition-colors"
@@ -212,78 +374,135 @@ export default function OnboardingChecklist() {
             </button>
           </div>
         </div>
+        {/* Progress bar */}
         <div className="flex items-center gap-2">
-          <div className="flex-1 rounded-full h-1.5" style={{ background: 'rgba(255,255,255,0.2)' }}>
+          <div className="flex-1 rounded-full h-1.5 bg-white/20">
             <div
-              className="h-1.5 rounded-full transition-all duration-500"
-              style={{ width: `${pct}%`, background: '#4ade80' }}
+              className="h-1.5 rounded-full transition-all duration-500 bg-[#F5B731]"
+              style={{ width: `${pct}%` }}
             />
           </div>
-          <span className="text-xs shrink-0" style={{ color: 'rgba(255,255,255,0.7)' }}>
-            {doneCount}/{total} done
-          </span>
+          <span className="text-[10px] text-white/60 shrink-0">{doneCount}/{totalSteps}</span>
         </div>
       </div>
 
-      {/* Steps list */}
-      {!minimized && (
-        <div className="max-h-[60vh] sm:max-h-[400px] overflow-y-auto divide-y divide-gray-50">
-          {STEPS.map((step, idx) => {
-            const isDone   = done[step.key]
-            const isActive = idx === firstIncompleteIdx
-
+      {/* Collapsed step list overview */}
+      {minimized ? (
+        <div className="max-h-52 overflow-y-auto divide-y divide-gray-50">
+          {steps.map((step, idx) => {
+            const isDone   = doneIds.has(step.id)
+            const isActive = idx === activeIdx
             return (
-              <div
-                key={step.key}
-                className={`px-4 py-3 transition-colors ${isActive && !isDone ? 'bg-green-50' : 'bg-white'}`}
+              <button
+                key={step.id}
+                onClick={() => { setActiveIdx(idx); setMinimized(false) }}
+                className={`w-full text-left px-4 py-2.5 flex items-center gap-2.5 transition-colors ${isActive ? 'bg-amber-50' : 'hover:bg-gray-50'}`}
               >
-                <div className="flex items-start gap-3">
-                  <div
-                    className="mt-0.5 h-5 w-5 rounded-full flex items-center justify-center shrink-0 border-2 transition-all"
-                    style={isDone
-                      ? { background: 'var(--brand-primary)', borderColor: 'var(--brand-primary)' }
-                      : isActive
-                      ? { background: 'transparent', borderColor: 'var(--brand-primary)' }
-                      : { background: 'transparent', borderColor: '#d1d5db' }
-                    }
-                  >
-                    {isDone && <Check className="h-3 w-3 text-white" />}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-sm leading-none">{step.emoji}</span>
-                      <span
-                        className="text-sm font-medium leading-snug"
-                        style={isDone
-                          ? { textDecoration: 'line-through', color: '#9ca3af' }
-                          : isActive
-                          ? { color: 'var(--brand-dark)' }
-                          : { color: '#4b5563' }
-                        }
-                      >
-                        {step.title}
-                      </span>
-                    </div>
-
-                    {isActive && !isDone && (
-                      <Link
-                        href={step.href}
-                        className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-white px-3 py-1.5 rounded-lg transition-colors hover:opacity-90"
-                        style={{ background: 'var(--brand-primary)' }}
-                      >
-                        {step.cta} <ArrowRight className="h-3 w-3" />
-                      </Link>
-                    )}
-                  </div>
+                <div
+                  className="h-4 w-4 rounded-full flex items-center justify-center shrink-0 border-2 transition-all"
+                  style={isDone
+                    ? { background: '#2d7a4f', borderColor: '#2d7a4f' }
+                    : isActive
+                    ? { background: 'transparent', borderColor: '#F5B731' }
+                    : { background: 'transparent', borderColor: '#d1d5db' }
+                  }
+                >
+                  {isDone && <Check className="h-2.5 w-2.5 text-white" />}
                 </div>
-              </div>
+                <span className="text-xs" style={isDone ? { textDecoration: 'line-through', color: '#9ca3af' } : { color: '#374151' }}>
+                  {step.emoji} {step.title}
+                </span>
+                {stepStates[step.id] === 'skipped' && (
+                  <span className="ml-auto text-[9px] text-gray-400 font-medium">skipped</span>
+                )}
+              </button>
             )
           })}
         </div>
-      )}
+      ) : currentStep ? (
+        /* ── Expanded active step ─────────────────────────────────────────── */
+        <div className="p-4">
+          {/* Step counter */}
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
+              Step {activeIdx + 1} of {totalSteps}
+            </span>
+            <button
+              onClick={() => { setMinimized(true) }}
+              className="text-[10px] text-gray-400 hover:text-gray-600 flex items-center gap-0.5"
+            >
+              See all <ChevronRight className="h-3 w-3" />
+            </button>
+          </div>
 
-      <div className="sm:hidden text-center py-2 text-xs text-gray-400">
+          {/* Step title */}
+          <h3 className="text-base font-black text-gray-900 mb-3 leading-snug">
+            {currentStep.emoji} {currentStep.title}
+          </h3>
+
+          {/* Why this matters — amber card in operator voice */}
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 mb-3">
+            <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide mb-1">Why this matters</p>
+            <p className="text-sm text-amber-900 leading-relaxed">{currentStep.why}</p>
+          </div>
+
+          {/* Validation error */}
+          {validateError && (
+            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 mb-3">
+              <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-red-700 leading-relaxed">{validateError}</p>
+            </div>
+          )}
+
+          {/* CTA button */}
+          <Link
+            href={currentStep.href}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-black transition-colors hover:opacity-90 mb-2"
+            style={{ background: '#F5B731' }}
+          >
+            {currentStep.cta} <ArrowRight className="h-4 w-4" />
+          </Link>
+
+          {/* Pro Tip toggle */}
+          {currentStep.proTip && (
+            <button
+              onClick={() => setShowProTip(p => !p)}
+              className="w-full flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 mb-3 transition-colors"
+            >
+              <Lightbulb className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+              {showProTip ? 'Hide pro tip' : 'Show pro tip'}
+            </button>
+          )}
+          {showProTip && currentStep.proTip && (
+            <div className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 mb-3">
+              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Pro Tip</p>
+              <p className="text-xs text-gray-700 leading-relaxed">{currentStep.proTip}</p>
+            </div>
+          )}
+
+          {/* Footer: Skip | Mark complete */}
+          <div className="flex items-center gap-2 pt-1 border-t border-gray-100 mt-2">
+            <button
+              onClick={handleSkip}
+              className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              Skip for now
+            </button>
+            <button
+              onClick={handleMarkComplete}
+              disabled={validating}
+              className="ml-auto flex items-center gap-1.5 text-xs font-bold text-white bg-gray-900 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+            >
+              {validating
+                ? <><Loader2 className="h-3 w-3 animate-spin" /> Checking…</>
+                : <><Check className="h-3 w-3" /> Done — next</>
+              }
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="sm:hidden text-center py-2 text-[10px] text-gray-400">
         Tap ↑ to minimize
       </div>
     </div>

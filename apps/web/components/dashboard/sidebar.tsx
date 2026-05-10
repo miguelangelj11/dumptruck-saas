@@ -20,7 +20,9 @@ import {
   FolderOpen,
   GripVertical,
   LucideIcon,
+  HelpCircle,
 } from 'lucide-react'
+import { OPEN_CHECKLIST_EVENT } from '@/components/onboarding-checklist'
 import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
@@ -332,6 +334,13 @@ export default function Sidebar({ user, logoUrl, companyName: companyNameProp, p
           </div>
         </div>
         <LanguageSelector />
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent(OPEN_CHECKLIST_EVENT))}
+          className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-white/50 hover:text-white hover:bg-white/8 transition-all mb-0.5"
+        >
+          <HelpCircle className="h-4 w-4" />
+          Setup guide
+        </button>
         <button
           onClick={handleLogout}
           disabled={loggingOut}

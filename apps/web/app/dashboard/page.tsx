@@ -12,6 +12,7 @@ import { ProfitAlerts } from '@/components/dashboard/profit-alerts'
 import { DriverProfitTable } from '@/components/dashboard/driver-profit-table'
 import SoloUpgradeNudge from '@/components/dashboard/solo-upgrade-nudge'
 import DashboardStatCards from '@/components/dashboard/DashboardStatCards'
+import SetupProgressBanner from '@/components/setup-progress-banner'
 import Link from 'next/link'
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -310,6 +311,9 @@ export default async function DashboardPage() {
     <div className="max-w-7xl">
       {/* Solo upgrade nudge */}
       {companyPlan === 'solo' && <SoloUpgradeNudge />}
+
+      {/* Setup progress banner — self-fetches, hides when dismissed or complete */}
+      <SetupProgressBanner />
 
       <div className="p-6 md:p-8">
 
