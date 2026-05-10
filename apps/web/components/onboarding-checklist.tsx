@@ -228,13 +228,15 @@ export default function OnboardingChecklist() {
       // Load company fields
       const { data: co } = await supabase
         .from('companies')
-        .select('onboarding_dismissed_at, onboarding_completed, plan, onboarding_steps, onboarding_tier')
+        .select('onboarding_dismissed_at, plan, onboarding_steps, onboarding_tier')
         .eq('id', cid)
         .maybeSingle()
 
       const coData = co as Record<string, unknown> | null
 
-      if (coData?.onboarding_dismissed_at || coData?.onboarding_completed === true) {
+      // Only the explicit dismiss flag (or localStorage) hides the checklist.
+      // onboarding_completed is for the initial signup wizard — separate concern.
+      if (coData?.onboarding_dismissed_at) {
         if (typeof window !== 'undefined') localStorage.setItem(DISMISS_KEY, '1')
         setDismissed(true)
         return
