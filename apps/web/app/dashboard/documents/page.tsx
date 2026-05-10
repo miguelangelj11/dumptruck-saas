@@ -1,15 +1,15 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import {
   FolderOpen, Search, LayoutGrid, List, X, ExternalLink,
   FileText, Image as ImageIcon, Bot, Receipt, Truck,
-  RefreshCw, Download,
+  RefreshCw, Download, Upload, Plus,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getCompanyId } from '@/lib/get-company-id'
 import LockedFeature from '@/components/dashboard/locked-feature'
-type Category = 'all' | 'ai_import' | 'ticket_photo' | 'subcontractor_photo' | 'received_invoice'
+type Category = 'all' | 'ai_import' | 'ticket_photo' | 'subcontractor_photo' | 'received_invoice' | 'uploaded'
 
 type DocumentItem = {
   id: string
@@ -29,6 +29,7 @@ const CATEGORY_TABS: { id: Category; label: string; icon: React.ElementType; col
   { id: 'ticket_photo',        label: 'Ticket Photos',      icon: Truck,       color: 'text-blue-600'   },
   { id: 'subcontractor_photo', label: 'Sub Photos',         icon: ImageIcon,   color: 'text-orange-600' },
   { id: 'received_invoice',    label: 'Received Invoices',  icon: Receipt,     color: 'text-green-600'  },
+  { id: 'uploaded',            label: 'Uploaded',           icon: Upload,      color: 'text-teal-600'   },
 ]
 
 const CATEGORY_BADGE: Record<Category, string> = {
@@ -37,6 +38,7 @@ const CATEGORY_BADGE: Record<Category, string> = {
   ticket_photo:        'bg-blue-100 text-blue-700',
   subcontractor_photo: 'bg-orange-100 text-orange-700',
   received_invoice:    'bg-green-100 text-green-700',
+  uploaded:            'bg-teal-100 text-teal-700',
 }
 
 const CATEGORY_LABEL: Record<Category, string> = {
@@ -45,6 +47,7 @@ const CATEGORY_LABEL: Record<Category, string> = {
   ticket_photo:        'Ticket Photo',
   subcontractor_photo: 'Sub Photo',
   received_invoice:    'Invoice',
+  uploaded:            'Uploaded',
 }
 
 function isImage(doc: DocumentItem) {
@@ -75,6 +78,12 @@ export default function DocumentsPage() {
   const [search, setSearch]       = useState('')
   const [view, setView]           = useState<ViewMode>('grid')
   const [preview, setPreview]     = useState<PreviewModal | null>(null)
+  const [uploadOpen, setUploadOpen] = useState(false)
+  const [uploading, setUploading]   = useState(false)
+  const [uploadName, setUploadName] = useState('')
+  const [uploadNotes, setUploadNotes] = useState('')
+  const [uploadFile, setUploadFile]   = useState<File | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const supaClient = createClient()
@@ -109,7 +118,27 @@ export default function DocumentsPage() {
     acc.all++
     acc[d.category] = (acc[d.category] ?? 0) + 1
     return acc
-  }, { all: 0, ai_import: 0, ticket_photo: 0, subcontractor_photo: 0, received_invoice: 0 })
+  }, { all: 0, ai_import: 0, ticket_photo: 0, subcontractor_photo: 0, received_invoice: 0, uploaded: 0 })
+
+  async function handleUpload() {
+    if (!uploadFile) return
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', uploadFile)
+      fd.append('name', uploadName || uploadFile.name)
+      if (uploadNotes) fd.append('notes', uploadNotes)
+      const res = await fetch('/api/documents', { method: 'POST', body: fd })
+      if (!res.ok) throw new Error('Upload failed')
+      setUploadOpen(false)
+      setUploadFile(null)
+      setUploadName('')
+      setUploadNotes('')
+      fetchDocs(category, search)
+    } finally {
+      setUploading(false)
+    }
+  }
 
   if (planLocked) {
     return <LockedFeature title="Documents Hub" description="All your AI-imported tickets, ticket photos, subcontractor photos, and received invoices in one place. Includes AI document reader." plan={planLocked.plan} price={planLocked.price} />
@@ -128,6 +157,13 @@ export default function DocumentsPage() {
           <p className="text-sm text-gray-500 mt-0.5">All files uploaded or generated in your account</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setUploadOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--brand-primary)] text-white text-sm font-semibold hover:bg-[var(--brand-primary-hover)] transition-colors shadow-sm"
+          >
+            <Plus className="h-4 w-4" />
+            Upload Document
+          </button>
           <button
             onClick={() => fetchDocs(category, search)}
             className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
@@ -282,6 +318,110 @@ export default function DocumentsPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Upload Modal */}
+      {uploadOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+          onClick={() => { if (!uploading) setUploadOpen(false) }}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+                <Upload className="h-4 w-4 text-[var(--brand-primary)]" />
+                Upload Document
+              </h2>
+              <button onClick={() => setUploadOpen(false)} disabled={uploading} className="text-gray-400 hover:text-gray-600">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {/* File picker */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">File <span className="text-red-500">*</span></label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={e => {
+                    const f = e.target.files?.[0] ?? null
+                    setUploadFile(f)
+                    if (f && !uploadName) setUploadName(f.name)
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full flex flex-col items-center gap-2 py-6 border-2 border-dashed border-gray-200 rounded-xl hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/5 transition-colors text-gray-500 hover:text-[var(--brand-primary)]"
+                >
+                  {uploadFile ? (
+                    <>
+                      <FileText className="h-8 w-8 text-[var(--brand-primary)]" />
+                      <span className="text-sm font-medium text-gray-900 truncate max-w-[280px]">{uploadFile.name}</span>
+                      <span className="text-xs text-gray-400">{(uploadFile.size / 1024).toFixed(0)} KB — click to change</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-8 w-8" />
+                      <span className="text-sm font-medium">Click to choose a file</span>
+                      <span className="text-xs text-gray-400">Images, PDFs, or any file type</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Name */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Document Name</label>
+                <input
+                  type="text"
+                  value={uploadName}
+                  onChange={e => setUploadName(e.target.value)}
+                  placeholder="e.g. Insurance Certificate 2026"
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
+                />
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Notes <span className="text-gray-400 font-normal">(optional)</span></label>
+                <textarea
+                  rows={2}
+                  value={uploadNotes}
+                  onChange={e => setUploadNotes(e.target.value)}
+                  placeholder="Any details about this document…"
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)] resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 px-5 pb-5">
+              <button
+                onClick={() => setUploadOpen(false)}
+                disabled={uploading}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpload}
+                disabled={!uploadFile || uploading}
+                className="flex-1 py-2.5 rounded-xl bg-[var(--brand-primary)] text-white text-sm font-semibold hover:bg-[var(--brand-primary-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {uploading ? (
+                  <><div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" /> Uploading…</>
+                ) : (
+                  <><Upload className="h-4 w-4" /> Upload</>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

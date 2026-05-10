@@ -5,7 +5,7 @@ export const runtime = 'nodejs'
 
 export type DocumentItem = {
   id: string
-  category: 'ai_import' | 'ticket_photo' | 'subcontractor_photo' | 'received_invoice'
+  category: 'ai_import' | 'ticket_photo' | 'subcontractor_photo' | 'received_invoice' | 'uploaded'
   name: string
   url: string
   mime: string
@@ -160,8 +160,77 @@ export async function GET(request: Request) {
     }
   }
 
+  // ── Manually Uploaded Documents ───────────────────────────────────────────
+  if (category === 'all' || category === 'uploaded') {
+    const { data: uploaded } = await supabase
+      .from('company_documents')
+      .select('id, name, url, mime, notes, created_at')
+      .eq('company_id', companyId)
+      .order('created_at', { ascending: false })
+      .limit(500)
+
+    for (const u of uploaded ?? []) {
+      if (!u.url) continue
+      if (search && !u.name.toLowerCase().includes(search)) continue
+      docs.push({
+        id:         `upload_${u.id}`,
+        category:   'uploaded',
+        name:       u.name,
+        url:        u.url,
+        mime:       u.mime ?? 'application/octet-stream',
+        job_name:   null,
+        created_at: u.created_at,
+        meta:       u.notes ? { notes: u.notes } : {},
+      })
+    }
+  }
+
   // Sort all merged docs by created_at desc
   docs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
   return NextResponse.json({ docs, total: docs.length })
+}
+
+export async function POST(request: Request) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('organization_id')
+    .eq('id', user.id)
+    .maybeSingle()
+  const companyId = profile?.organization_id ?? user.id
+
+  const formData = await request.formData()
+  const file  = formData.get('file') as File | null
+  const name  = (formData.get('name') as string | null)?.trim() || null
+  const notes = (formData.get('notes') as string | null)?.trim() || null
+
+  if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
+
+  const ext      = file.name.split('.').pop() ?? 'bin'
+  const safeName = name || file.name
+  const path     = `${companyId}/${crypto.randomUUID()}.${ext}`
+
+  const { error: storageErr } = await supabase.storage
+    .from('company-documents')
+    .upload(path, file, { contentType: file.type, upsert: false })
+
+  if (storageErr) return NextResponse.json({ error: storageErr.message }, { status: 500 })
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('company-documents')
+    .getPublicUrl(path)
+
+  const { data: doc, error: dbErr } = await supabase
+    .from('company_documents')
+    .insert({ company_id: companyId, name: safeName, url: publicUrl, mime: file.type || 'application/octet-stream', notes })
+    .select('id')
+    .single()
+
+  if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 })
+
+  return NextResponse.json({ id: doc.id, url: publicUrl })
 }
