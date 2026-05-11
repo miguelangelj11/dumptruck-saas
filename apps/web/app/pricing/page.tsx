@@ -63,7 +63,7 @@ const plans = [
     key: 'fleet',
     name: 'Fleet',
     tagline: 'Run your entire operation from one dashboard.',
-    monthlyPrice: '$200',
+    monthlyPrice: '$150',
     popular: true,
     isEnterprise: false,
     ctaLabel: 'Start Free 7-Day Trial',
