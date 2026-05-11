@@ -111,7 +111,7 @@ export default function EnterprisePage() {
                   <input
                     type="text"
                     required
-                    placeholder="Miguel Jimenez"
+                    placeholder="John Smith"
                     className={inputClass}
                     value={form.name}
                     onChange={e => update('name', e.target.value)}
@@ -122,7 +122,7 @@ export default function EnterprisePage() {
                   <input
                     type="text"
                     required
-                    placeholder="Jimenez Hauling LLC"
+                    placeholder="Atlas Hauling LLC"
                     className={inputClass}
                     value={form.company}
                     onChange={e => update('company', e.target.value)}
