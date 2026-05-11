@@ -11,7 +11,7 @@ import {
   Loader2, Plus, Trash2, Building2, Upload, X, Palette, Globe,
   FileText, Users, Bell, CreditCard, Shield, Download,
   Check, AlertTriangle, Mail, Lock, Eye, EyeOff, Truck, Clock,
-  Hash, Package, Link2, Pencil, Database, ChevronRight,
+  Hash, Package, Link2, Pencil, Database, ChevronRight, BarChart2,
 } from 'lucide-react'
 import type { ClientCompany } from '@/lib/types'
 import LanguageSelector from '@/components/language-selector'
@@ -2375,6 +2375,40 @@ export default function SettingsPage() {
               Manage Backups
               <ChevronRight className="h-4 w-4" />
             </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Business Analytics — owner only */}
+      {isSuperAdmin && (
+        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+            <BarChart2 className="h-4 w-4 text-[var(--brand-primary)]" />
+            <h2 className="font-semibold text-sm text-gray-900">Business Analytics</h2>
+            <span className="ml-1 text-xs bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] font-semibold px-2 py-0.5 rounded-full">Owner Only</span>
+          </div>
+          <div className="p-6">
+            <p className="text-xs text-gray-500 mb-4">
+              View signup trends, referral source breakdown, plan distribution, and trial-to-paid conversion across all DumpTruckBoss accounts.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/dashboard/admin/analytics"
+                className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors"
+              >
+                <BarChart2 className="h-4 w-4" />
+                View Analytics
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+              <a
+                href="https://app.posthog.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                PostHog Dashboard →
+              </a>
+            </div>
           </div>
         </div>
       )}

@@ -6,8 +6,18 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import { track } from '@/lib/analytics/posthog'
 
 type Plan = 'solo' | 'pro' | 'fleet'
+
+const HEARD_FROM_OPTIONS = [
+  { value: 'google',        label: 'Google Search' },
+  { value: 'facebook',      label: 'Facebook / Instagram' },
+  { value: 'youtube',       label: 'YouTube' },
+  { value: 'friend',        label: 'Friend or colleague' },
+  { value: 'industry_show', label: 'Trade show / event' },
+  { value: 'other',         label: 'Other' },
+]
 
 const PLANS: { id: Plan; name: string; price: string; desc: string; color: string; badge?: string }[] = [
   { id: 'solo',  name: 'Owner Operator Solo', price: '$25/mo',  desc: '1 truck & 1 driver, basic tickets',   color: '#1a1a1a' },
@@ -28,6 +38,8 @@ export default function SignupPage() {
   const [subscribeMode, setSubscribeMode]       = useState(false)
   const [alreadyExistsError, setAlreadyExists]  = useState(false)
   const [paymentComplete, setPaymentComplete]   = useState(false)
+  const [heardFrom, setHeardFrom]               = useState('')
+  const [heardFromDetail, setHeardFromDetail]   = useState('')
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -38,6 +50,7 @@ export default function SignupPage() {
     else if (p === 'growth' || p === 'enterprise') { /* enterprise → redirect handled by link */ }
     if (params.get('subscribe') === 'true') setSubscribeMode(true)
     if (params.get('paid') === 'true') setPaymentComplete(true)
+    track('signup_started', { plan: p ?? undefined, source: params.get('utm_source') ?? undefined })
   }, [])
 
   // ── Free trial flow ──────────────────────────────────────────────────────────
@@ -84,16 +97,18 @@ export default function SignupPage() {
       const now = new Date().toISOString()
       const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
       await supabase.from('companies').insert({
-        id:                  user.id,
-        name:                companyName,
-        owner_id:            user.id,
-        plan:                selectedPlan,
-        trial_started_at:    now,
-        trial_ends_at:       trialEndsAt,
-        subscription_status: 'trial',
-        terms_accepted_at:   now,
-        terms_version:       '2026-05-07',
-        privacy_accepted_at: now,
+        id:                       user.id,
+        name:                     companyName,
+        owner_id:                 user.id,
+        plan:                     selectedPlan,
+        trial_started_at:         now,
+        trial_ends_at:            trialEndsAt,
+        subscription_status:      'trial',
+        terms_accepted_at:        now,
+        terms_version:            '2026-05-07',
+        privacy_accepted_at:      now,
+        ...(heardFrom ? { referral_source: heardFrom } : {}),
+        ...(heardFromDetail ? { referral_source_detail: heardFromDetail } : {}),
       })
 
       await supabase.from('profiles').upsert({
@@ -108,6 +123,12 @@ export default function SignupPage() {
       ])
 
       localStorage.setItem('dtb_selected_plan', selectedPlan)
+      track('signup_completed', {
+        plan: selectedPlan,
+        heard_from: heardFrom || undefined,
+        heard_from_detail: heardFromDetail || undefined,
+      })
+      track('trial_started', { plan: selectedPlan })
       clearTimeout(timer)
       router.push('/dashboard')
     } catch (err) {
@@ -309,6 +330,28 @@ export default function SignupPage() {
             <Field label="Confirm password">
               <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
                 required minLength={6} autoComplete="new-password" placeholder="Re-enter your password" style={inputStyle} />
+            </Field>
+
+            <Field label="How did you hear about us?">
+              <select
+                value={heardFrom}
+                onChange={e => { setHeardFrom(e.target.value); setHeardFromDetail('') }}
+                style={{ ...inputStyle, appearance: 'none', backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'8\' viewBox=\'0 0 12 8\'%3E%3Cpath d=\'M1 1l5 5 5-5\' stroke=\'%236b7280\' stroke-width=\'1.5\' fill=\'none\' stroke-linecap=\'round\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', paddingRight: '36px', color: heardFrom ? '#111827' : '#9ca3af' }}
+              >
+                <option value="" disabled>Select an option…</option>
+                {HEARD_FROM_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+              {heardFrom === 'other' && (
+                <input
+                  type="text"
+                  value={heardFromDetail}
+                  onChange={e => setHeardFromDetail(e.target.value)}
+                  placeholder="Tell us more…"
+                  style={{ ...inputStyle, marginTop: '8px' }}
+                />
+              )}
             </Field>
 
             <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>

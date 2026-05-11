@@ -4,6 +4,8 @@ import { Toaster } from "sonner"
 import { NextIntlClientProvider } from "next-intl"
 import { getLocale, getMessages } from "next-intl/server"
 import { RegisterSW } from "@/components/pwa/RegisterSW"
+import { Suspense } from "react"
+import { PostHogProvider } from "@/components/analytics/PostHogProvider"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
@@ -76,9 +78,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="bg-white font-sans antialiased">
         <NextIntlClientProvider messages={messages}>
-          {children}
-          <Toaster position="top-right" richColors />
-          <RegisterSW />
+          <Suspense fallback={null}>
+            <PostHogProvider>
+              {children}
+              <Toaster position="top-right" richColors />
+              <RegisterSW />
+            </PostHogProvider>
+          </Suspense>
         </NextIntlClientProvider>
       </body>
     </html>
