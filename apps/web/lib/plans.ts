@@ -63,7 +63,7 @@ export const PLANS = {
   fleet: {
     id: 'fleet',
     name: 'Fleet',
-    price: 200,
+    price: 150,
     priceId: process.env.STRIPE_FLEET_PRICE_ID ?? '',
     description: 'Run your entire operation and stop losing money every week.',
     tagline: 'For growing companies that need full control',

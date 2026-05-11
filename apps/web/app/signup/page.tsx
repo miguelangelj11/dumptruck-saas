@@ -12,7 +12,7 @@ type Plan = 'solo' | 'owner_operator' | 'fleet' | 'growth'
 const PLANS: { id: Plan; name: string; price: string; desc: string; color: string; badge?: string; subtext?: string }[] = [
   { id: 'solo',           name: 'Solo',           price: '$25/mo',  desc: '1 truck & 1 driver, basic tickets',        color: '#1a1a1a' },
   { id: 'owner_operator', name: 'Owner Operator', price: '$80/mo',  desc: 'Up to 5 trucks, dispatch & jobs',          color: '#1a1a1a' },
-  { id: 'fleet',          name: 'Fleet',          price: '$200/mo', desc: 'Unlimited trucks & drivers',               color: '#F5B731', badge: 'Most Popular', subtext: 'Includes missing ticket detection + auto follow-ups' },
+  { id: 'fleet',          name: 'Fleet',          price: '$150/mo', desc: 'Unlimited trucks & drivers',               color: '#F5B731', badge: 'Most Popular', subtext: 'Includes missing ticket detection + auto follow-ups' },
   { id: 'growth',         name: 'Growth',         price: '$350/mo', desc: 'CRM + quotes + advanced analytics',        color: '#8B5CF6' },
 ]
 

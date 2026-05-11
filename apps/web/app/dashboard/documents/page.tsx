@@ -119,7 +119,7 @@ export default function DocumentsPage() {
       const { data } = await supaClient.from('companies').select('plan, is_super_admin, subscription_override').eq('id', id).maybeSingle()
       if (data?.is_super_admin || data?.subscription_override) return
       const p = (data?.plan as string | null) ?? 'owner_operator'
-      if (p === 'solo' || p === 'owner_operator') setPlanLocked({ plan: 'Fleet', price: 200 })
+      if (p === 'solo' || p === 'owner_operator') setPlanLocked({ plan: 'Fleet', price: 150 })
     })
   }, [])
 

@@ -23,7 +23,7 @@ const plans = [
   {
     key: 'fleet',
     name: 'Fleet',
-    price: '$200',
+    price: '$150',
     period: '/mo',
     description: 'For growing companies that need full control',
     features: [

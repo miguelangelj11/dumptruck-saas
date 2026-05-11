@@ -80,7 +80,7 @@ export default async function TrialExpiredPage() {
                 textAlign: 'center',
               }}
             >
-              Subscribe — $200/mo
+              Subscribe — $150/mo
               <div style={{ fontSize: '11px', fontWeight: 400, marginTop: '2px', opacity: 0.7 }}>Fleet Plan</div>
             </Link>
             <Link

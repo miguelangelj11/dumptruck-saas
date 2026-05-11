@@ -64,7 +64,7 @@ const plans = [
     key: 'fleet',
     name: 'Fleet',
     tagline: 'For growing companies that need full control',
-    monthlyPrice: '$200',
+    monthlyPrice: '$150',
     popular: true,
     ctaLabel: 'Start Free 7-Day Trial',
     features: [
