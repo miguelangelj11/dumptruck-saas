@@ -226,7 +226,7 @@ export default function SignupPage() {
         {/* Plan selector */}
         <div style={{ marginBottom: '24px' }}>
           <p style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: '16px' }}>Which plan are you signing up for?</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', alignItems: 'stretch' }}>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 items-stretch">
             {PLANS.map((plan) => {
               const isSelected = selectedPlan === plan.id
               const isPopular = !!plan.badge

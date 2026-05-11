@@ -8,7 +8,7 @@ import Footer from '@/components/landing/footer'
 
 function Hero() {
   return (
-    <section className="relative bg-[#1a1a1a] min-h-screen flex items-center overflow-hidden px-6 py-24 pt-32">
+    <section className="relative bg-[#1a1a1a] sm:min-h-screen flex items-center overflow-hidden px-6 py-16 pt-28 sm:py-24 sm:pt-32">
       <div
         className="absolute inset-0 opacity-[0.04]"
         style={{
