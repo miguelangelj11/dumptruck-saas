@@ -49,13 +49,12 @@ export async function POST(request: Request) {
 
   const stripe   = new Stripe(secretKey)
   const siteUrl  = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin
-  const isEnterprise = plan === 'enterprise'
-  const trialParams = (!isEnterprise && !skipTrial) ? {
+  const trialParams = !skipTrial ? {
     trial_period_days: 7,
     trial_settings: { end_behavior: { missing_payment_method: 'cancel' as const } },
   } : {}
   const paymentCollection: Stripe.Checkout.SessionCreateParams['payment_method_collection'] =
-    (isEnterprise || skipTrial) ? 'always' : 'if_required'
+    skipTrial ? 'always' : 'if_required'
 
   // ── Guest "pay first, create account after" flow ──────────────────────────
   if (!user) {

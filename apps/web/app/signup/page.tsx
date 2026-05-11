@@ -34,8 +34,8 @@ export default function SignupPage() {
     const p = params.get('plan')
     if (p === 'solo') setSelectedPlan('solo')
     else if (p === 'fleet') setSelectedPlan('fleet')
-    else if (p === 'growth') setSelectedPlan('growth')
     else if (p === 'pro' || p === 'owner_operator' || p === 'owner') setSelectedPlan('pro')
+    else if (p === 'growth' || p === 'enterprise') { /* enterprise → redirect handled by link */ }
     if (params.get('subscribe') === 'true') setSubscribeMode(true)
     if (params.get('paid') === 'true') setPaymentComplete(true)
   }, [])
