@@ -2,11 +2,10 @@ import Link from 'next/link'
 import { Truck } from 'lucide-react'
 
 const productLinks = [
-  { label: 'Features',     href: '/#features' },
-  { label: 'How It Works', href: '/#how-it-works' },
-  { label: 'Pricing',      href: '/pricing' },
-  { label: 'FAQ',          href: '/#faq' },
-  { label: 'Changelog',    href: '/changelog' },
+  { label: 'Features',  href: '/#features' },
+  { label: 'Pricing',   href: '/pricing' },
+  { label: 'FAQ',       href: '/#faq' },
+  { label: 'Changelog', href: '/changelog' },
 ]
 
 const companyLinks = [
