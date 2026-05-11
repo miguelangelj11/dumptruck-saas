@@ -213,31 +213,17 @@ export default function AboutPage() {
               </p>
             </div>
 
-            {/* Angelo */}
+            {/* Addie */}
             <div className="text-center p-8 bg-gray-50 rounded-2xl border-2 border-gray-200 hover:border-[#F5B731] transition-colors">
               <div className="w-24 h-24 rounded-full bg-[#1a1a1a] mx-auto mb-4 flex items-center justify-center text-white text-2xl font-black border-4 border-gray-600">
-                AJ
+                A
               </div>
-              <h3 className="text-xl font-bold text-gray-900">Angelo Jimenez</h3>
+              <h3 className="text-xl font-bold text-gray-900">Addie</h3>
               <p className="text-[#F5B731] font-semibold text-sm mb-3">Co-founder &amp; Engineer</p>
               <p className="text-gray-600 text-sm leading-relaxed">
                 Software engineer. Built DumpTruckBoss with me from
                 the ground up. The reason every screen actually works
                 the way it should.
-              </p>
-            </div>
-
-            {/* Angel */}
-            <div className="text-center p-8 bg-gray-50 rounded-2xl border-2 border-gray-200 hover:border-[#F5B731] transition-colors">
-              <div className="w-24 h-24 rounded-full bg-[#1a1a1a] mx-auto mb-4 flex items-center justify-center text-white text-2xl font-black border-4 border-gray-600">
-                AJ
-              </div>
-              <h3 className="text-xl font-bold text-gray-900">Angel Jimenez</h3>
-              <p className="text-[#F5B731] font-semibold text-sm mb-3">Operations Partner</p>
-              <p className="text-gray-600 text-sm leading-relaxed">
-                Decades in the hauling business. The reason I know
-                what real operators need — and the first one to test
-                every feature in the real world.
               </p>
             </div>
 
