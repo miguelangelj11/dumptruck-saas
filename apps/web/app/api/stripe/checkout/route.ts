@@ -3,15 +3,16 @@ import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
 
-type PlanKey = 'solo' | 'owner_operator' | 'owner' | 'fleet' | 'growth' | 'enterprise'
+type PlanKey = 'solo' | 'pro' | 'owner_operator' | 'owner' | 'fleet' | 'growth' | 'enterprise'
 
-const PRICE_IDS: Record<PlanKey, string | undefined> = {
+const PRICE_IDS: Record<PlanKey, string | undefined | null> = {
   solo:           process.env.STRIPE_SOLO_PRICE_ID,
-  owner_operator: process.env.STRIPE_OWNER_PRICE_ID,
-  owner:          process.env.STRIPE_OWNER_PRICE_ID,
+  pro:            process.env.STRIPE_OWNER_PRICE_ID,   // Owner Operator Pro reuses STRIPE_OWNER_PRICE_ID
+  owner_operator: process.env.STRIPE_OWNER_PRICE_ID,   // backward compat
+  owner:          process.env.STRIPE_OWNER_PRICE_ID,   // backward compat
   fleet:          process.env.STRIPE_FLEET_PRICE_ID,
-  growth:         process.env.STRIPE_GROWTH_PRICE_ID || process.env.STRIPE_ENTERPRISE_PRICE_ID,
-  enterprise:     process.env.STRIPE_ENTERPRISE_PRICE_ID,
+  growth:         null,   // enterprise — no Stripe checkout
+  enterprise:     null,   // enterprise — no Stripe checkout
 }
 
 function getAdmin() {
@@ -33,6 +34,10 @@ export async function POST(request: Request) {
   const skipTrial: boolean = body.skip_trial === true
   const guestEmail: string | undefined = body.guest_email || undefined
   const guestCompanyName: string | undefined = body.guest_company_name || undefined
+
+  if (plan === 'enterprise' || plan === 'growth') {
+    return NextResponse.json({ error: 'Enterprise requires custom setup', redirect: '/enterprise' }, { status: 400 })
+  }
 
   const priceId = PRICE_IDS[plan]
   if (!priceId) {

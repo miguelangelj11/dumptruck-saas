@@ -1,49 +1,52 @@
 export const PLANS = {
   solo: {
     id: 'solo',
-    name: 'Solo',
+    name: 'Owner Operator Solo',
+    shortName: 'Solo',
     price: 25,
-    priceId: process.env.STRIPE_SOLO_PRICE_ID ?? '',
-    description: 'Track your loads and get paid. Simple.',
-    tagline: 'For the one-man operation — 1 truck, 1 driver',
+    displayPrice: '$25',
+    priceLabel: '/mo',
+    priceId: process.env.STRIPE_SOLO_PRICE_ID,
+    tagline: 'One truck. Get organized and get paid.',
+    description: 'Perfect for single truck owner-operators.',
     badge: null,
-    limits: {
-      trucks: 1,
-      drivers: 1,
-    },
+    isCustom: false,
+    limits: { trucks: 1, drivers: 1, team_members: 1 },
     features: [
       '1 truck & 1 driver',
-      'Ticket tracking (unlimited)',
+      'Dashboard',
+      'Unlimited ticket tracking',
       'Basic invoicing',
-      'Basic dashboard',
+      'Document storage',
       '7-day free trial',
     ],
     locked: [
-      'Dispatching & job management',
+      'Dispatch board',
+      'Revenue analytics',
       'Subcontractor management',
-      'Revenue & profit tracking',
-      'CRM Pipeline',
       'Team access',
+      'AI document reader',
     ],
   },
-  owner_operator: {
-    id: 'owner_operator',
-    name: 'Owner Operator',
+
+  pro: {
+    id: 'pro',
+    name: 'Owner Operator Pro',
+    shortName: 'Pro',
     price: 80,
-    priceId: process.env.STRIPE_OWNER_PRICE_ID ?? '',
-    description: 'Stay organized and get paid faster.',
-    tagline: 'Perfect for solo operators with up to 5 trucks',
+    displayPrice: '$80',
+    priceLabel: '/mo',
+    priceId: process.env.STRIPE_OWNER_PRICE_ID,
+    tagline: 'Growing your operation? This is your plan.',
+    description: 'For owner-operators ready to scale to a small fleet.',
     badge: null,
-    limits: {
-      trucks: 5,
-      drivers: 5,
-    },
+    isCustom: false,
+    limits: { trucks: 5, drivers: 5, team_members: 1 },
     features: [
-      'Up to 5 trucks & 5 drivers',
-      'Dispatching & job management',
-      'Ticket tracking (unlimited)',
-      'Basic invoicing',
-      'Basic dashboard',
+      'Up to 5 trucks & drivers',
+      'Everything in Solo',
+      'Full dispatch board',
+      'Revenue analytics',
       'Driver management',
       'Client companies',
       '7-day free trial',
@@ -52,36 +55,35 @@ export const PLANS = {
       'Subcontractor management',
       'Missing ticket detection',
       'Follow-up automation',
-      'Auto invoice intelligence',
-      'Profit tracking',
-      'AI dispatch recommendations',
-      'CRM Pipeline',
-      'AI document reader',
       'Team access',
+      'AI document reader',
+      'CRM Pipeline',
     ],
   },
+
   fleet: {
     id: 'fleet',
     name: 'Fleet',
-    price: 150,
-    priceId: process.env.STRIPE_FLEET_PRICE_ID ?? '',
-    description: 'Run your entire operation and stop losing money every week.',
-    tagline: 'For growing companies that need full control',
+    shortName: 'Fleet',
+    price: 200,
+    displayPrice: '$200',
+    priceLabel: '/mo',
+    priceId: process.env.STRIPE_FLEET_PRICE_ID,
+    tagline: 'Run your entire operation from one dashboard.',
+    description: 'For growing fleets that need full operational control.',
     badge: 'Most Popular',
-    limits: {
-      trucks: null,
-      drivers: null,
-    },
+    isCustom: false,
+    limits: { trucks: null, drivers: null, team_members: null },
     features: [
       'Unlimited trucks & drivers',
-      'Everything in Owner Operator',
+      'Everything in Owner Operator Pro',
       'Subcontractor management',
       'Missing ticket detection',
       'Follow-up automation engine',
       'Auto invoice intelligence',
       'Real-time dispatch board',
       'Driver zero-friction portal',
-      'Basic profit tracking',
+      'Profit tracking',
       'AI dispatch recommendations',
       'Overdue invoice automation',
       'Weekly performance reports',
@@ -94,37 +96,39 @@ export const PLANS = {
       'CRM Growth Pipeline',
       'Quote builder',
       'Advanced job profitability',
-      'Customer insights',
       'Mobile ticket + signature',
     ],
   },
-  growth: {
-    id: 'growth',
-    name: 'Growth',
-    price: 350,
-    priceId: process.env.STRIPE_GROWTH_PRICE_ID ?? process.env.STRIPE_ENTERPRISE_PRICE_ID ?? '',
-    description: 'Win more jobs and scale your revenue.',
-    tagline: 'For operators ready to grow their business',
+
+  enterprise: {
+    id: 'enterprise',
+    name: 'Enterprise',
+    shortName: 'Enterprise',
+    price: null,
+    displayPrice: 'Custom',
+    priceLabel: 'pricing',
+    priceId: null,
+    tagline: 'Built around your operation. Priced to match.',
+    description: 'Custom solutions for large dump truck fleets and hauling companies.',
     badge: null,
-    limits: {
-      trucks: null,
-      drivers: null,
-    },
+    isCustom: true,
+    limits: { trucks: null, drivers: null, team_members: null },
     features: [
       'Everything in Fleet',
+      'Custom onboarding',
+      'Dedicated account manager',
       'CRM Growth Pipeline',
-      'Lead & job tracking',
       'Quote builder',
-      'Convert quotes → jobs → invoices',
       'Advanced job profitability',
       'Revenue per driver & truck',
       'Customer insights dashboard',
-      'Top clients & slow payer tracking',
-      'Mobile ticket with signature capture',
-      'AI document reader (400/mo)',
+      'Mobile ticket + signature capture',
+      'AI document reader (unlimited)',
       'Documents hub',
+      'Custom integrations',
       'Priority support',
-      '7-day free trial',
+      'Custom contract terms',
+      'Multi-location support',
     ],
     locked: [],
   },
@@ -133,7 +137,7 @@ export const PLANS = {
 export type PlanId = keyof typeof PLANS
 
 export function getPlan(planId: string) {
-  return PLANS[planId as PlanId] ?? PLANS.owner_operator
+  return PLANS[planId as PlanId] ?? PLANS.pro
 }
 
 export type FeatureKey =
@@ -155,27 +159,27 @@ export type FeatureKey =
   | 'customer_invoicing'
 
 export const FEATURE_GATES: Record<FeatureKey, PlanId[]> = {
-  // Owner Operator + above
-  realtime_dispatch: ['owner_operator', 'fleet', 'growth'],
-  driver_portal:     ['owner_operator', 'fleet', 'growth'],
+  // Pro + above
+  realtime_dispatch: ['pro', 'fleet', 'enterprise'],
+  driver_portal:     ['pro', 'fleet', 'enterprise'],
 
   // Fleet + above
-  subcontractors:            ['fleet', 'growth'],
-  missing_ticket_detection:  ['fleet', 'growth'],
-  follow_up_automation:      ['fleet', 'growth'],
-  auto_invoice_intelligence: ['fleet', 'growth'],
-  profit_tracking:           ['fleet', 'growth'],
-  ai_dispatch:               ['fleet', 'growth'],
-  overdue_automation:        ['fleet', 'growth'],
-  weekly_reports:            ['fleet', 'growth'],
+  subcontractors:            ['fleet', 'enterprise'],
+  missing_ticket_detection:  ['fleet', 'enterprise'],
+  follow_up_automation:      ['fleet', 'enterprise'],
+  auto_invoice_intelligence: ['fleet', 'enterprise'],
+  profit_tracking:           ['fleet', 'enterprise'],
+  ai_dispatch:               ['fleet', 'enterprise'],
+  overdue_automation:        ['fleet', 'enterprise'],
+  weekly_reports:            ['fleet', 'enterprise'],
 
-  // Growth only
-  crm_pipeline:           ['growth'],
-  quote_builder:          ['growth'],
-  advanced_profitability: ['growth'],
-  customer_insights:      ['growth'],
-  mobile_ticket:          ['growth'],
-  customer_invoicing:     ['growth'],
+  // Enterprise only
+  crm_pipeline:           ['enterprise'],
+  quote_builder:          ['enterprise'],
+  advanced_profitability: ['enterprise'],
+  customer_insights:      ['enterprise'],
+  mobile_ticket:          ['enterprise'],
+  customer_invoicing:     ['enterprise'],
 }
 
 export function canAccess(planId: string, feature: FeatureKey): boolean {
@@ -183,11 +187,11 @@ export function canAccess(planId: string, feature: FeatureKey): boolean {
 }
 
 function normalizePlanId(plan: string | null | undefined): PlanId {
-  if (plan === 'solo')                            return 'solo'
-  if (plan === 'fleet')                           return 'fleet'
-  if (plan === 'growth' || plan === 'enterprise') return 'growth'
-  if (plan === 'owner_operator')                  return 'owner_operator'
-  return 'owner_operator'
+  if (plan === 'solo')                                            return 'solo'
+  if (plan === 'fleet')                                          return 'fleet'
+  if (plan === 'enterprise' || plan === 'growth')                return 'enterprise'
+  if (plan === 'pro' || plan === 'owner_operator' || plan === 'starter') return 'pro'
+  return 'pro'
 }
 
 export function getPlanGate(company: {
@@ -198,15 +202,18 @@ export function getPlanGate(company: {
 }) {
   if (company.is_super_admin || company.subscription_override) {
     return {
-      planId:          'growth' as PlanId,
+      planId:          'enterprise' as PlanId,
       can:             (_feature: FeatureKey) => true,
       truckLimit:      null as number | null,
       driverLimit:     null as number | null,
       isSolo:          false,
-      isOwnerOperator: false,
+      isPro:           false,
       isFleet:         false,
-      isGrowth:        true,
+      isEnterprise:    true,
       isSuperAdmin:    true,
+      // backward-compat aliases
+      isOwnerOperator: false,
+      isGrowth:        true,
     }
   }
 
@@ -217,9 +224,12 @@ export function getPlanGate(company: {
     truckLimit:      PLANS[planId].limits.trucks as number | null,
     driverLimit:     PLANS[planId].limits.drivers as number | null,
     isSolo:          planId === 'solo',
-    isOwnerOperator: planId === 'owner_operator',
+    isPro:           planId === 'pro',
     isFleet:         planId === 'fleet',
-    isGrowth:        planId === 'growth',
+    isEnterprise:    planId === 'enterprise',
     isSuperAdmin:    false,
+    // backward-compat aliases
+    isOwnerOperator: planId === 'pro',
+    isGrowth:        planId === 'enterprise',
   }
 }

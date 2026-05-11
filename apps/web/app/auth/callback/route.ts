@@ -116,7 +116,7 @@ export async function GET(request: Request) {
     .insert({
       owner_id:            user.id,
       name:                user.user_metadata?.company_name ?? user.email,
-      plan:                user.user_metadata?.plan ?? 'owner_operator',
+      plan:                user.user_metadata?.plan ?? 'pro',
       trial_started_at:    now.toISOString(),
       trial_ends_at:       new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       subscription_status: 'trial',
@@ -138,10 +138,10 @@ export async function GET(request: Request) {
         const resend      = new Resend(process.env.RESEND_API_KEY)
         const firstName   = (user.user_metadata?.full_name as string | undefined)?.split(' ')[0]?.trim() || 'there'
         const companyName = (user.user_metadata?.company_name as string | undefined) || user.email
-        const plan        = (user.user_metadata?.plan as string | undefined) ?? 'owner_operator'
+        const plan        = (user.user_metadata?.plan as string | undefined) ?? 'pro'
         const trialEnd    = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
         const trialEndStr = trialEnd.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-        const planLabel   = plan === 'fleet' ? 'Fleet Plan' : plan === 'enterprise' ? 'Enterprise Plan' : 'Owner Operator Plan'
+        const planLabel   = plan === 'fleet' ? 'Fleet Plan' : plan === 'enterprise' ? 'Enterprise Plan' : plan === 'solo' ? 'Owner Operator Solo Plan' : 'Owner Operator Pro Plan'
 
         await Promise.allSettled([
           // Welcome email to new user

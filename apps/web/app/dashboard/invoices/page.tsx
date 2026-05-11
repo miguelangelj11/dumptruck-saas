@@ -1624,8 +1624,8 @@ export default function InvoicesPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {([
                 { type: 'client',     label: 'Client Invoice',        desc: 'Bill a client for work completed',          locked: false },
-                { type: 'paystub',    label: 'Driver Pay Invoice',    desc: 'Pay your drivers for jobs completed',       locked: companyPlan === 'owner_operator' },
-                { type: 'contractor', label: 'Subcontractor Invoice', desc: 'Pay a subcontractor for work completed',    locked: companyPlan === 'owner_operator' },
+                { type: 'paystub',    label: 'Driver Pay Invoice',    desc: 'Pay your drivers for jobs completed',       locked: companyPlan === 'pro' || companyPlan === 'owner_operator' },
+                { type: 'contractor', label: 'Subcontractor Invoice', desc: 'Pay a subcontractor for work completed',    locked: companyPlan === 'pro' || companyPlan === 'owner_operator' },
               ] as const).map(({ type, label, desc, locked }) => (
                 <div key={type} className="relative">
                   <button

@@ -7,13 +7,12 @@ import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
-type Plan = 'solo' | 'owner_operator' | 'fleet' | 'growth'
+type Plan = 'solo' | 'pro' | 'fleet'
 
-const PLANS: { id: Plan; name: string; price: string; desc: string; color: string; badge?: string; subtext?: string }[] = [
-  { id: 'solo',           name: 'Solo',           price: '$25/mo',  desc: '1 truck & 1 driver, basic tickets',        color: '#1a1a1a' },
-  { id: 'owner_operator', name: 'Owner Operator', price: '$80/mo',  desc: 'Up to 5 trucks, dispatch & jobs',          color: '#1a1a1a' },
-  { id: 'fleet',          name: 'Fleet',          price: '$150/mo', desc: 'Unlimited trucks & drivers',               color: '#F5B731', badge: 'Most Popular', subtext: 'Includes missing ticket detection + auto follow-ups' },
-  { id: 'growth',         name: 'Growth',         price: '$350/mo', desc: 'CRM + quotes + advanced analytics',        color: '#8B5CF6' },
+const PLANS: { id: Plan; name: string; price: string; desc: string; color: string; badge?: string }[] = [
+  { id: 'solo',  name: 'Owner Operator Solo', price: '$25/mo',  desc: '1 truck & 1 driver, basic tickets',   color: '#1a1a1a' },
+  { id: 'pro',   name: 'Owner Operator Pro',  price: '$80/mo',  desc: 'Up to 5 trucks, dispatch & jobs',     color: '#1a1a1a' },
+  { id: 'fleet', name: 'Fleet',               price: '$200/mo', desc: 'Unlimited trucks & drivers',          color: '#F5B731', badge: 'Most Popular' },
 ]
 
 export default function SignupPage() {
@@ -36,7 +35,7 @@ export default function SignupPage() {
     if (p === 'solo') setSelectedPlan('solo')
     else if (p === 'fleet') setSelectedPlan('fleet')
     else if (p === 'growth') setSelectedPlan('growth')
-    else if (p === 'owner_operator' || p === 'owner') setSelectedPlan('owner_operator')
+    else if (p === 'pro' || p === 'owner_operator' || p === 'owner') setSelectedPlan('pro')
     if (params.get('subscribe') === 'true') setSubscribeMode(true)
     if (params.get('paid') === 'true') setPaymentComplete(true)
   }, [])
@@ -134,7 +133,7 @@ export default function SignupPage() {
     }, 20_000)
 
     try {
-      const planKey = selectedPlan === 'owner_operator' ? 'owner' : selectedPlan
+      const planKey = selectedPlan === 'pro' ? 'pro' : selectedPlan
       let res: Response
       try {
         res = await fetch('/api/stripe/checkout', {
@@ -255,6 +254,26 @@ export default function SignupPage() {
                 </div>
               )
             })}
+            {/* Enterprise — contact flow, not checkout */}
+            <div style={{ paddingTop: '20px', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ height: '20px' }} />
+              <a
+                href="/enterprise"
+                style={{
+                  flex: 1, width: '100%', padding: '14px', borderRadius: '12px', textAlign: 'left', cursor: 'pointer', outline: 'none', transition: 'all 0.15s',
+                  border: '2px solid rgba(255,255,255,0.12)',
+                  background: '#111',
+                  textDecoration: 'none',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
+                <p style={{ fontWeight: 700, fontSize: '12px', color: '#fff', marginBottom: '4px', minHeight: '30px' }}>Enterprise</p>
+                <p style={{ fontSize: '18px', fontWeight: 800, color: '#F5B731', marginBottom: '4px' }}>Custom</p>
+                <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)', marginBottom: '6px' }}>Large fleet?</p>
+                <span style={{ fontSize: '10px', color: '#F5B731', textDecoration: 'underline' }}>Contact us →</span>
+              </a>
+            </div>
           </div>
         </div>
 

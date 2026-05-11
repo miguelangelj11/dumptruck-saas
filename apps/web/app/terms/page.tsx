@@ -71,9 +71,10 @@ export default function TermsPage() {
               <Subsection title="Available Plans">
                 DumpTruckBoss offers the following subscription tiers:
                 <ul className="list-disc list-inside space-y-1 mt-2">
-                  <li><strong>Owner Operator Plan</strong> — Up to 5 trucks &amp; drivers, unlimited tickets, basic invoicing. $80/month or $64/month billed annually.</li>
-                  <li><strong>Fleet Plan</strong> — Unlimited trucks &amp; drivers, all invoice types, subcontractor management, team access, AI document reader. $150/month or $120/month billed annually.</li>
-                  <li><strong>Growth Plan</strong> — Everything in Fleet plus CRM Growth Pipeline, quote builder, advanced profitability, and mobile ticket capture. $350/month.</li>
+                  <li><strong>Owner Operator Solo Plan</strong> — 1 truck &amp; 1 driver, unlimited tickets, basic invoicing. $25/month.</li>
+                  <li><strong>Owner Operator Pro Plan</strong> — Up to 5 trucks &amp; drivers, full dispatch board, revenue analytics. $80/month.</li>
+                  <li><strong>Fleet Plan</strong> — Unlimited trucks &amp; drivers, all invoice types, subcontractor management, team access, AI document reader. $200/month.</li>
+                  <li><strong>Enterprise Plan</strong> — Custom pricing. Everything in Fleet plus CRM Growth Pipeline, quote builder, advanced profitability, dedicated account manager, and custom integrations. Contact us for pricing.</li>
                 </ul>
               </Subsection>
               <Subsection title="Billing Cycle">
@@ -96,7 +97,7 @@ export default function TermsPage() {
 
             <Section title="4. Free Trial Policy">
               <p className="text-gray-600 leading-relaxed mb-4">
-                We offer a <strong>7-day free trial</strong> for the Owner Operator and Fleet plans. During the
+                We offer a <strong>7-day free trial</strong> for the Owner Operator Solo, Owner Operator Pro, and Fleet plans. During the
                 trial period:
               </p>
               <ul className="list-disc list-inside space-y-2 text-gray-600 mb-4">

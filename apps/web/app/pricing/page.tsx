@@ -11,39 +11,41 @@ import Footer from '@/components/landing/footer'
 const plans = [
   {
     key: 'solo',
-    name: 'Solo',
-    tagline: 'For the one-man operation — 1 truck, 1 driver',
+    name: 'Owner Operator Solo',
+    tagline: 'One truck. Get organized and get paid.',
     monthlyPrice: '$25',
     popular: false,
+    isEnterprise: false,
     ctaLabel: 'Start Free 7-Day Trial',
     features: [
       '1 truck & 1 driver',
-      'Ticket tracking (unlimited)',
+      'Dashboard',
+      'Unlimited ticket tracking',
       'Basic invoicing',
-      'Basic dashboard',
+      'Document storage',
       '7-day free trial',
     ],
     locked: [
-      'Dispatching & job management',
+      'Dispatch board',
+      'Revenue analytics',
       'Subcontractor management',
-      'Revenue & profit tracking',
-      'CRM Pipeline',
       'Team access',
+      'AI document reader',
     ],
   },
   {
-    key: 'owner_operator',
-    name: 'Owner Operator',
-    tagline: 'Perfect for solo operators with up to 5 trucks',
+    key: 'pro',
+    name: 'Owner Operator Pro',
+    tagline: 'Growing your operation? This is your plan.',
     monthlyPrice: '$80',
     popular: false,
+    isEnterprise: false,
     ctaLabel: 'Start Free 7-Day Trial',
     features: [
-      'Up to 5 trucks & 5 drivers',
-      'Dispatching & job management',
-      'Ticket tracking (unlimited)',
-      'Basic invoicing',
-      'Basic dashboard',
+      'Up to 5 trucks & drivers',
+      'Everything in Solo',
+      'Full dispatch board',
+      'Revenue analytics',
       'Driver management',
       'Client companies',
       '7-day free trial',
@@ -52,31 +54,29 @@ const plans = [
       'Subcontractor management',
       'Missing ticket detection',
       'Follow-up automation',
-      'Auto invoice intelligence',
-      'Profit tracking',
-      'AI dispatch recommendations',
-      'CRM Pipeline',
-      'AI document reader',
       'Team access',
+      'AI document reader',
+      'CRM Pipeline',
     ],
   },
   {
     key: 'fleet',
     name: 'Fleet',
-    tagline: 'For growing companies that need full control',
-    monthlyPrice: '$150',
+    tagline: 'Run your entire operation from one dashboard.',
+    monthlyPrice: '$200',
     popular: true,
+    isEnterprise: false,
     ctaLabel: 'Start Free 7-Day Trial',
     features: [
       'Unlimited trucks & drivers',
-      'Everything in Owner Operator',
+      'Everything in Owner Operator Pro',
       'Subcontractor management',
       'Missing ticket detection',
       'Follow-up automation engine',
       'Auto invoice intelligence',
       'Real-time dispatch board',
       'Driver zero-friction portal',
-      'Basic profit tracking',
+      'Profit tracking',
       'AI dispatch recommendations',
       'Overdue invoice automation',
       'Weekly performance reports',
@@ -89,32 +89,33 @@ const plans = [
       'CRM Growth Pipeline',
       'Quote builder',
       'Advanced job profitability',
-      'Customer insights',
       'Mobile ticket + signature',
     ],
   },
   {
-    key: 'growth',
-    name: 'Growth',
-    tagline: 'For operators ready to grow their business',
-    monthlyPrice: '$350',
+    key: 'enterprise',
+    name: 'Enterprise',
+    tagline: 'Built around your operation. Priced to match.',
+    monthlyPrice: 'Custom',
     popular: false,
-    ctaLabel: 'Start Free 7-Day Trial',
+    isEnterprise: true,
+    ctaLabel: 'Contact Us',
     features: [
       'Everything in Fleet',
+      'Custom onboarding',
+      'Dedicated account manager',
       'CRM Growth Pipeline',
-      'Lead & job tracking',
       'Quote builder',
-      'Convert quotes → jobs → invoices',
       'Advanced job profitability',
       'Revenue per driver & truck',
       'Customer insights dashboard',
-      'Top clients & slow payer tracking',
-      'Mobile ticket with signature capture',
-      'AI document reader (400/mo)',
+      'Mobile ticket + signature capture',
+      'AI document reader (unlimited)',
       'Documents hub',
+      'Custom integrations',
       'Priority support',
-      '7-day free trial',
+      'Custom contract terms',
+      'Multi-location support',
     ],
     locked: [],
   },
@@ -131,7 +132,7 @@ const table: { section: string; rows: { label: string; vals: [V, V, V, V] }[] }[
       { label: 'Ticket management',      vals: ['Basic', 'Basic', 'Full', 'Full'] },
       { label: 'Ticket photo upload',    vals: [true, true, true, true] },
       { label: 'Full dispatch board',    vals: [false, true, true, true] },
-      { label: 'AI document reader',     vals: [false, false, '50/mo', '400/mo'] },
+      { label: 'AI document reader',     vals: [false, false, '50/mo', 'Unlimited'] },
       { label: 'Documents hub',          vals: [false, false, false, true] },
     ],
   },
@@ -168,8 +169,8 @@ const table: { section: string; rows: { label: string; vals: [V, V, V, V] }[] }[
   {
     section: 'Support',
     rows: [
-      { label: 'Support tier',   vals: ['Email', 'Email', 'Priority email', 'Priority phone'] },
-      { label: 'Free trial',     vals: ['7 days', '7 days', '7 days', '7 days'] },
+      { label: 'Support tier',   vals: ['Email', 'Email', 'Priority email', 'Dedicated manager'] },
+      { label: 'Free trial',     vals: ['7 days', '7 days', '7 days', 'Custom'] },
     ],
   },
 ]
@@ -177,12 +178,12 @@ const table: { section: string; rows: { label: string; vals: [V, V, V, V] }[] }[
 // ─── FAQ ─────────────────────────────────────────────────────────────────────
 
 const faq = [
-  { q: 'Is there a free trial?', a: 'Yes — all plans include a 7-day free trial. No credit card required. Full access from day one.' },
+  { q: 'Is there a free trial?', a: 'Yes — Solo, Owner Operator Pro, and Fleet plans include a 7-day free trial. No credit card required. Full access from day one.' },
   { q: 'Can I change plans later?', a: 'Absolutely. Upgrade or downgrade any time. Changes take effect at the next billing cycle.' },
   { q: 'What happens to my data if I cancel?', a: 'Your data stays in the system for 30 days after cancellation. You can export everything before then.' },
   { q: 'Is there a limit on load tickets?', a: 'No. All plans include unlimited ticket tracking.' },
-  { q: 'What is the Growth plan?', a: 'Growth adds the full CRM Pipeline, quote builder, advanced profitability reports, mobile ticket capture with signature, and 400 AI document reads per month — everything you need to win more jobs and scale revenue.' },
-  { q: 'Can I use DumpTruckBoss for subcontractors?', a: 'Yes. Fleet and Growth plans include full subcontractor management — track their loads, generate pay stubs, and settle up with one click.' },
+  { q: 'What is the Enterprise plan?', a: 'Enterprise is a custom plan built around your specific operation — fleet size, integrations, onboarding, and pricing. Contact us and we\'ll put together something that fits.' },
+  { q: 'Can I use DumpTruckBoss for subcontractors?', a: 'Yes. Fleet and Enterprise plans include full subcontractor management — track their loads, generate pay stubs, and settle up with one click.' },
 ]
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -216,13 +217,13 @@ export default function PricingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan: planKey }),
       })
-      const data = await res.json() as { url?: string; redirect?: string }
-      if (res.status === 401 || data.redirect) {
-        router.push(data.redirect ?? `/signup?plan=${planKey}`)
+      const data = await res.json() as { url?: string; redirect?: string; error?: string }
+      if (data.redirect) {
+        router.push(data.redirect)
         return
       }
-      if (res.status === 302) {
-        router.push(data.redirect ?? '/onboarding')
+      if (res.status === 401) {
+        router.push(`/signup?plan=${planKey}`)
         return
       }
       if (data.url) {
@@ -263,7 +264,7 @@ export default function PricingPage() {
           <span style={{ color: '#F5B731' }}>Run your dump truck business the right way.</span>
         </h1>
         <p style={{ fontSize: '17px', color: 'rgba(255,255,255,0.45)', marginBottom: '56px', lineHeight: 1.6 }}>
-          All plans include a free 7-day trial. No credit card required.
+          Solo, Pro, and Fleet plans include a free 7-day trial. No credit card required.
         </p>
       </div>
 
@@ -272,6 +273,78 @@ export default function PricingPage() {
         <div className="plans-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', alignItems: 'stretch' }}>
           {plans.map((plan) => {
             const hl = plan.popular
+
+            if (plan.isEnterprise) {
+              return (
+                <div
+                  key={plan.key}
+                  style={{
+                    position: 'relative',
+                    borderRadius: '18px',
+                    padding: '32px 28px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    background: 'linear-gradient(135deg, #1a1a1a 0%, #111 100%)',
+                    border: '2px solid rgba(255,255,255,0.12)',
+                  }}
+                >
+                  <p style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.4)', marginBottom: '10px' }}>
+                    Enterprise
+                  </p>
+
+                  <h3 style={{ fontSize: '22px', fontWeight: 900, color: '#fff', marginBottom: '12px' }}>Enterprise</h3>
+
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '6px' }}>
+                    <span style={{ fontSize: '40px', fontWeight: 900, color: '#fff', lineHeight: 1 }}>Custom</span>
+                    <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.35)' }}>pricing</span>
+                  </div>
+
+                  <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.5, marginBottom: '24px' }}>
+                    {plan.tagline}
+                  </p>
+
+                  <Link
+                    href="/enterprise"
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      textAlign: 'center',
+                      padding: '13px 16px',
+                      borderRadius: '10px',
+                      fontSize: '15px',
+                      fontWeight: 700,
+                      textDecoration: 'none',
+                      border: '2px solid #F5B731',
+                      color: '#F5B731',
+                      background: 'transparent',
+                      transition: 'all 0.15s',
+                      marginBottom: '28px',
+                    }}
+                    onMouseEnter={e => { (e.target as HTMLAnchorElement).style.background = '#F5B731'; (e.target as HTMLAnchorElement).style.color = '#1a1a1a' }}
+                    onMouseLeave={e => { (e.target as HTMLAnchorElement).style.background = 'transparent'; (e.target as HTMLAnchorElement).style.color = '#F5B731' }}
+                  >
+                    Contact Us →
+                  </Link>
+
+                  <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', marginBottom: '24px' }} />
+
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: '11px' }}>
+                    {plan.features.map((f) => (
+                      <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                        <span style={{ color: '#4ade80', fontSize: '14px', fontWeight: 700, flexShrink: 0, marginTop: '1px', lineHeight: 1.4 }}>✓</span>
+                        <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                    <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>
+                      Custom contract · Dedicated onboarding
+                    </p>
+                  </div>
+                </div>
+              )
+            }
 
             return (
               <div
@@ -284,11 +357,10 @@ export default function PricingPage() {
                   flexDirection: 'column',
                   background: hl ? HIGHLIGHT_BG : CARD_BG,
                   border: hl ? HIGHLIGHT_BORDER : CARD_BORDER,
-                  boxShadow: hl ? '0 0 48px rgba(45,122,79,0.18)' : 'none',
+                  boxShadow: hl ? '0 0 48px rgba(245,183,49,0.12)' : 'none',
                   marginTop: hl ? '-8px' : '0',
                 }}
               >
-                {/* Popular badge */}
                 {hl && (
                   <div style={{
                     position: 'absolute',
@@ -309,23 +381,19 @@ export default function PricingPage() {
                   </div>
                 )}
 
-                {/* Plan name */}
                 <p style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: hl ? GREEN_LIGHT : 'rgba(255,255,255,0.4)', marginBottom: '10px' }}>
                   {plan.name}
                 </p>
 
-                {/* Price block */}
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '6px' }}>
                   <span style={{ fontSize: '44px', fontWeight: 800, color: '#fff', lineHeight: 1 }}>{plan.monthlyPrice}</span>
                   <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.35)' }}>/mo</span>
                 </div>
 
-                {/* Tagline */}
                 <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.5, marginBottom: '24px' }}>
                   {plan.tagline}
                 </p>
 
-                {/* CTA */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '28px' }}>
                   <button
                     onClick={() => handleStartTrial(plan.key)}
@@ -370,10 +438,8 @@ export default function PricingPage() {
                   </Link>
                 </div>
 
-                {/* Divider */}
-                <div style={{ height: '1px', background: hl ? 'rgba(45,122,79,0.3)' : 'rgba(255,255,255,0.07)', marginBottom: '24px' }} />
+                <div style={{ height: '1px', background: hl ? 'rgba(245,183,49,0.3)' : 'rgba(255,255,255,0.07)', marginBottom: '24px' }} />
 
-                {/* Feature list */}
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: '11px' }}>
                   {plan.features.map((f) => (
                     <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
@@ -389,8 +455,7 @@ export default function PricingPage() {
                   ))}
                 </ul>
 
-                {/* Trust bullets */}
-                <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: hl ? '1px solid rgba(45,122,79,0.3)' : '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: hl ? '1px solid rgba(245,183,49,0.3)' : '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {['7-day free trial', 'No credit card required', 'Cancel anytime'].map((t) => (
                     <div key={t} style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: 'rgba(255,255,255,0.35)' }}>
                       <span style={{ color: hl ? GREEN_LIGHT : GREEN, fontWeight: 700 }}>✓</span>
@@ -438,9 +503,9 @@ export default function PricingPage() {
                     textAlign: 'center',
                     fontSize: '13px',
                     fontWeight: 700,
-                    color: p.popular ? GREEN_LIGHT : '#fff',
+                    color: p.popular ? GREEN_LIGHT : p.isEnterprise ? 'rgba(255,255,255,0.6)' : '#fff',
                     borderBottom: '1px solid rgba(255,255,255,0.08)',
-                    background: p.popular ? 'rgba(45,122,79,0.08)' : 'transparent',
+                    background: p.popular ? 'rgba(245,183,49,0.08)' : 'transparent',
                     width: '16.25%',
                   }}>
                     {p.name}
@@ -474,7 +539,7 @@ export default function PricingPage() {
                           padding: '12px 12px',
                           textAlign: 'center',
                           borderBottom: '1px solid rgba(255,255,255,0.04)',
-                          background: plans[vi]?.popular ? 'rgba(45,122,79,0.05)' : 'transparent',
+                          background: plans[vi]?.popular ? 'rgba(245,183,49,0.05)' : 'transparent',
                         }}>
                           <Cell v={v} highlighted={!!plans[vi]?.popular} />
                         </td>
@@ -527,14 +592,29 @@ export default function PricingPage() {
                 padding: '14px 36px',
                 borderRadius: '12px',
                 background: GREEN,
-                color: '#fff',
+                color: '#1a1a1a',
                 fontSize: '15px',
                 fontWeight: 700,
                 textDecoration: 'none',
-                transition: 'opacity 0.15s',
               }}
             >
               Start Free Trial →
+            </Link>
+            <Link
+              href="/enterprise"
+              style={{
+                display: 'inline-block',
+                padding: '14px 36px',
+                borderRadius: '12px',
+                background: 'transparent',
+                color: 'rgba(255,255,255,0.6)',
+                fontSize: '15px',
+                fontWeight: 600,
+                textDecoration: 'none',
+                border: '1px solid rgba(255,255,255,0.15)',
+              }}
+            >
+              Enterprise? Contact Us →
             </Link>
           </div>
         </div>
