@@ -4,11 +4,13 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import {
   FolderOpen, Search, LayoutGrid, List, X, ExternalLink,
   FileText, Image as ImageIcon, Bot, Receipt, Truck,
-  RefreshCw, Download, Upload, Plus,
+  RefreshCw, Download, Upload, Plus, Folder, FolderPlus,
+  Trash2, MoreHorizontal, FolderInput, ChevronRight,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getCompanyId } from '@/lib/get-company-id'
 import LockedFeature from '@/components/dashboard/locked-feature'
+
 type Category = 'all' | 'ai_import' | 'ticket_photo' | 'subcontractor_photo' | 'received_invoice' | 'uploaded'
 
 type DocumentItem = {
@@ -21,15 +23,23 @@ type DocumentItem = {
   created_at: string
   meta: Record<string, unknown>
 }
+
+type DocFolder = {
+  id: string
+  name: string
+  color: string
+  count: number
+}
+
 type ViewMode = 'grid' | 'list'
 
-const CATEGORY_TABS: { id: Category; label: string; icon: React.ElementType; color: string }[] = [
-  { id: 'all',                 label: 'All Documents',      icon: FolderOpen,  color: 'text-gray-600'   },
-  { id: 'ai_import',           label: 'AI Imports',         icon: Bot,         color: 'text-violet-600' },
-  { id: 'ticket_photo',        label: 'Ticket Photos',      icon: Truck,       color: 'text-blue-600'   },
-  { id: 'subcontractor_photo', label: 'Sub Photos',         icon: ImageIcon,   color: 'text-orange-600' },
-  { id: 'received_invoice',    label: 'Received Invoices',  icon: Receipt,     color: 'text-green-600'  },
-  { id: 'uploaded',            label: 'Uploaded',           icon: Upload,      color: 'text-teal-600'   },
+const CATEGORY_TABS: { id: Category; label: string; icon: React.ElementType }[] = [
+  { id: 'all',                 label: 'All',             icon: FolderOpen  },
+  { id: 'ai_import',           label: 'AI Imports',      icon: Bot         },
+  { id: 'ticket_photo',        label: 'Ticket Photos',   icon: Truck       },
+  { id: 'subcontractor_photo', label: 'Sub Photos',      icon: ImageIcon   },
+  { id: 'received_invoice',    label: 'Received Inv.',   icon: Receipt     },
+  { id: 'uploaded',            label: 'Uploaded',        icon: Upload      },
 ]
 
 const CATEGORY_BADGE: Record<Category, string> = {
@@ -49,6 +59,11 @@ const CATEGORY_LABEL: Record<Category, string> = {
   received_invoice:    'Invoice',
   uploaded:            'Uploaded',
 }
+
+const FOLDER_COLORS = [
+  '#6366f1', '#f59e0b', '#10b981', '#3b82f6',
+  '#ef4444', '#8b5cf6', '#f97316', '#06b6d4',
+]
 
 function isImage(doc: DocumentItem) {
   return doc.mime.startsWith('image') || /\.(jpg|jpeg|png|gif|webp|heic)$/i.test(doc.url)
@@ -72,18 +87,30 @@ type PreviewModal = { doc: DocumentItem; loaded: boolean }
 
 export default function DocumentsPage() {
   const [planLocked, setPlanLocked] = useState<null | { plan: string; price: number }>(null)
-  const [docs, setDocs]           = useState<DocumentItem[]>([])
-  const [loading, setLoading]     = useState(true)
-  const [category, setCategory]   = useState<Category>('all')
-  const [search, setSearch]       = useState('')
-  const [view, setView]           = useState<ViewMode>('grid')
-  const [preview, setPreview]     = useState<PreviewModal | null>(null)
-  const [uploadOpen, setUploadOpen] = useState(false)
-  const [uploading, setUploading]   = useState(false)
-  const [uploadName, setUploadName] = useState('')
+  const [docs, setDocs]             = useState<DocumentItem[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [category, setCategory]     = useState<Category>('all')
+  const [search, setSearch]         = useState('')
+  const [view, setView]             = useState<ViewMode>('grid')
+  const [preview, setPreview]       = useState<PreviewModal | null>(null)
+
+  // Upload state
+  const [uploadOpen, setUploadOpen]   = useState(false)
+  const [uploading, setUploading]     = useState(false)
+  const [uploadName, setUploadName]   = useState('')
   const [uploadNotes, setUploadNotes] = useState('')
   const [uploadFile, setUploadFile]   = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Folder state
+  const [folders, setFolders]               = useState<DocFolder[]>([])
+  const [activeFolderId, setActiveFolderId] = useState<string | null>(null)
+  const [newFolderOpen, setNewFolderOpen]   = useState(false)
+  const [newFolderName, setNewFolderName]   = useState('')
+  const [newFolderColor, setNewFolderColor] = useState(FOLDER_COLORS[0])
+  const [creatingFolder, setCreatingFolder] = useState(false)
+  const [folderMenuDoc, setFolderMenuDoc]   = useState<string | null>(null) // doc.id with open menu
+  const [movingDoc, setMovingDoc]           = useState<string | null>(null)  // doc.id being moved
 
   useEffect(() => {
     const supaClient = createClient()
@@ -96,11 +123,20 @@ export default function DocumentsPage() {
     })
   }, [])
 
-  const fetchDocs = useCallback(async (cat: Category, q: string) => {
+  const fetchFolders = useCallback(async () => {
+    const res  = await fetch('/api/documents/folders')
+    const json = await res.json()
+    setFolders(json.folders ?? [])
+  }, [])
+
+  useEffect(() => { fetchFolders() }, [fetchFolders])
+
+  const fetchDocs = useCallback(async (cat: Category, q: string, folderId: string | null) => {
     setLoading(true)
     try {
       const params = new URLSearchParams({ category: cat })
-      if (q) params.set('search', q)
+      if (q)        params.set('search', q)
+      if (folderId) params.set('folder_id', folderId)
       const res  = await fetch(`/api/documents?${params}`)
       const json = await res.json()
       setDocs(json.docs ?? [])
@@ -110,9 +146,9 @@ export default function DocumentsPage() {
   }, [])
 
   useEffect(() => {
-    const t = setTimeout(() => fetchDocs(category, search), search ? 300 : 0)
+    const t = setTimeout(() => fetchDocs(category, search, activeFolderId), search ? 300 : 0)
     return () => clearTimeout(t)
-  }, [category, search, fetchDocs])
+  }, [category, search, activeFolderId, fetchDocs])
 
   const counts = docs.reduce<Record<Category, number>>((acc, d) => {
     acc.all++
@@ -134,15 +170,76 @@ export default function DocumentsPage() {
       setUploadFile(null)
       setUploadName('')
       setUploadNotes('')
-      fetchDocs(category, search)
+      fetchDocs(category, search, activeFolderId)
     } finally {
       setUploading(false)
+    }
+  }
+
+  async function handleCreateFolder() {
+    if (!newFolderName.trim()) return
+    setCreatingFolder(true)
+    try {
+      const res  = await fetch('/api/documents/folders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newFolderName.trim(), color: newFolderColor }),
+      })
+      const json = await res.json()
+      if (json.folder) {
+        setFolders(f => [...f, json.folder])
+        setNewFolderOpen(false)
+        setNewFolderName('')
+        setNewFolderColor(FOLDER_COLORS[0])
+      }
+    } finally {
+      setCreatingFolder(false)
+    }
+  }
+
+  async function handleDeleteFolder(id: string) {
+    await fetch(`/api/documents/folders/${id}`, { method: 'DELETE' })
+    setFolders(f => f.filter(x => x.id !== id))
+    if (activeFolderId === id) setActiveFolderId(null)
+  }
+
+  async function handleMoveToFolder(docId: string, folderId: string) {
+    setMovingDoc(docId)
+    setFolderMenuDoc(null)
+    try {
+      await fetch(`/api/documents/folders/${folderId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ doc_ref: docId, action: 'add' }),
+      })
+      await fetchFolders()
+      if (activeFolderId) fetchDocs(category, search, activeFolderId)
+    } finally {
+      setMovingDoc(null)
+    }
+  }
+
+  async function handleRemoveFromFolder(docId: string, folderId: string) {
+    setMovingDoc(docId)
+    setFolderMenuDoc(null)
+    try {
+      await fetch(`/api/documents/folders/${folderId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ doc_ref: docId, action: 'remove' }),
+      })
+      await fetchFolders()
+      fetchDocs(category, search, activeFolderId)
+    } finally {
+      setMovingDoc(null)
     }
   }
 
   if (planLocked) {
     return <LockedFeature title="Documents Hub" description="All your AI-imported tickets, ticket photos, subcontractor photos, and received invoices in one place. Includes AI document reader." plan={planLocked.plan} price={planLocked.price} />
   }
+
+  const activeFolder = folders.find(f => f.id === activeFolderId)
 
   return (
     <div className="p-6 md:p-8 max-w-7xl">
@@ -165,7 +262,7 @@ export default function DocumentsPage() {
             Upload Document
           </button>
           <button
-            onClick={() => fetchDocs(category, search)}
+            onClick={() => fetchDocs(category, search, activeFolderId)}
             className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
             title="Refresh"
           >
@@ -186,139 +283,364 @@ export default function DocumentsPage() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-        <input
-          type="text"
-          placeholder="Search documents…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)] bg-white"
-        />
-        {search && (
-          <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-            <X className="h-4 w-4" />
-          </button>
-        )}
-      </div>
+      <div className="flex gap-6">
 
-      {/* Category Tabs */}
-      <div className="flex gap-2 flex-wrap mb-6">
-        {CATEGORY_TABS.map(tab => {
-          const Icon   = tab.icon
-          const active = category === tab.id
-          const count  = category === 'all' ? counts[tab.id] : (tab.id === 'all' ? counts.all : counts[tab.id])
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setCategory(tab.id)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border transition-all ${
-                active
-                  ? 'bg-[var(--brand-primary)] text-white border-[var(--brand-primary)]'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/5'
-              }`}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {tab.label}
-              {count > 0 && (
-                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${active ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'}`}>
-                  {count}
-                </span>
+        {/* ── Folders Sidebar ───────────────────────────────────────────── */}
+        <aside className="w-52 shrink-0">
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Folders</span>
+              <button
+                onClick={() => setNewFolderOpen(true)}
+                className="p-1 rounded-lg text-gray-400 hover:text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10 transition-colors"
+                title="New folder"
+              >
+                <FolderPlus className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="py-1">
+              {/* All Documents */}
+              <button
+                onClick={() => setActiveFolderId(null)}
+                className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${
+                  !activeFolderId ? 'bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] font-semibold' : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <FolderOpen className="h-4 w-4 shrink-0" />
+                <span className="flex-1 text-left truncate">All Documents</span>
+              </button>
+
+              {/* User folders */}
+              {folders.length === 0 && (
+                <p className="px-4 py-3 text-xs text-gray-400 italic">No folders yet</p>
               )}
-            </button>
-          )
-        })}
+              {folders.map(folder => (
+                <div key={folder.id} className="group relative flex items-center">
+                  <button
+                    onClick={() => setActiveFolderId(folder.id === activeFolderId ? null : folder.id)}
+                    className={`flex-1 flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors min-w-0 ${
+                      activeFolderId === folder.id
+                        ? 'bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] font-semibold'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Folder className="h-4 w-4 shrink-0" style={{ color: folder.color }} />
+                    <span className="flex-1 text-left truncate">{folder.name}</span>
+                    {folder.count > 0 && (
+                      <span className="text-[10px] font-bold text-gray-400">{folder.count}</span>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteFolder(folder.id)}
+                    className="shrink-0 mr-2 p-1 rounded opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all"
+                    title="Delete folder"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* New folder inline form */}
+            {newFolderOpen && (
+              <div className="border-t border-gray-100 p-3 space-y-2">
+                <input
+                  autoFocus
+                  type="text"
+                  value={newFolderName}
+                  onChange={e => setNewFolderName(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleCreateFolder(); if (e.key === 'Escape') setNewFolderOpen(false) }}
+                  placeholder="Folder name…"
+                  className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
+                />
+                <div className="flex gap-1 flex-wrap">
+                  {FOLDER_COLORS.map(c => (
+                    <button
+                      key={c}
+                      onClick={() => setNewFolderColor(c)}
+                      className={`h-5 w-5 rounded-full transition-all ${newFolderColor === c ? 'ring-2 ring-offset-1 ring-gray-400 scale-110' : ''}`}
+                      style={{ background: c }}
+                    />
+                  ))}
+                </div>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => { setNewFolderOpen(false); setNewFolderName('') }}
+                    className="flex-1 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-500 hover:bg-gray-50"
+                  >Cancel</button>
+                  <button
+                    onClick={handleCreateFolder}
+                    disabled={!newFolderName.trim() || creatingFolder}
+                    className="flex-1 py-1.5 rounded-lg bg-[var(--brand-primary)] text-white text-xs font-semibold disabled:opacity-50"
+                  >{creatingFolder ? '…' : 'Create'}</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </aside>
+
+        {/* ── Main Content ─────────────────────────────────────────────── */}
+        <div className="flex-1 min-w-0">
+
+          {/* Breadcrumb when in a folder */}
+          {activeFolder && (
+            <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-4">
+              <button onClick={() => setActiveFolderId(null)} className="hover:text-gray-800 transition-colors">All Documents</button>
+              <ChevronRight className="h-3.5 w-3.5" />
+              <span className="font-semibold flex items-center gap-1.5" style={{ color: activeFolder.color }}>
+                <Folder className="h-3.5 w-3.5" style={{ color: activeFolder.color }} />
+                {activeFolder.name}
+              </span>
+            </div>
+          )}
+
+          {/* Search */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search documents…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)] bg-white"
+            />
+            {search && (
+              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Category Tabs */}
+          <div className="flex gap-2 flex-wrap mb-6">
+            {CATEGORY_TABS.map(tab => {
+              const Icon   = tab.icon
+              const active = category === tab.id
+              const count  = tab.id === 'all' ? counts.all : counts[tab.id as Category]
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setCategory(tab.id)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border transition-all ${
+                    active
+                      ? 'bg-[var(--brand-primary)] text-white border-[var(--brand-primary)]'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/5'
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {tab.label}
+                  {count > 0 && (
+                    <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${active ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Content */}
+          {loading ? (
+            <div className="flex items-center justify-center py-24">
+              <div className="h-8 w-8 rounded-full border-2 border-[var(--brand-primary)] border-t-transparent animate-spin" />
+            </div>
+          ) : docs.length === 0 ? (
+            <div className="text-center py-24">
+              <FolderOpen className="h-12 w-12 text-gray-200 mx-auto mb-3" />
+              <p className="text-gray-500 font-medium">
+                {activeFolder ? `No documents in "${activeFolder.name}"` : 'No documents found'}
+              </p>
+              <p className="text-sm text-gray-400 mt-1">
+                {activeFolder
+                  ? 'Move documents here using the folder icon on any document card'
+                  : search ? 'Try a different search term' : 'Upload ticket photos or import AI documents to get started'}
+              </p>
+            </div>
+          ) : view === 'grid' ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {docs.map(doc => (
+                <div key={doc.id} className="group relative bg-white rounded-xl border border-gray-100 overflow-hidden hover:border-[var(--brand-primary)] hover:shadow-md transition-all">
+                  {/* Thumbnail — clickable */}
+                  <button
+                    className="w-full text-left"
+                    onClick={() => setPreview({ doc, loaded: false })}
+                  >
+                    <div className="relative aspect-[4/3] bg-gray-50 flex items-center justify-center overflow-hidden">
+                      {isImage(doc) ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={doc.url}
+                          alt={doc.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                          onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                        />
+                      ) : (
+                        <DocIcon doc={doc} size={36} />
+                      )}
+                      <span className={`absolute top-1.5 left-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${CATEGORY_BADGE[doc.category]}`}>
+                        {CATEGORY_LABEL[doc.category]}
+                      </span>
+                    </div>
+                    <div className="px-3 pt-2.5 pb-1">
+                      <p className="text-xs font-medium text-gray-900 line-clamp-2 leading-snug">{doc.name}</p>
+                      <p className="text-[10px] text-gray-400 mt-1">{fmtDate(doc.created_at)}</p>
+                    </div>
+                  </button>
+
+                  {/* Folder action row */}
+                  <div className="px-3 pb-2.5 flex items-center justify-between gap-1">
+                    <div className="flex gap-1 flex-wrap min-w-0">
+                      {folders.filter(() => false).map(f => ( // placeholder — replaced by move button
+                        <span key={f.id} className="text-[9px]" style={{ color: f.color }}>{f.name}</span>
+                      ))}
+                    </div>
+                    <div className="relative ml-auto">
+                      <button
+                        onClick={e => { e.stopPropagation(); setFolderMenuDoc(folderMenuDoc === doc.id ? null : doc.id) }}
+                        disabled={movingDoc === doc.id}
+                        className="p-1 rounded-lg text-gray-300 hover:text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10 transition-colors"
+                        title="Move to folder"
+                      >
+                        {movingDoc === doc.id
+                          ? <div className="h-3.5 w-3.5 rounded-full border border-gray-400 border-t-transparent animate-spin" />
+                          : <FolderInput className="h-3.5 w-3.5" />
+                        }
+                      </button>
+
+                      {/* Folder picker dropdown */}
+                      {folderMenuDoc === doc.id && (
+                        <div
+                          className="absolute bottom-full right-0 mb-1 w-48 bg-white rounded-xl border border-gray-200 shadow-lg z-20 overflow-hidden"
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <p className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">Move to folder</p>
+                          {folders.length === 0 && (
+                            <p className="px-3 py-2 text-xs text-gray-400">No folders yet — create one in the sidebar</p>
+                          )}
+                          {folders.map(f => (
+                            <button
+                              key={f.id}
+                              onClick={() => handleMoveToFolder(doc.id, f.id)}
+                              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                            >
+                              <Folder className="h-3.5 w-3.5 shrink-0" style={{ color: f.color }} />
+                              <span className="truncate">{f.name}</span>
+                            </button>
+                          ))}
+                          {activeFolderId && (
+                            <>
+                              <div className="border-t border-gray-100" />
+                              <button
+                                onClick={() => handleRemoveFromFolder(doc.id, activeFolderId)}
+                                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                                Remove from folder
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            /* List view */
+            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    {['Name', 'Category', 'Job', 'Date', ''].map(h => (
+                      <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {docs.map(doc => (
+                    <tr key={doc.id} className="hover:bg-gray-50/50">
+                      <td className="px-4 py-3 cursor-pointer" onClick={() => setPreview({ doc, loaded: false })}>
+                        <div className="flex items-center gap-2.5">
+                          <DocIcon doc={doc} size={18} />
+                          <span className="font-medium text-gray-900 truncate max-w-[200px]">{doc.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 cursor-pointer" onClick={() => setPreview({ doc, loaded: false })}>
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${CATEGORY_BADGE[doc.category]}`}>
+                          {CATEGORY_LABEL[doc.category]}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 text-xs truncate max-w-[120px] cursor-pointer" onClick={() => setPreview({ doc, loaded: false })}>{doc.job_name ?? '—'}</td>
+                      <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap cursor-pointer" onClick={() => setPreview({ doc, loaded: false })}>{fmtDate(doc.created_at)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10 transition-colors"
+                            title="Open"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </a>
+                          <div className="relative">
+                            <button
+                              onClick={() => setFolderMenuDoc(folderMenuDoc === doc.id ? null : doc.id)}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10 transition-colors"
+                              title="Move to folder"
+                            >
+                              <MoreHorizontal className="h-3.5 w-3.5" />
+                            </button>
+                            {folderMenuDoc === doc.id && (
+                              <div
+                                className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl border border-gray-200 shadow-lg z-20 overflow-hidden"
+                                onClick={e => e.stopPropagation()}
+                              >
+                                <p className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">Move to folder</p>
+                                {folders.length === 0 && (
+                                  <p className="px-3 py-2 text-xs text-gray-400">No folders yet</p>
+                                )}
+                                {folders.map(f => (
+                                  <button
+                                    key={f.id}
+                                    onClick={() => handleMoveToFolder(doc.id, f.id)}
+                                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                                  >
+                                    <Folder className="h-3.5 w-3.5 shrink-0" style={{ color: f.color }} />
+                                    <span className="truncate">{f.name}</span>
+                                  </button>
+                                ))}
+                                {activeFolderId && (
+                                  <>
+                                    <div className="border-t border-gray-100" />
+                                    <button
+                                      onClick={() => handleRemoveFromFolder(doc.id, activeFolderId)}
+                                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-500 hover:bg-red-50"
+                                    >
+                                      <X className="h-3.5 w-3.5" />
+                                      Remove from folder
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Content */}
-      {loading ? (
-        <div className="flex items-center justify-center py-24">
-          <div className="h-8 w-8 rounded-full border-2 border-[var(--brand-primary)] border-t-transparent animate-spin" />
-        </div>
-      ) : docs.length === 0 ? (
-        <div className="text-center py-24">
-          <FolderOpen className="h-12 w-12 text-gray-200 mx-auto mb-3" />
-          <p className="text-gray-500 font-medium">No documents found</p>
-          <p className="text-sm text-gray-400 mt-1">
-            {search ? 'Try a different search term' : 'Upload ticket photos or import AI documents to get started'}
-          </p>
-        </div>
-      ) : view === 'grid' ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {docs.map(doc => (
-            <button
-              key={doc.id}
-              onClick={() => setPreview({ doc, loaded: false })}
-              className="group text-left bg-white rounded-xl border border-gray-100 overflow-hidden hover:border-[var(--brand-primary)] hover:shadow-md transition-all"
-            >
-              {/* Thumbnail */}
-              <div className="relative aspect-[4/3] bg-gray-50 flex items-center justify-center overflow-hidden">
-                {isImage(doc) ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={doc.url}
-                    alt={doc.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                    onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                  />
-                ) : (
-                  <DocIcon doc={doc} size={36} />
-                )}
-                {/* Category badge */}
-                <span className={`absolute top-1.5 left-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${CATEGORY_BADGE[doc.category]}`}>
-                  {CATEGORY_LABEL[doc.category]}
-                </span>
-              </div>
-              {/* Info */}
-              <div className="p-3">
-                <p className="text-xs font-medium text-gray-900 line-clamp-2 leading-snug">{doc.name}</p>
-                <p className="text-[10px] text-gray-400 mt-1">{fmtDate(doc.created_at)}</p>
-              </div>
-            </button>
-          ))}
-        </div>
-      ) : (
-        /* List view */
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                {['Name', 'Category', 'Job', 'Date', ''].map(h => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {docs.map(doc => (
-                <tr key={doc.id} className="hover:bg-gray-50/50 cursor-pointer" onClick={() => setPreview({ doc, loaded: false })}>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2.5">
-                      <DocIcon doc={doc} size={18} />
-                      <span className="font-medium text-gray-900 truncate max-w-[260px]">{doc.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${CATEGORY_BADGE[doc.category]}`}>
-                      {CATEGORY_LABEL[doc.category]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500 text-xs truncate max-w-[160px]">{doc.job_name ?? '—'}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{fmtDate(doc.created_at)}</td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={e => { e.stopPropagation(); window.open(doc.url, '_blank') }}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10 transition-colors"
-                      title="Open in new tab"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {/* Close folder menus on outside click */}
+      {folderMenuDoc && (
+        <div className="fixed inset-0 z-10" onClick={() => setFolderMenuDoc(null)} />
       )}
 
       {/* Upload Modal */}
@@ -342,7 +664,6 @@ export default function DocumentsPage() {
             </div>
 
             <div className="p-5 space-y-4">
-              {/* File picker */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">File <span className="text-red-500">*</span></label>
                 <input
@@ -376,7 +697,6 @@ export default function DocumentsPage() {
                 </button>
               </div>
 
-              {/* Name */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">Document Name</label>
                 <input
@@ -388,7 +708,6 @@ export default function DocumentsPage() {
                 />
               </div>
 
-              {/* Notes */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">Notes <span className="text-gray-400 font-normal">(optional)</span></label>
                 <textarea
@@ -435,7 +754,6 @@ export default function DocumentsPage() {
             className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
             onClick={e => e.stopPropagation()}
           >
-            {/* Modal header */}
             <div className="flex items-start gap-3 px-5 py-4 border-b border-gray-100">
               <DocIcon doc={preview.doc} size={20} />
               <div className="flex-1 min-w-0">
@@ -468,7 +786,6 @@ export default function DocumentsPage() {
               </div>
             </div>
 
-            {/* Metadata */}
             {Object.keys(preview.doc.meta).length > 0 && (
               <div className="flex flex-wrap gap-x-6 gap-y-1 px-5 py-3 bg-gray-50 border-b border-gray-100 text-xs text-gray-500">
                 {Object.entries(preview.doc.meta).map(([k, v]) => v != null && (
@@ -480,7 +797,6 @@ export default function DocumentsPage() {
               </div>
             )}
 
-            {/* Preview body */}
             <div className="flex-1 overflow-auto flex items-center justify-center bg-gray-50 min-h-[300px]">
               {isImage(preview.doc) ? (
                 // eslint-disable-next-line @next/next/no-img-element

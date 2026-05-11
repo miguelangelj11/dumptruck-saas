@@ -29,6 +29,18 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const category = searchParams.get('category') ?? 'all'
   const search   = (searchParams.get('search') ?? '').toLowerCase().trim()
+  const folderId = searchParams.get('folder_id') ?? null
+
+  // When filtering by folder, pre-load the doc_refs in that folder
+  let folderDocRefs: Set<string> | null = null
+  if (folderId) {
+    const { data: items } = await supabase
+      .from('document_folder_items')
+      .select('doc_ref')
+      .eq('folder_id', folderId)
+      .eq('company_id', companyId)
+    folderDocRefs = new Set((items ?? []).map(i => i.doc_ref))
+  }
 
   const docs: DocumentItem[] = []
 
@@ -185,10 +197,16 @@ export async function GET(request: Request) {
     }
   }
 
-  // Sort all merged docs by created_at desc
-  docs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  // Filter by folder if requested
+  const filtered = folderDocRefs ? docs.filter(d => folderDocRefs!.has(d.id)) : docs
 
-  return NextResponse.json({ docs, total: docs.length })
+  // Also attach which folder(s) each doc is in (for the UI "move" button)
+  // — skip for folder-filtered views to keep response lean
+
+  // Sort all merged docs by created_at desc
+  filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+  return NextResponse.json({ docs: filtered, total: filtered.length })
 }
 
 export async function POST(request: Request) {
