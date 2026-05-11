@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useTranslations } from 'next-intl'
 import { Truck, TrendingUp, Receipt, Radio, X } from 'lucide-react'
 import Link from 'next/link'
 
@@ -56,7 +57,7 @@ function PctBadge({ value, period }: { value: number | null; period: string }) {
   const pos = value >= 0
   return (
     <span className={`text-xs font-medium ${pos ? 'text-green-600' : 'text-red-500'}`}>
-      {pos ? '↑' : '↓'} {Math.abs(value)}% vs last {period}
+      {pos ? '↑' : '↓'} {Math.abs(value)}% {period}
     </span>
   )
 }
@@ -119,6 +120,7 @@ export default function DashboardStatCards({
   outstandingTotal, outstandingCount, dispatchedToday,
   thisWeekStartStr, todayStr, thisMonthStr,
 }: Props) {
+  const t = useTranslations('dashboard')
   const [openPanel, setOpenPanel] = useState<Panel>(null)
   const supabase = createClient()
 
@@ -224,10 +226,10 @@ export default function DashboardStatCards({
   })
 
   const cards = [
-    { key: 'tickets'     as Panel, label: 'Tickets This Week',   value: thisWeekTickets.toString(), sub: <PctBadge value={ticketPct} period="week" />,    icon: Truck,     color: 'text-[var(--brand-primary)] bg-[var(--brand-primary)]/10' },
-    { key: 'revenue'     as Panel, label: 'Revenue This Month',  value: fmt(thisMonthRev),          sub: <PctBadge value={revPct} period="month" />,       icon: TrendingUp, color: 'text-blue-600 bg-blue-100' },
-    { key: 'outstanding' as Panel, label: 'Outstanding Balance', value: fmt(outstandingTotal),      sub: <span className="text-xs font-medium text-gray-400">{outstandingCount} invoice{outstandingCount !== 1 ? 's' : ''} unpaid</span>, icon: Receipt, color: outstandingTotal > 0 ? 'text-orange-500 bg-orange-100' : 'text-gray-400 bg-gray-100' },
-    { key: 'dispatched'  as Panel, label: 'Dispatched Today',    value: dispatchedToday.toString(), sub: <span className="text-xs font-medium text-gray-400">active drivers out</span>, icon: Radio, color: dispatchedToday > 0 ? 'text-purple-600 bg-purple-100' : 'text-gray-400 bg-gray-100' },
+    { key: 'tickets'     as Panel, label: t('ticketsThisWeek'),   value: thisWeekTickets.toString(), sub: <PctBadge value={ticketPct} period={t('vsLastWeek')} />,    icon: Truck,     color: 'text-[var(--brand-primary)] bg-[var(--brand-primary)]/10' },
+    { key: 'revenue'     as Panel, label: t('revenueThisMonth'),  value: fmt(thisMonthRev),          sub: <PctBadge value={revPct} period={t('vsLastMonth')} />,       icon: TrendingUp, color: 'text-blue-600 bg-blue-100' },
+    { key: 'outstanding' as Panel, label: t('outstandingBalance'), value: fmt(outstandingTotal),      sub: <span className="text-xs font-medium text-gray-400">{outstandingCount !== 1 ? t('invoicesUnpaid', { count: outstandingCount }) : t('invoiceUnpaid', { count: outstandingCount })}</span>, icon: Receipt, color: outstandingTotal > 0 ? 'text-orange-500 bg-orange-100' : 'text-gray-400 bg-gray-100' },
+    { key: 'dispatched'  as Panel, label: t('dispatchedToday'),    value: dispatchedToday.toString(), sub: <span className="text-xs font-medium text-gray-400">{t('activeDriversOut')}</span>, icon: Radio, color: dispatchedToday > 0 ? 'text-purple-600 bg-purple-100' : 'text-gray-400 bg-gray-100' },
   ]
 
   return (

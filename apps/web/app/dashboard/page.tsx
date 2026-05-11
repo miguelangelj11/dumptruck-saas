@@ -1,6 +1,7 @@
 export const revalidate = 10
 
 import { createClient } from '@/lib/supabase/server'
+import { getTranslations } from 'next-intl/server'
 import {
   Truck, Radio,
   Send, Plus, Receipt, Users, FileText,
@@ -43,6 +44,7 @@ type TodayDispatch = {
 }
 
 export default async function DashboardPage() {
+  const t = await getTranslations('dashboard')
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const uid = user?.id ?? ''
@@ -333,42 +335,42 @@ export default async function DashboardPage() {
 
         {/* Panel 1: Needs Attention */}
         <div className={`rounded-xl border p-4 ${(missingTickets > 0 || overdueInvs.length > 0 || noResponseCount > 0) ? 'border-red-200 bg-red-50/30' : 'border-gray-100 bg-white'}`}>
-          <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">🚨 Needs Attention</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">🚨 {t('needsAttention')}</p>
           <div className="space-y-2.5">
             {missingTickets > 0 ? (
               <Link href="/dashboard/tickets?tab=missing" className="flex items-center justify-between gap-2 group">
-                <span className="text-sm text-red-700 font-medium group-hover:underline">{missingTickets} dispatch{missingTickets !== 1 ? 'es' : ''} missing tickets</span>
+                <span className="text-sm text-red-700 font-medium group-hover:underline">{missingTickets !== 1 ? t('missingTicketsPlural', { count: missingTickets }) : t('missingTickets', { count: missingTickets })}</span>
                 {missingRevenueEst > 0 && <span className="text-xs font-bold text-red-600 shrink-0">~{fmt(missingRevenueEst)}</span>}
               </Link>
             ) : (
-              <p className="text-sm text-gray-400">No missing tickets ✓</p>
+              <p className="text-sm text-gray-400">{t('noMissingTickets')}</p>
             )}
             {overdueInvs.length > 0 ? (
               <Link href="/dashboard/invoices?filter=overdue" className="flex items-center justify-between gap-2 group">
-                <span className="text-sm text-orange-700 font-medium group-hover:underline">{overdueInvs.length} overdue invoice{overdueInvs.length !== 1 ? 's' : ''}</span>
+                <span className="text-sm text-orange-700 font-medium group-hover:underline">{overdueInvs.length !== 1 ? t('overdueInvoices_plural', { count: overdueInvs.length }) : t('overdueInvoice', { count: overdueInvs.length })}</span>
                 <span className="text-xs font-bold text-orange-600 shrink-0">{fmt(overdueTotal)}</span>
               </Link>
             ) : (
-              <p className="text-sm text-gray-400">No overdue invoices ✓</p>
+              <p className="text-sm text-gray-400">{t('noOverdueInvoices')}</p>
             )}
             {partialInvs.length > 0 && (
               <Link href="/dashboard/revenue" className="flex items-center justify-between gap-2 group">
-                <span className="text-sm text-amber-700 font-medium group-hover:underline">{partialInvs.length} partially paid invoice{partialInvs.length !== 1 ? 's' : ''}</span>
-                <span className="text-xs font-bold text-amber-600 shrink-0">${fmt(partialTotal)} outstanding</span>
+                <span className="text-sm text-amber-700 font-medium group-hover:underline">{partialInvs.length !== 1 ? t('partiallyPaidPlural', { count: partialInvs.length }) : t('partiallyPaid', { count: partialInvs.length })}</span>
+                <span className="text-xs font-bold text-amber-600 shrink-0">${fmt(partialTotal)} {t('outstanding')}</span>
               </Link>
             )}
             {noResponseCount > 0 ? (
               <Link href="/dashboard/dispatch" className="flex items-center justify-between gap-2 group">
-                <span className="text-sm text-amber-700 font-medium group-hover:underline">{noResponseCount} dispatch{noResponseCount !== 1 ? 'es' : ''} no response &gt;2h</span>
-                <span className="text-xs text-amber-600 shrink-0">Follow up →</span>
+                <span className="text-sm text-amber-700 font-medium group-hover:underline">{noResponseCount !== 1 ? t('noResponsePlural', { count: noResponseCount }) : t('noResponse', { count: noResponseCount })}</span>
+                <span className="text-xs text-amber-600 shrink-0">{t('followUp')}</span>
               </Link>
             ) : (
-              <p className="text-sm text-gray-400">All drivers responded ✓</p>
+              <p className="text-sm text-gray-400">{t('allDriversResponded')}</p>
             )}
             {pendingReceivedCount > 0 && (
               <Link href="/dashboard/dispatch" className="flex items-center justify-between gap-2 group">
-                <span className="text-sm text-blue-700 font-medium group-hover:underline">{pendingReceivedCount} incoming dispatch offer{pendingReceivedCount !== 1 ? 's' : ''}</span>
-                <span className="text-xs text-blue-600 shrink-0">Review →</span>
+                <span className="text-sm text-blue-700 font-medium group-hover:underline">{pendingReceivedCount !== 1 ? t('incomingOfferPlural', { count: pendingReceivedCount }) : t('incomingOffer', { count: pendingReceivedCount })}</span>
+                <span className="text-xs text-blue-600 shrink-0">{t('reviewMissing')}</span>
               </Link>
             )}
           </div>
@@ -376,18 +378,18 @@ export default async function DashboardPage() {
 
         {/* Panel 2: Today's Operations */}
         <div className="rounded-xl border border-gray-100 bg-white p-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">🚛 Today&apos;s Operations</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">🚛 {t('todaysOperations')}</p>
           <div className="space-y-2.5">
             <Link href="/dashboard/dispatch" className="flex items-center justify-between gap-2 group">
-              <span className="text-sm text-gray-700 group-hover:underline">Active dispatches</span>
+              <span className="text-sm text-gray-700 group-hover:underline">{t('activeDispatches')}</span>
               <span className="text-sm font-bold text-purple-700">{dispatchedToday}</span>
             </Link>
             <Link href="/dashboard/dispatch" className="flex items-center justify-between gap-2 group">
-              <span className="text-sm text-gray-700 group-hover:underline">Drivers currently working</span>
+              <span className="text-sm text-gray-700 group-hover:underline">{t('driversWorking')}</span>
               <span className="text-sm font-bold text-green-700">{workingDrivers}</span>
             </Link>
             <Link href="/dashboard/tickets" className="flex items-center justify-between gap-2 group">
-              <span className="text-sm text-gray-700 group-hover:underline">Jobs completed today</span>
+              <span className="text-sm text-gray-700 group-hover:underline">{t('jobsCompletedToday')}</span>
               <span className="text-sm font-bold text-[var(--brand-primary)]">{loadsToday.length}</span>
             </Link>
           </div>
@@ -395,21 +397,21 @@ export default async function DashboardPage() {
 
         {/* Panel 3: Money This Week */}
         <div className="rounded-xl border border-green-100 bg-green-50/30 p-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">💰 Money This Week</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">💰 {t('moneyThisWeek')}</p>
           <div className="space-y-2.5">
             <Link href="/dashboard/revenue" className="flex items-center justify-between gap-2 group">
-              <span className="text-sm text-gray-700 group-hover:underline">Revenue</span>
+              <span className="text-sm text-gray-700 group-hover:underline">{t('revenue')}</span>
               <span className="text-sm font-bold text-green-700">{fmt(weekRevProjected)}</span>
             </Link>
             {weekCosts > 0 && (
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm text-gray-700">Job Costs (est.)</span>
+                <span className="text-sm text-gray-700">{t('jobCosts')}</span>
                 <span className="text-sm font-bold text-red-600">-{fmt(weekCosts)}</span>
               </div>
             )}
             {weekCosts > 0 && (
               <div className="flex items-center justify-between gap-2 pt-1 border-t border-green-100">
-                <span className="text-sm font-semibold text-gray-900">Net Profit</span>
+                <span className="text-sm font-semibold text-gray-900">{t('netProfit')}</span>
                 <span className={`text-sm font-bold ${weekProfit >= 0 ? 'text-green-700' : 'text-red-600'}`}>
                   {weekProfit >= 0 ? '' : '-'}{fmt(Math.abs(weekProfit))}
                   {weekMargin !== null && (
@@ -419,11 +421,11 @@ export default async function DashboardPage() {
               </div>
             )}
             <Link href="/dashboard/invoices" className="flex items-center justify-between gap-2 group">
-              <span className="text-sm text-gray-700 group-hover:underline">Outstanding invoices</span>
+              <span className="text-sm text-gray-700 group-hover:underline">{t('outstandingInvoices')}</span>
               <span className={`text-sm font-bold ${outstandingTotal > 0 ? 'text-orange-600' : 'text-gray-500'}`}>{fmt(outstandingTotal)}</span>
             </Link>
             <Link href="/dashboard/revenue" className="flex items-center justify-between gap-2 group">
-              <span className="text-sm text-gray-700 group-hover:underline">Revenue collected</span>
+              <span className="text-sm text-gray-700 group-hover:underline">{t('revenueCollected')}</span>
               <span className="text-sm font-bold text-[var(--brand-primary)]">{fmt(weekRevCollected)}</span>
             </Link>
           </div>
@@ -448,10 +450,10 @@ export default async function DashboardPage() {
       {/* Quick Actions */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {[
-          { label: 'Dispatch Driver', icon: Send,      href: '/dashboard/dispatch',       bg: 'bg-[var(--brand-dark)] text-white hover:bg-[var(--brand-primary-hover)]' },
-          { label: 'Add Ticket',      icon: Plus,      href: '/dashboard/tickets',        bg: 'bg-white text-gray-800 border border-gray-200 hover:border-[var(--brand-primary)] hover:bg-[#f0fdf4]' },
-          { label: 'New Invoice',     icon: FileText,  href: '/dashboard/invoices?new=1', bg: 'bg-white text-gray-800 border border-gray-200 hover:border-[var(--brand-primary)] hover:bg-[#f0fdf4]' },
-          { label: 'Add Expense',     icon: Receipt,   href: '/dashboard/expenses?new-expense=1', bg: 'bg-white text-gray-800 border border-gray-200 hover:border-[var(--brand-primary)] hover:bg-[#f0fdf4]' },
+          { label: t('dispatchDriver'), icon: Send,      href: '/dashboard/dispatch',       bg: 'bg-[var(--brand-dark)] text-white hover:bg-[var(--brand-primary-hover)]' },
+          { label: t('addTicket'),      icon: Plus,      href: '/dashboard/tickets',        bg: 'bg-white text-gray-800 border border-gray-200 hover:border-[var(--brand-primary)] hover:bg-[#f0fdf4]' },
+          { label: t('newInvoice'),     icon: FileText,  href: '/dashboard/invoices?new=1', bg: 'bg-white text-gray-800 border border-gray-200 hover:border-[var(--brand-primary)] hover:bg-[#f0fdf4]' },
+          { label: t('addExpense'),     icon: Receipt,   href: '/dashboard/expenses?new-expense=1', bg: 'bg-white text-gray-800 border border-gray-200 hover:border-[var(--brand-primary)] hover:bg-[#f0fdf4]' },
         ].map(({ label, icon: Icon, href, bg }) => (
           <Link
             key={label}
@@ -490,22 +492,22 @@ export default async function DashboardPage() {
         {/* Revenue Chart */}
         <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 p-5">
           <div className="flex items-center justify-between mb-1">
-            <h2 className="font-semibold text-gray-900 text-sm">Revenue</h2>
+            <h2 className="font-semibold text-gray-900 text-sm">{t('revenue')}</h2>
           </div>
-          <p className="text-xs text-gray-400 mb-4">Based on paid client invoices (date paid)</p>
+          <p className="text-xs text-gray-400 mb-4">{t('revenueChartSubtitle')}</p>
           <LoadsChart week={weekData} month={monthData} year={yearData} />
         </div>
 
         {/* Top Drivers */}
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-gray-900 text-sm">Top Drivers</h2>
-            <Link href="/dashboard/drivers" className="text-xs text-[var(--brand-primary)] font-medium hover:underline">View all</Link>
+            <h2 className="font-semibold text-gray-900 text-sm">{t('topDrivers')}</h2>
+            <Link href="/dashboard/drivers" className="text-xs text-[var(--brand-primary)] font-medium hover:underline">{t('viewAll')}</Link>
           </div>
           {topDrivers.length === 0 ? (
             <div className="text-center py-8">
               <Users className="h-8 w-8 text-gray-200 mx-auto mb-2" />
-              <p className="text-sm text-gray-400">No driver data yet</p>
+              <p className="text-sm text-gray-400">{t('noDriverData')}</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -541,18 +543,18 @@ export default async function DashboardPage() {
           <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Radio className="h-4 w-4 text-purple-500" />
-              <h2 className="font-semibold text-gray-900 text-sm">Today&apos;s Dispatches</h2>
+              <h2 className="font-semibold text-gray-900 text-sm">{t('todaysDispatches')}</h2>
               {dispatchedToday > 0 && (
                 <span className="rounded-full bg-purple-100 text-purple-700 px-2 py-0.5 text-xs font-bold">{dispatchedToday}</span>
               )}
             </div>
-            <Link href="/dashboard/dispatch" className="text-xs text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] font-medium">View all →</Link>
+            <Link href="/dashboard/dispatch" className="text-xs text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] font-medium">{t('viewAll')}</Link>
           </div>
           {todayDispatches.length === 0 ? (
             <div className="text-center py-10">
               <Radio className="h-8 w-8 text-gray-200 mx-auto mb-2" />
-              <p className="text-sm text-gray-400">No dispatches today</p>
-              <Link href="/dashboard/dispatch" className="text-xs text-[var(--brand-primary)] mt-1 inline-block hover:underline">Dispatch a driver →</Link>
+              <p className="text-sm text-gray-400">{t('noDispatchesToday')}</p>
+              <Link href="/dashboard/dispatch" className="text-xs text-[var(--brand-primary)] mt-1 inline-block hover:underline">{t('dispatchADriver')}</Link>
             </div>
           ) : (
             <div className="divide-y divide-gray-50">
@@ -584,21 +586,21 @@ export default async function DashboardPage() {
       {/* Recent Tickets */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-6">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900 text-sm">Recent Tickets</h2>
-          <Link href="/dashboard/tickets" className="text-xs text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] font-medium">View all →</Link>
+          <h2 className="font-semibold text-gray-900 text-sm">{t('recentTickets')}</h2>
+          <Link href="/dashboard/tickets" className="text-xs text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] font-medium">{t('viewAll')}</Link>
         </div>
         {recentLoads.length === 0 ? (
           <div className="text-center py-12">
             <Truck className="h-10 w-10 text-gray-200 mx-auto mb-3" />
-            <p className="text-sm text-gray-400 font-medium">No tickets yet</p>
-            <Link href="/dashboard/tickets" className="text-xs text-[var(--brand-primary)] mt-1 inline-block hover:underline">Add your first ticket →</Link>
+            <p className="text-sm text-gray-400 font-medium">{t('noTickets')}</p>
+            <Link href="/dashboard/tickets" className="text-xs text-[var(--brand-primary)] mt-1 inline-block hover:underline">{t('addFirstTicket')}</Link>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[480px] text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  {['Job', 'Driver', 'Date', 'Total', 'Status'].map(h => (
+                  {[t('tableJob'), t('tableDriver'), t('tableDate'), t('tableTotal'), t('tableStatus')].map(h => (
                     <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
@@ -635,7 +637,7 @@ export default async function DashboardPage() {
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
             <Activity className="h-4 w-4 text-gray-400" />
-            <h2 className="font-semibold text-gray-900 text-sm">Recent Activity</h2>
+            <h2 className="font-semibold text-gray-900 text-sm">{t('recentActivity')}</h2>
           </div>
           <div className="divide-y divide-gray-50">
             {activityFeed.map(a => (
