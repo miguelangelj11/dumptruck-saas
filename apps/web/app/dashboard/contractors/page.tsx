@@ -982,7 +982,7 @@ export default function ContractorsPage() {
                 <button onClick={() => setShowTicketForm(false)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
               </div>
               <form onSubmit={handleSaveTicket} className="p-6 space-y-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
                     <div className="flex items-center justify-between mb-1">
                       <label className="block text-xs font-medium text-gray-700">Working Under (Company)</label>
@@ -1038,7 +1038,7 @@ export default function ContractorsPage() {
                       />
                     )}
                   </div>
-                  <div className="col-span-full">
+                  <div className="col-span-2">
                     <label className="block text-xs font-medium text-gray-700 mb-1">Date *</label>
                     <input required type="date" value={ticketForm.date} onChange={e => setTicketForm(p => ({ ...p, date: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
                   </div>
