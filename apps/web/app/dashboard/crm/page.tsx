@@ -49,12 +49,27 @@ type Lead = {
   contact_name: string | null
   contact_title: string | null
   converted_job_id: string | null
+  converted_client_id: string | null
   converted_at: string | null
   win_amount: number | null
+  ai_score: number | null
+  lost_reason: string | null
+  lost_reason_notes: string | null
+  stage_entered_at: Record<string, string> | null
   notes: string | null
   created_at: string
   updated_at: string
   quotes?: Quote[]
+}
+
+type LeadNote = {
+  id: string
+  lead_id: string
+  company_id: string
+  note: string
+  note_type: string
+  created_by_name: string | null
+  created_at: string
 }
 
 type Quote = {
@@ -74,6 +89,26 @@ type Quote = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+const STUCK_THRESHOLDS: Record<string, number> = {
+  new_lead: 3, contacted: 5, quoted: 7, negotiating: 10, scheduled: 14,
+}
+
+const LOST_REASON_LABELS: Record<string, string> = {
+  price: '💰 Price Too High', timing: '⏰ Bad Timing',
+  competitor: '🏆 Lost to Competitor', no_response: '📵 No Response',
+  wrong_fit: '❌ Wrong Fit', other: '📋 Other',
+}
+
+const NOTE_TYPE_CONFIG: Record<string, { icon: string; label: string; color: string }> = {
+  note:       { icon: '📝', label: 'Note',       color: 'bg-gray-100 text-gray-700' },
+  call:       { icon: '📞', label: 'Call',        color: 'bg-green-100 text-green-700' },
+  email:      { icon: '✉️', label: 'Email',       color: 'bg-blue-100 text-blue-700' },
+  text:       { icon: '💬', label: 'Text',        color: 'bg-purple-100 text-purple-700' },
+  meeting:    { icon: '🤝', label: 'Meeting',     color: 'bg-amber-100 text-amber-700' },
+  quote_sent: { icon: '📋', label: 'Quote Sent',  color: 'bg-orange-100 text-orange-700' },
+  system:     { icon: '⚙️', label: 'System',      color: 'bg-gray-50 text-gray-400' },
+}
+
 const fmt = (n: number) => n >= 1000 ? `$${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `$${n}`
 const fmtFull = (n: number) => `$${n.toLocaleString()}`
 
@@ -89,6 +124,12 @@ function daysSince(iso: string | null | undefined) {
 
 function getLeadStage(l: Lead): StageId { return normalizeStage(l) }
 function getEffectiveRevenue(l: Lead) { return l.estimated_revenue ?? l.value ?? 0 }
+
+function getDaysInStage(lead: Lead): number | null {
+  const entry = lead.stage_entered_at?.[lead.stage ?? 'new_lead']
+  if (!entry) return null
+  return Math.floor((Date.now() - new Date(entry).getTime()) / 86400000)
+}
 
 function getAiInsights(l: Lead): { emoji: string; text: string }[] {
   const insights: { emoji: string; text: string }[] = []
@@ -172,32 +213,82 @@ export default function CRMPage() {
   // Mobile stage tab
   const [mobileStage,    setMobileStage]    = useState<string>('new_lead')
 
+  // Lost reason modal
+  const [lostModal,      setLostModal]      = useState<{ lead: Lead; newStage: StageId } | null>(null)
+
+  // Activity log
+  const [detailTab,      setDetailTab]      = useState<'details' | 'activity'>('details')
+  const [activityNotes,  setActivityNotes]  = useState<LeadNote[]>([])
+  const [noteText,       setNoteText]       = useState('')
+  const [noteType,       setNoteType]       = useState('note')
+  const [loadingNotes,   setLoadingNotes]   = useState(false)
+  const [userName,       setUserName]       = useState('')
+
+  // Client autocomplete
+  const [nameSuggestions, setNameSuggestions] = useState<{ id: string; name: string; phone: string | null; email: string | null }[]>([])
+
   // ── Data ──────────────────────────────────────────────────────────────────
 
   const fetchData = useCallback(async () => {
     setLoading(true)
-    const cid = await getCompanyId()
-    if (!cid) { setLoading(false); return }
-    setCompanyId(cid)
+    try {
+      const cid = await getCompanyId()
+      if (!cid) return
+      setCompanyId(cid)
 
-    const [leadsRes, companyRes, quotesRes] = await Promise.all([
-      supabase.from('leads').select('*').eq('company_id', cid).order('created_at', { ascending: false }),
-      supabase.from('companies').select('plan, is_super_admin, subscription_override').eq('id', cid).maybeSingle(),
-      supabase.from('quotes').select('*').eq('company_id', cid).order('created_at', { ascending: false }),
-    ])
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user?.email) setUserName(user.email.split('@')[0] ?? '')
 
-    const co = companyRes.data as Record<string, unknown> | null
-    setPlan(co?.plan as string | null ?? null)
-    setIsSuperAdmin(!!(co?.is_super_admin))
-    setSubOverride(co?.subscription_override as string | null ?? null)
+      const [leadsRes, companyRes, quotesRes] = await Promise.all([
+        supabase.from('leads').select('*').eq('company_id', cid).order('created_at', { ascending: false }),
+        supabase.from('companies').select('plan, is_super_admin, subscription_override').eq('id', cid).maybeSingle(),
+        supabase.from('quotes').select('*').eq('company_id', cid).order('created_at', { ascending: false }),
+      ])
 
-    const quotes = (quotesRes.data ?? []) as Quote[]
-    const rawLeads = (leadsRes.data ?? []) as Lead[]
-    setLeads(rawLeads.map(l => ({ ...l, quotes: quotes.filter(q => q.lead_id === l.id) })))
-    setLoading(false)
+      const co = companyRes.data as Record<string, unknown> | null
+      setPlan(co?.plan as string | null ?? null)
+      setIsSuperAdmin(!!(co?.is_super_admin))
+      setSubOverride(co?.subscription_override as string | null ?? null)
+
+      const quotes = (quotesRes.data ?? []) as Quote[]
+      const rawLeads = (leadsRes.data ?? []) as Lead[]
+      setLeads(rawLeads.map(l => ({ ...l, quotes: quotes.filter(q => q.lead_id === l.id) })))
+    } catch (err) {
+      console.error('[CRM] fetchData error:', err)
+      setLeads([])
+    } finally {
+      setLoading(false)
+    }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  // Client autocomplete
+  useEffect(() => {
+    if (!companyId || leadForm.name.length < 2) { setNameSuggestions([]); return }
+    supabase.from('client_companies')
+      .select('id, name, phone, email')
+      .eq('company_id', companyId)
+      .ilike('name', `%${leadForm.name}%`)
+      .limit(5)
+      .then(({ data }: { data: typeof nameSuggestions | null }) => setNameSuggestions(data ?? []))
+  }, [leadForm.name, companyId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch notes when detail panel opens or tab changes
+  const fetchNotes = useCallback(async (leadId: string) => {
+    if (!leadId) return
+    setLoadingNotes(true)
+    try {
+      const { data } = await supabase.from('lead_notes').select('*').eq('lead_id', leadId).order('created_at', { ascending: false })
+      setActivityNotes((data ?? []) as LeadNote[])
+    } finally {
+      setLoadingNotes(false)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (selectedLead && detailTab === 'activity') fetchNotes(selectedLead.id)
+  }, [selectedLead?.id, detailTab]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Plan gate ───────────────────────────────────────────────────────────────
 
@@ -258,6 +349,14 @@ export default function CRMPage() {
     setShowModal(true)
   }
 
+  function openDetailPanel(lead: Lead) {
+    setSelectedLead(lead)
+    setDetailTab('details')
+    setActivityNotes([])
+    setNoteText('')
+    setNoteType('note')
+  }
+
   function openEditLead(l: Lead, e?: React.MouseEvent) {
     e?.stopPropagation()
     setEditingLead(l)
@@ -296,6 +395,16 @@ export default function CRMPage() {
     setSavingLead(true)
     const n = (s: string) => s.trim() || null
     const num = (s: string) => s.trim() ? parseFloat(s) : null
+    const partialLead = {
+      estimated_revenue: num(leadForm.estimated_revenue),
+      source: n(leadForm.source),
+      phone: n(leadForm.phone),
+      email: n(leadForm.email),
+      last_contacted_at: n(leadForm.last_contacted_at),
+      next_follow_up_at: n(leadForm.next_follow_up_at),
+      stage: leadForm.stage,
+      status: leadForm.stage,
+    }
     const payload = {
       company_id:         companyId,
       name:               leadForm.name.trim(),
@@ -321,7 +430,8 @@ export default function CRMPage() {
       follow_up_notes:    n(leadForm.follow_up_notes),
       notes:              n(leadForm.notes),
       stage:              leadForm.stage,
-      status:             leadForm.stage,  // keep in sync for backward compat
+      status:             leadForm.stage,
+      ai_score:           computeLeadScore(partialLead),
       updated_at:         new Date().toISOString(),
     }
     if (editingLead) {
@@ -355,13 +465,35 @@ export default function CRMPage() {
   }
 
   async function moveStage(lead: Lead, stageId: StageId) {
+    if (stageId === 'lost') {
+      setLostModal({ lead, newStage: stageId })
+      return
+    }
+    await commitStageMove(lead, stageId, null, null)
+  }
+
+  async function commitStageMove(lead: Lead, stageId: StageId, lostReason: string | null, lostNotes: string | null) {
+    const stageEnteredAt = { ...(lead.stage_entered_at ?? {}), [stageId]: new Date().toISOString() }
     const { error } = await supabase.from('leads').update({
-      stage: stageId, status: stageId, updated_at: new Date().toISOString(),
+      stage: stageId, status: stageId,
+      lost_reason: lostReason,
+      lost_reason_notes: lostNotes,
+      stage_entered_at: stageEnteredAt,
+      updated_at: new Date().toISOString(),
     }).eq('id', lead.id)
     if (error) { toast.error('Failed to move'); return }
-    const updated = { ...lead, stage: stageId, status: stageId }
+    const updated = { ...lead, stage: stageId, status: stageId, lost_reason: lostReason, lost_reason_notes: lostNotes, stage_entered_at: stageEnteredAt }
     setLeads(prev => prev.map(l => l.id === lead.id ? updated : l))
     if (selectedLead?.id === lead.id) setSelectedLead(updated)
+    // Auto-log stage change
+    if (companyId) {
+      await supabase.from('lead_notes').insert({
+        lead_id: lead.id, company_id: companyId,
+        note: `Stage → ${stageId.replace(/_/g, ' ')}${lostReason ? ` — ${lostReason.replace(/_/g, ' ')}` : ''}`,
+        note_type: 'system', created_by_name: 'System',
+      })
+    }
+    setLostModal(null)
   }
 
   // ── Convert to Job ──────────────────────────────────────────────────────────
@@ -394,6 +526,26 @@ export default function CRMPage() {
     setConverting(false)
     setConvertLead(null)
     toast.success('Lead converted to active job!')
+  }
+
+  // ── Activity / Notes ────────────────────────────────────────────────────────
+
+  async function addNote() {
+    if (!noteText.trim() || !selectedLead || !companyId) return
+    const contactTypes = ['call', 'email', 'text', 'meeting']
+    await supabase.from('lead_notes').insert({
+      lead_id: selectedLead.id, company_id: companyId,
+      note: noteText.trim(), note_type: noteType,
+      created_by_name: userName || null,
+    })
+    if (contactTypes.includes(noteType)) {
+      const updated = { ...selectedLead, last_contacted_at: new Date().toISOString(), follow_up_count: (selectedLead.follow_up_count ?? 0) + 1 }
+      await supabase.from('leads').update({ last_contacted_at: updated.last_contacted_at, follow_up_count: updated.follow_up_count }).eq('id', selectedLead.id)
+      setLeads(prev => prev.map(l => l.id === selectedLead.id ? updated : l))
+      setSelectedLead(updated)
+    }
+    setNoteText('')
+    fetchNotes(selectedLead.id)
   }
 
   // ── Quote CRUD ──────────────────────────────────────────────────────────────
@@ -558,6 +710,18 @@ export default function CRMPage() {
         <div className="flex items-center justify-center flex-1 py-20">
           <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
         </div>
+      ) : !loading && leads.length === 0 ? (
+        <div className="flex flex-col items-center justify-center flex-1 py-20 px-6 text-center">
+          <span className="text-6xl block mb-4">📊</span>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">No leads yet</h3>
+          <p className="text-gray-500 mb-6 max-w-sm">Add your first lead to start tracking your pipeline and closing more jobs.</p>
+          <button
+            onClick={() => openAddLead()}
+            className="px-6 py-3 bg-[var(--brand-dark)] text-white font-bold rounded-xl hover:bg-[var(--brand-primary-hover)] transition-colors"
+          >
+            + Add Your First Lead
+          </button>
+        </div>
       ) : view === 'pipeline' ? (
         <>
           {/* ── DESKTOP: Horizontal kanban ── */}
@@ -585,7 +749,7 @@ export default function CRMPage() {
                         <MiniLeadCard
                           key={lead.id}
                           lead={lead}
-                          onSelect={() => setSelectedLead(lead)}
+                          onSelect={() => openDetailPanel(lead)}
                           onMove={moveStage}
                         />
                       ))}
@@ -632,7 +796,7 @@ export default function CRMPage() {
                 <MiniLeadCard
                   key={lead.id}
                   lead={lead}
-                  onSelect={() => setSelectedLead(lead)}
+                  onSelect={() => openDetailPanel(lead)}
                   onMove={moveStage}
                   fullWidth
                 />
@@ -646,6 +810,27 @@ export default function CRMPage() {
       ) : (
         /* ── LIST VIEW ── */
         <div className="px-6">
+          {/* Lost reason analytics */}
+          {lostLeads.length > 0 && (() => {
+            const byReason = lostLeads.reduce<Record<string, number>>((acc, l) => {
+              const r = l.lost_reason ?? 'unknown'
+              acc[r] = (acc[r] ?? 0) + 1
+              return acc
+            }, {})
+            return (
+              <div className="mb-4 p-4 bg-red-50 border border-red-100 rounded-xl">
+                <p className="text-xs font-bold text-red-700 uppercase tracking-wide mb-3">Lost Deal Analysis</p>
+                <div className="flex gap-3 flex-wrap">
+                  {Object.entries(byReason).sort((a, b) => b[1] - a[1]).map(([reason, count]) => (
+                    <div key={reason} className="flex items-center gap-1.5 text-xs bg-white px-2 py-1 rounded-lg border border-red-100">
+                      <span>{LOST_REASON_LABELS[reason] ?? reason}</span>
+                      <span className="font-bold text-red-600">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
           {/* Filters */}
           <div className="flex flex-wrap gap-2 mb-4">
             <input
@@ -698,7 +883,7 @@ export default function CRMPage() {
                     const rev   = getEffectiveRevenue(lead)
                     const isOverdue = lead.next_follow_up_at && new Date(lead.next_follow_up_at) < new Date()
                     return (
-                      <tr key={lead.id} className="hover:bg-gray-50/50 cursor-pointer" onClick={() => setSelectedLead(lead)}>
+                      <tr key={lead.id} className="hover:bg-gray-50/50 cursor-pointer" onClick={() => openDetailPanel(lead)}>
                         <td className="px-4 py-3">
                           <p className="font-semibold text-gray-900">{lead.name}</p>
                           {lead.contact_name && <p className="text-xs text-gray-400">{lead.contact_name}</p>}
@@ -818,6 +1003,70 @@ export default function CRMPage() {
               </div>
             </div>
 
+            {/* Detail / Activity tabs */}
+            <div className="flex border-b border-gray-100">
+              {(['details', 'activity'] as const).map(tab => (
+                <button key={tab} onClick={() => setDetailTab(tab)}
+                  className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${detailTab === tab ? 'text-[var(--brand-primary)] border-b-2 border-[var(--brand-primary)]' : 'text-gray-400 hover:text-gray-600'}`}>
+                  {tab === 'details' ? '📋 Details' : '🗒️ Activity'}
+                </button>
+              ))}
+            </div>
+
+            {detailTab === 'activity' ? (
+              <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4">
+                {/* Add note */}
+                <div className="p-4 bg-gray-50 rounded-xl">
+                  <div className="flex gap-1.5 mb-2 flex-wrap">
+                    {Object.entries(NOTE_TYPE_CONFIG).filter(([k]) => k !== 'system').map(([type, cfg]) => (
+                      <button key={type} type="button" onClick={() => setNoteType(type)}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-all ${noteType === type ? cfg.color + ' ring-2 ring-offset-1 ring-gray-300' : 'bg-white border border-gray-200 text-gray-500'}`}>
+                        {cfg.icon} {cfg.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <textarea
+                      value={noteText}
+                      onChange={e => setNoteText(e.target.value)}
+                      placeholder={`Log a ${noteType}…`}
+                      rows={2}
+                      className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:border-[var(--brand-primary)]"
+                      onKeyDown={e => { if (e.key === 'Enter' && e.metaKey) addNote() }}
+                    />
+                    <button onClick={addNote} disabled={!noteText.trim()}
+                      className="px-3 py-2 bg-[var(--brand-dark)] text-white font-bold rounded-xl text-sm disabled:opacity-40 self-end">
+                      Log
+                    </button>
+                  </div>
+                </div>
+                {/* Timeline */}
+                {loadingNotes ? (
+                  <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin text-gray-400" /></div>
+                ) : activityNotes.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-4">No activity logged yet</p>
+                ) : (
+                  <div className="space-y-2">
+                    {activityNotes.map(n => {
+                      const cfg = NOTE_TYPE_CONFIG[n.note_type] ?? NOTE_TYPE_CONFIG.note!
+                      return (
+                        <div key={n.id} className="flex gap-3 p-3 bg-white border border-gray-100 rounded-xl">
+                          <span className="text-lg flex-shrink-0">{cfg.icon}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cfg.color}`}>{cfg.label}</span>
+                              {n.created_by_name && <span className="text-xs text-gray-400">{n.created_by_name}</span>}
+                            </div>
+                            <p className="text-sm text-gray-800 leading-relaxed">{n.note}</p>
+                            <p className="text-xs text-gray-400 mt-1">{new Date(n.created_at).toLocaleString()}</p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : (
             <div className="flex-1 overflow-y-auto p-5 space-y-5">
 
               {/* Quick actions */}
@@ -1000,6 +1249,7 @@ export default function CRMPage() {
                 )}
               </div>
             </div>
+            )} {/* end details tab */}
 
             {/* Footer */}
             <div className="px-5 py-4 border-t border-gray-100 flex gap-2">
@@ -1046,7 +1296,34 @@ export default function CRMPage() {
                 {modalTab === 'basic' && (
                   <>
                     <FF label="Lead / Company Name *">
-                      <input required value={leadForm.name} onChange={e => setLeadForm(p => ({ ...p, name: e.target.value }))} placeholder="ABC Excavating" className={inp} />
+                      <div className="relative">
+                        <input
+                          required
+                          value={leadForm.name}
+                          onChange={e => setLeadForm(p => ({ ...p, name: e.target.value }))}
+                          onBlur={() => setTimeout(() => setNameSuggestions([]), 150)}
+                          placeholder="ABC Excavating"
+                          className={inp}
+                          autoComplete="off"
+                        />
+                        {nameSuggestions.length > 0 && (
+                          <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                            {nameSuggestions.map(client => (
+                              <button key={client.id} type="button"
+                                onMouseDown={() => {
+                                  setLeadForm(p => ({ ...p, name: client.name, phone: client.phone ?? p.phone, email: client.email ?? p.email }))
+                                  setNameSuggestions([])
+                                  toast.success(`Pre-filled from ${client.name}`)
+                                }}
+                                className="w-full text-left px-3 py-2.5 hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                              >
+                                <p className="text-sm font-medium">{client.name}</p>
+                                {client.phone && <p className="text-xs text-gray-400">{client.phone}</p>}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </FF>
                     <div className="grid grid-cols-2 gap-3">
                       <FF label="Contact Name">
@@ -1234,6 +1511,15 @@ export default function CRMPage() {
         </div>
       )}
 
+      {/* ── Lost Reason Modal ── */}
+      {lostModal && (
+        <LostReasonModal
+          lead={lostModal.lead}
+          onConfirm={(lostReason, lostNotes) => commitStageMove(lostModal.lead, 'lost', lostReason, lostNotes)}
+          onCancel={() => setLostModal(null)}
+        />
+      )}
+
       {/* ── Convert to Job Modal ── */}
       {convertLead && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setConvertLead(null)}>
@@ -1345,6 +1631,20 @@ function MiniLeadCard({
         <p className="text-[10px] text-gray-400 mt-1.5">📅 {fmtDate(lead.expected_start_date)}</p>
       )}
 
+      {/* Stage velocity */}
+      {(() => {
+        const days = getDaysInStage(lead)
+        if (days === null) return null
+        const threshold = STUCK_THRESHOLDS[lead.stage ?? 'new_lead']
+        const isStuck = threshold !== undefined && days >= threshold
+        return (
+          <div className={`flex items-center gap-1 text-[10px] mt-1 ${isStuck ? 'text-red-500' : 'text-gray-400'}`}>
+            <span>{isStuck ? '🔴' : '⏱️'}</span>
+            <span>{days}d in {(lead.stage ?? 'new_lead').replace(/_/g, ' ')}{isStuck ? ' — follow up!' : ''}</span>
+          </div>
+        )
+      })()}
+
       {/* Actions */}
       <div className="flex gap-1.5 mt-2.5 pt-2.5 border-t border-gray-50" onClick={e => e.stopPropagation()}>
         {lead.phone && (
@@ -1402,6 +1702,53 @@ function QuoteCard({ quote, onEdit, onDelete }: {
         <button onClick={onDelete} className="text-xs text-gray-500 hover:text-red-500 flex items-center gap-1">
           <Trash2 className="h-3 w-3" /> Delete
         </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Lost Reason Modal ───────────────────────────────────────────────────────
+
+function LostReasonModal({ lead, onConfirm, onCancel }: {
+  lead: Lead
+  onConfirm: (reason: string, notes: string) => void
+  onCancel: () => void
+}) {
+  const [reason, setReason] = useState('')
+  const [notes, setNotes] = useState('')
+  const reasons = [
+    { id: 'price', label: '💰 Price Too High' },
+    { id: 'timing', label: '⏰ Bad Timing' },
+    { id: 'competitor', label: '🏆 Lost to Competitor' },
+    { id: 'no_response', label: '📵 No Response' },
+    { id: 'wrong_fit', label: '❌ Wrong Fit' },
+    { id: 'other', label: '📋 Other' },
+  ]
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+        <h3 className="text-lg font-bold text-gray-900 mb-1">Mark Lead as Lost</h3>
+        <p className="text-sm text-gray-500 mb-5">{lead.name} — Why did you lose this one?</p>
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          {reasons.map(r => (
+            <button key={r.id} type="button" onClick={() => setReason(r.id)}
+              className={`py-2.5 px-3 rounded-xl text-sm font-medium border-2 text-left transition-all ${reason === r.id ? 'border-red-400 bg-red-50 text-red-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+              {r.label}
+            </button>
+          ))}
+        </div>
+        <textarea value={notes} onChange={e => setNotes(e.target.value)}
+          placeholder="Any additional notes? (optional)" rows={2}
+          className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm resize-none mb-5 focus:outline-none focus:border-[var(--brand-primary)]" />
+        <div className="flex gap-3">
+          <button onClick={onCancel} className="flex-1 py-2.5 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50">
+            Cancel
+          </button>
+          <button onClick={() => onConfirm(reason, notes)} disabled={!reason}
+            className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-white ${reason ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-300 cursor-not-allowed'}`}>
+            Mark as Lost
+          </button>
+        </div>
       </div>
     </div>
   )
