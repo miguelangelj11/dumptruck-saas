@@ -152,7 +152,7 @@ export default async function DashboardPage() {
   // ── Batch 2 (needs companyId) ─────────────────────────────────────────────
   const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString()
 
-  const [dispTodayRes, dispDetailRes, missingRes, noResponseRes, missingRevenueRes, workingRes, pendingRDRes] = companyId
+  const [dispTodayRes, dispDetailRes, missingRes, noResponseRes, missingRevenueRes, workingRes, pendingRDRes, coiRes] = companyId
     ? await Promise.all([
         supabase.from('dispatches').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('dispatch_date', todayStr).neq('status', 'completed').neq('status', 'cancelled'),
         supabase.from('dispatches').select('id, driver_name, status, start_time, jobs(job_name)').eq('company_id', companyId).eq('dispatch_date', todayStr).neq('status', 'cancelled').order('created_at', { ascending: false }).limit(6),
@@ -164,6 +164,8 @@ export default async function DashboardPage() {
         supabase.from('dispatches').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('dispatch_date', todayStr).eq('status', 'working'),
         // Pending received dispatches (incoming work from other companies)
         supabase.from('received_dispatches').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('status', 'pending'),
+        // Expiring/expired COIs
+        supabase.from('contractors').select('name, coi_expiry').eq('company_id', companyId).eq('status', 'active').not('coi_expiry', 'is', null),
       ])
     : [
         { count: 0, error: null },
@@ -173,12 +175,17 @@ export default async function DashboardPage() {
         { data: [],  error: null },
         { count: 0, error: null },
         { count: 0, error: null },
+        { data: [],  error: null },
       ] as const
 
   const dispatchedToday      = dispTodayRes.count  ?? 0
   const todayDispatches      = (dispDetailRes.data ?? []) as unknown as TodayDispatch[]
   const missingTickets       = missingRes.count    ?? 0
   const noResponseCount      = noResponseRes.count ?? 0
+  type CoiRow = { name: string; coi_expiry: string }
+  const expiringCOIs = ((coiRes as { data: CoiRow[] | null }).data ?? []).filter((c: CoiRow) =>
+    Math.floor((new Date(c.coi_expiry).getTime() - Date.now()) / 86400000) <= 30
+  )
   const workingDrivers       = workingRes.count    ?? 0
   const pendingReceivedCount = (pendingRDRes as { count?: number | null }).count ?? 0
 
@@ -436,6 +443,12 @@ export default async function DashboardPage() {
               <Link href="/dashboard/dispatch" className="flex items-center justify-between gap-2 group">
                 <span className="text-sm text-blue-700 font-medium group-hover:underline">{pendingReceivedCount !== 1 ? t('incomingOfferPlural', { count: pendingReceivedCount }) : t('incomingOffer', { count: pendingReceivedCount })}</span>
                 <span className="text-xs text-blue-600 shrink-0">{t('reviewMissing')}</span>
+              </Link>
+            )}
+            {expiringCOIs.length > 0 && (
+              <Link href="/dashboard/contractors" className="flex items-center justify-between gap-2 group border-t pt-2.5">
+                <span className="text-sm text-red-700 font-medium group-hover:underline">🛡️ {expiringCOIs.length} subcontractor COI{expiringCOIs.length > 1 ? 's' : ''} expiring soon</span>
+                <span className="text-xs font-bold text-red-600 shrink-0">Review →</span>
               </Link>
             )}
           </div>

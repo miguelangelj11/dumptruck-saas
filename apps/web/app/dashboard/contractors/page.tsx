@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { getCompanyId } from '@/lib/get-company-id'
-import { Plus, Pencil, Trash2, Loader2, Truck, ChevronLeft, Camera, X, ImageIcon, ChevronRight, Phone, Mail } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, Truck, ChevronLeft, Camera, X, ImageIcon, ChevronRight, Phone, Mail, FileText, Shield, CheckCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Contractor, ContractorTicket, ContractorTicketSlip, ClientCompany } from '@/lib/types'
 import Image from 'next/image'
@@ -17,6 +17,36 @@ const statusColor = {
 const materials = ['Asphalt', 'Concrete', 'Dirt', 'Gravel', 'Mix', 'Mulch', 'Rock', 'Sand', 'Other']
 
 type SlipRow = { id: string; tonnage: string; imageFile: File | null; imagePreview: string | null }
+
+type CompanyDocument = {
+  id: string
+  company_id: string
+  name: string
+  url: string | null
+  mime: string | null
+  notes: string | null
+  created_at: string
+  contractor_id: string | null
+  doc_type: string | null
+}
+
+function COIExpiryBadge({ expiryDate }: { expiryDate: string }) {
+  const daysUntil = Math.floor((new Date(expiryDate).getTime() - Date.now()) / 86400000)
+  if (daysUntil < 0) return <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-semibold">❌ Expired</span>
+  if (daysUntil <= 30) return <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-semibold">⚠️ {daysUntil}d left</span>
+  return <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-semibold">✅ Valid</span>
+}
+
+function getComplianceStatus(contractor: Contractor): 'compliant' | 'expiring' | 'expired' | 'incomplete' | 'unknown' {
+  const coiDays = contractor.coi_expiry
+    ? Math.floor((new Date(contractor.coi_expiry).getTime() - Date.now()) / 86400000)
+    : null
+  if (coiDays !== null && coiDays < 0) return 'expired'
+  if (!contractor.w9_on_file) return 'incomplete'
+  if (coiDays !== null && coiDays <= 30) return 'expiring'
+  if (contractor.w9_on_file && (coiDays === null || coiDays > 30)) return 'compliant'
+  return 'unknown'
+}
 
 function localToday(): string {
   const d = new Date()
@@ -58,17 +88,33 @@ export default function ContractorsPage() {
   const [companySubOverride,   setCompanySubOverride]   = useState<string | null>(null)
   const [selected, setSelected] = useState<Contractor | null>(null)
   const [clientCompanies, setClientCompanies] = useState<ClientCompany[]>([])
+  const [contractorTicketSummary, setContractorTicketSummary] = useState<{ contractor_id: string; date: string }[]>([])
 
   // Contractor form
   const [showContractorForm, setShowContractorForm] = useState(false)
   const [editingContractor, setEditingContractor] = useState<Contractor | null>(null)
-  const [contractorForm, setContractorForm] = useState({ name: '', address: '', phone: '', email: '', status: 'active', notes: '' })
+  const [contractorForm, setContractorForm] = useState({ name: '', address: '', phone: '', email: '', status: 'active', notes: '', day_rate: '', night_rate: '' })
   const [savingContractor, setSavingContractor] = useState(false)
 
   // Ticket list + form
   const [tickets, setTickets] = useState<ContractorTicket[]>([])
+  const [allTickets, setAllTickets] = useState<ContractorTicket[]>([])
   const [loadingTickets, setLoadingTickets] = useState(false)
-  const [ticketTab, setTicketTab] = useState<'pending' | 'invoiced' | 'all'>('pending')
+  const [ticketTab, setTicketTab] = useState<'pending' | 'invoiced' | 'paid' | 'all'>('pending')
+  const [detailSection, setDetailSection] = useState<'tickets' | 'documents'>('tickets')
+
+  // Batch pay
+  const [selectedForPay, setSelectedForPay] = useState<string[]>([])
+  const [paymentModal, setPaymentModal] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState('check')
+  const [paymentReference, setPaymentReference] = useState('')
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]!)
+  const [paymentNotes, setPaymentNotes] = useState('')
+  const [savingPayment, setSavingPayment] = useState(false)
+
+  // Documents
+  const [docs, setDocs] = useState<CompanyDocument[]>([])
+  const [loadingDocs, setLoadingDocs] = useState(false)
   const [showTicketForm, setShowTicketForm] = useState(false)
   const [editingTicket, setEditingTicket] = useState<ContractorTicket | null>(null)
   const [ticketForm, setTicketForm] = useState(EMPTY_TICKET)
@@ -105,15 +151,17 @@ export default function ContractorsPage() {
     setUserId(user.id)
     const orgId = await getCompanyId()
     if (!orgId) { setLoading(false); return }
-    const [contractorsRes, companiesRes, trucksRes, planRes] = await Promise.all([
+    const [contractorsRes, companiesRes, trucksRes, planRes, ticketSummaryRes] = await Promise.all([
       supabase.from('contractors').select('*').eq('company_id', orgId).order('name'),
       supabase.from('client_companies').select('*').eq('company_id', orgId).order('name'),
       supabase.from('trucks').select('id,truck_number').eq('company_id', orgId).order('truck_number'),
       supabase.from('companies').select('plan, is_super_admin, subscription_override').eq('id', orgId).maybeSingle(),
+      supabase.from('contractor_tickets').select('contractor_id, date').eq('company_id', orgId),
     ])
     if (contractorsRes.error) toast.error('Failed to load subcontractors: ' + contractorsRes.error.message)
     setContractors(contractorsRes.data ?? [])
     setClientCompanies(companiesRes.data ?? [])
+    setContractorTicketSummary((ticketSummaryRes.data ?? []) as { contractor_id: string; date: string }[])
     setTrucks((trucksRes.data ?? []) as { id: string; truck_number: string }[])
     const planCoData = planRes.data as Record<string, unknown> | null
     setCompanyPlan(planCoData?.plan as string | null ?? null)
@@ -137,8 +185,32 @@ export default function ContractorsPage() {
       .select('*, contractor_ticket_slips(*)')
       .eq('contractor_id', contractorId)
       .order('date', { ascending: false })
-    setTickets(data ?? [])
+    const t = (data ?? []) as ContractorTicket[]
+    setTickets(t)
+    setAllTickets(t)
     setLoadingTickets(false)
+  }
+
+  async function fetchDocs(contractorId: string) {
+    setLoadingDocs(true)
+    const orgId = await getCompanyId()
+    if (!orgId) { setLoadingDocs(false); return }
+    const { data } = await supabase
+      .from('company_documents')
+      .select('*')
+      .eq('company_id', orgId)
+      .eq('contractor_id', contractorId)
+      .order('created_at', { ascending: false })
+    setDocs((data ?? []) as CompanyDocument[])
+    setLoadingDocs(false)
+  }
+
+  async function updateContractor(updates: Partial<Contractor>) {
+    if (!selected) return
+    const { error } = await supabase.from('contractors').update(updates).eq('id', selected.id)
+    if (error) { toast.error(error.message); return }
+    setSelected(prev => prev ? { ...prev, ...updates } : prev)
+    setContractors(prev => prev.map(c => c.id === selected.id ? { ...c, ...updates } : c))
   }
 
   async function fetchActiveJobs(orgId: string) {
@@ -198,8 +270,11 @@ export default function ContractorsPage() {
   function selectContractor(c: Contractor) {
     setSelected(c)
     setTicketTab('pending')
+    setDetailSection('tickets')
+    setSelectedForPay([])
     fetchTickets(c.id)
     fetchContractorTrucks(c.id)
+    fetchDocs(c.id)
     setAddingContractorTruck(false)
     setNewContractorTruckNumber('')
   }
@@ -207,13 +282,13 @@ export default function ContractorsPage() {
   // --- Contractor CRUD ---
   function openAddContractor() {
     setEditingContractor(null)
-    setContractorForm({ name: '', address: '', phone: '', email: '', status: 'active', notes: '' })
+    setContractorForm({ name: '', address: '', phone: '', email: '', status: 'active', notes: '', day_rate: '', night_rate: '' })
     setShowContractorForm(true)
   }
 
   function openEditContractor(c: Contractor) {
     setEditingContractor(c)
-    setContractorForm({ name: c.name, address: c.address ?? '', phone: c.phone ?? '', email: c.email ?? '', status: c.status, notes: c.notes ?? '' })
+    setContractorForm({ name: c.name, address: c.address ?? '', phone: c.phone ?? '', email: c.email ?? '', status: c.status, notes: c.notes ?? '', day_rate: c.day_rate ? String(c.day_rate) : '', night_rate: c.night_rate ? String(c.night_rate) : '' })
     setShowContractorForm(true)
   }
 
@@ -230,6 +305,8 @@ export default function ContractorsPage() {
       email: contractorForm.email || null,
       status: contractorForm.status,
       notes: contractorForm.notes || null,
+      day_rate: contractorForm.day_rate ? parseFloat(contractorForm.day_rate) : null,
+      night_rate: contractorForm.night_rate ? parseFloat(contractorForm.night_rate) : null,
     }
 
     if (editingContractor) {
@@ -259,7 +336,10 @@ export default function ContractorsPage() {
   // --- Ticket CRUD ---
   async function openAddTicket() {
     setEditingTicket(null)
-    setTicketForm({ ...EMPTY_TICKET, date: localToday() })
+    const autoRate = selected?.day_rate ? String(selected.day_rate) : ''
+    const autoRateType = selected?.default_rate_type ?? 'load'
+    setTicketForm({ ...EMPTY_TICKET, date: localToday(), unit_rate: autoRate, rate_type: autoRateType })
+    if (autoRate) toast.success(`Rate auto-filled from ${selected?.name ?? 'contractor'}'s profile`)
     const allTrucks = [...contractorTrucks, ...trucks]
     setTruckMode(allTrucks.length > 0 ? 'dropdown' : 'manual')
     setJobMode('dropdown')
@@ -389,6 +469,64 @@ export default function ContractorsPage() {
     return (t.contractor_ticket_slips ?? []).map(s => s.image_url).filter(Boolean) as string[]
   }
 
+  async function handleRecordPayment() {
+    if (!selected || selectedForPay.length === 0) return
+    setSavingPayment(true)
+    const orgId = await getCompanyId()
+    if (!orgId) { toast.error('Not authenticated'); setSavingPayment(false); return }
+
+    const selectedTickets = tickets.filter(t => selectedForPay.includes(t.id))
+    const total = selectedTickets.reduce((s, t) => s + (t.rate || 0), 0)
+
+    const { data: batch, error: batchErr } = await supabase
+      .from('contractor_payment_batches')
+      .insert({
+        company_id: orgId,
+        contractor_id: selected.id,
+        total_amount: total,
+        ticket_count: selectedTickets.length,
+        payment_method: paymentMethod,
+        payment_reference: paymentReference || null,
+        payment_date: paymentDate,
+        notes: paymentNotes || null,
+      })
+      .select('id')
+      .single()
+
+    if (batchErr || !batch) { toast.error(batchErr?.message ?? 'Failed to create payment batch'); setSavingPayment(false); return }
+
+    const { error: ticketErr } = await supabase
+      .from('contractor_tickets')
+      .update({
+        payment_status: 'paid',
+        paid_at: new Date(paymentDate).toISOString(),
+        payment_method: paymentMethod,
+        payment_reference: paymentReference || null,
+        payment_batch_id: (batch as Record<string, unknown>).id as string,
+        status: 'paid',
+      })
+      .in('id', selectedForPay)
+
+    if (ticketErr) { toast.error(ticketErr.message); setSavingPayment(false); return }
+
+    await supabase.from('contractors').update({
+      ytd_paid: (selected.ytd_paid ?? 0) + total,
+      lifetime_paid: (selected.lifetime_paid ?? 0) + total,
+      last_worked_at: paymentDate,
+    }).eq('id', selected.id)
+
+    setSelected(prev => prev ? { ...prev, ytd_paid: (prev.ytd_paid ?? 0) + total, lifetime_paid: (prev.lifetime_paid ?? 0) + total } : prev)
+
+    toast.success(`✅ Payment of $${total.toLocaleString()} recorded for ${selected.name}`)
+    setPaymentModal(false)
+    setSelectedForPay([])
+    setPaymentMethod('check')
+    setPaymentReference('')
+    setPaymentNotes('')
+    setSavingPayment(false)
+    fetchTickets(selected.id)
+  }
+
   // --- Render ---
   if (loading) {
     return <div className="flex items-center justify-center py-40"><Loader2 className="h-6 w-6 animate-spin text-[var(--brand-primary)]" /></div>
@@ -468,14 +606,137 @@ export default function ContractorsPage() {
           )}
         </div>
 
+        {/* Money summary band */}
+        {(() => {
+          const pendingAmt   = allTickets.filter(t => t.status === 'pending').reduce((s, t) => s + (t.rate || 0), 0)
+          const pendingCnt   = allTickets.filter(t => t.status === 'pending').length
+          const invoicedAmt  = allTickets.filter(t => t.status === 'invoiced').reduce((s, t) => s + (t.rate || 0), 0)
+          const invoicedCnt  = allTickets.filter(t => t.status === 'invoiced').length
+          const paidAmt      = allTickets.filter(t => t.payment_status === 'paid').reduce((s, t) => s + (t.rate || 0), 0)
+          const paidCnt      = allTickets.filter(t => t.payment_status === 'paid').length
+          const ytdAmt       = allTickets.filter(t => {
+            const yr = new Date(t.date || '').getFullYear()
+            return yr === new Date().getFullYear() && t.payment_status === 'paid'
+          }).reduce((s, t) => s + (t.rate || 0), 0)
+          return (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-5 bg-gray-50 rounded-2xl border border-gray-200">
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Pending</p>
+                <p className="text-2xl font-black text-amber-600">${pendingAmt.toLocaleString()}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{pendingCnt} ticket{pendingCnt !== 1 ? 's' : ''} owed</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Invoiced</p>
+                <p className="text-2xl font-black text-blue-600">${invoicedAmt.toLocaleString()}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{invoicedCnt} ticket{invoicedCnt !== 1 ? 's' : ''} billed</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Paid YTD</p>
+                <p className="text-2xl font-black text-green-600">${ytdAmt.toLocaleString()}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{new Date().getFullYear()} total</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Lifetime Paid</p>
+                <p className="text-2xl font-black text-gray-700">${paidAmt.toLocaleString()}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{paidCnt} tickets total</p>
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* Section tabs: Tickets / Documents */}
+        <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 w-fit">
+          <button onClick={() => setDetailSection('tickets')} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 ${detailSection === 'tickets' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+            <Truck className="h-3.5 w-3.5" /> Tickets
+          </button>
+          <button onClick={() => setDetailSection('documents')} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 ${detailSection === 'documents' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+            <FileText className="h-3.5 w-3.5" /> Documents
+            {docs.length > 0 && <span className="text-xs px-1.5 py-0.5 rounded-full font-semibold bg-gray-200/70 text-gray-500">{docs.length}</span>}
+          </button>
+        </div>
+
+        {detailSection === 'documents' ? (
+          <div className="space-y-4">
+            {/* Quick type status cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { type: 'coi', label: 'Certificate of Insurance', icon: '🛡️' },
+                { type: 'w9', label: 'W-9 Form', icon: '📋' },
+                { type: 'contract', label: 'Contract / MSA', icon: '📄' },
+                { type: 'license', label: 'Business License', icon: '🏢' },
+              ].map(docType => {
+                const existing = docs.find(d => d.doc_type === docType.type)
+                return (
+                  <div key={docType.type} className={`p-4 rounded-xl border-2 text-center ${existing ? 'border-green-300 bg-green-50' : 'border-dashed border-gray-300'}`}>
+                    <span className="text-2xl block mb-1">{docType.icon}</span>
+                    <p className="text-xs font-medium text-gray-700">{docType.label}</p>
+                    {existing ? <p className="text-xs text-green-600 font-semibold mt-1">✓ On file</p> : <p className="text-xs text-gray-400 mt-1">Not uploaded</p>}
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* COI expiry field */}
+            <div className="p-4 bg-gray-50 rounded-xl">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-gray-700">COI Expiration Date</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Certificate of Insurance expiry</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="date" value={selected.coi_expiry ?? ''} onChange={e => updateContractor({ coi_expiry: e.target.value || null })} className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
+                  {selected.coi_expiry && <COIExpiryBadge expiryDate={selected.coi_expiry} />}
+                </div>
+              </div>
+            </div>
+
+            {/* W9 on file */}
+            <div className="p-4 bg-gray-50 rounded-xl flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-gray-700">W-9 On File</p>
+                <p className="text-xs text-gray-500 mt-0.5">Required for 1099 at year end</p>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={selected.w9_on_file ?? false} onChange={e => updateContractor({ w9_on_file: e.target.checked })} className="w-4 h-4 rounded" />
+                <span className={`text-sm font-medium ${selected.w9_on_file ? 'text-green-600' : 'text-gray-400'}`}>{selected.w9_on_file ? 'Yes — on file' : 'Not collected'}</span>
+              </label>
+            </div>
+
+            {/* Uploaded docs */}
+            {loadingDocs ? (
+              <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-gray-400" /></div>
+            ) : docs.length > 0 ? (
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold text-gray-700">Uploaded Files</h4>
+                {docs.map(doc => (
+                  <div key={doc.id} className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-xl hover:shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">📄</span>
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">{doc.name}</p>
+                        <p className="text-xs text-gray-400">{fmtDate(doc.created_at)}</p>
+                      </div>
+                    </div>
+                    {doc.url && <a href={doc.url} target="_blank" rel="noreferrer" className="text-xs px-2 py-1 border border-gray-200 rounded hover:bg-gray-50">View</a>}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400 text-center py-8">No documents uploaded yet</p>
+            )}
+          </div>
+        ) : (
+          <>
         {/* Ticket status tabs */}
         <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 w-fit">
-          {(['pending', 'invoiced', 'all'] as const).map(tab => {
-            const count = tab === 'all' ? tickets.length : tickets.filter(t => t.status === tab).length
+          {(['pending', 'invoiced', 'paid', 'all'] as const).map(tab => {
+            const count = tab === 'all' ? tickets.length
+              : tab === 'paid' ? tickets.filter(t => t.payment_status === 'paid').length
+              : tickets.filter(t => t.status === tab).length
             return (
               <button
                 key={tab}
-                onClick={() => setTicketTab(tab)}
+                onClick={() => { setTicketTab(tab); setSelectedForPay([]) }}
                 className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 capitalize ${ticketTab === tab ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
               >
                 {tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -485,11 +746,28 @@ export default function ContractorsPage() {
           })}
         </div>
 
+        {/* Batch pay toolbar */}
+        {ticketTab === 'pending' && selectedForPay.length > 0 && (() => {
+          const selectedTotal = tickets.filter(t => selectedForPay.includes(t.id)).reduce((s, t) => s + (t.rate || 0), 0)
+          return (
+            <div className="flex items-center gap-3 p-3 mb-3 bg-green-900 text-white rounded-xl">
+              <div>
+                <p className="font-bold text-sm">{selectedForPay.length} ticket{selectedForPay.length !== 1 ? 's' : ''} selected</p>
+                <p className="text-green-300 text-xs">Total: ${selectedTotal.toLocaleString()}</p>
+              </div>
+              <button onClick={() => setPaymentModal(true)} className="ml-auto px-4 py-2 bg-green-500 hover:bg-green-400 text-white font-bold rounded-xl text-sm">💵 Record Payment</button>
+              <button onClick={() => setSelectedForPay([])} className="text-green-400 hover:text-white text-sm">Clear ✕</button>
+            </div>
+          )
+        })()}
+
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
           {loadingTickets ? (
             <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-[var(--brand-primary)]" /></div>
           ) : (() => {
-            const visibleTickets = ticketTab === 'all' ? tickets : tickets.filter(t => t.status === ticketTab)
+            const visibleTickets = ticketTab === 'all' ? tickets
+              : ticketTab === 'paid' ? tickets.filter(t => t.payment_status === 'paid')
+              : tickets.filter(t => t.status === ticketTab)
             return visibleTickets.length === 0 ? (
               <div className="text-center py-16">
                 <Truck className="h-10 w-10 text-gray-200 mx-auto mb-3" />
@@ -503,7 +781,8 @@ export default function ContractorsPage() {
               <table className="w-full min-w-[700px] text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
-                    {['Photos', 'Job', 'Ticket #', 'Company', 'Truck #', 'Material', 'Rate', 'Tickets', 'Hours', 'Date', 'Status', ''].map(h => (
+                    {ticketTab === 'pending' && <th className="w-8 px-4 py-3"></th>}
+                    {['Photos', 'Job', 'Ticket #', 'Company', 'Truck #', 'Material', 'Job Rate', 'Total Pay', 'Tickets', 'Hours', 'Date', 'Status', ticketTab === 'paid' ? 'Payment' : ''].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                     ))}
                   </tr>
@@ -515,6 +794,11 @@ export default function ContractorsPage() {
                     const totalTonnage = slips.reduce((s, r) => s + (r.tonnage ?? 0), 0)
                     return (
                       <tr key={t.id} className="hover:bg-gray-50/50 transition-colors">
+                        {ticketTab === 'pending' && (
+                          <td className="py-2 px-4 w-8">
+                            <input type="checkbox" checked={selectedForPay.includes(t.id)} onChange={e => setSelectedForPay(prev => e.target.checked ? [...prev, t.id] : prev.filter(id => id !== t.id))} className="w-4 h-4 rounded" />
+                          </td>
+                        )}
                         <td className="px-4 py-3">
                           {photos.length > 0 ? (
                             <div className="flex gap-1">
@@ -536,7 +820,8 @@ export default function ContractorsPage() {
                         <td className="px-4 py-3 text-gray-600">{t.client_company || <span className="text-gray-300">—</span>}</td>
                         <td className="px-4 py-3 text-gray-600">{t.truck_number ? `#${t.truck_number}` : <span className="text-gray-300">—</span>}</td>
                         <td className="px-4 py-3 text-gray-500">{t.material || '—'}</td>
-                        <td className="px-4 py-3 font-medium text-gray-900">${t.rate?.toLocaleString()}<span className="text-xs text-gray-400 font-normal">/{t.rate_type ?? 'job'}</span></td>
+                        <td className="px-4 py-3 text-xs text-gray-500">{t.rate ? `$${t.rate.toLocaleString()}/${t.rate_type ?? 'job'}` : '—'}</td>
+                        <td className="px-4 py-3 font-semibold text-gray-900">${t.rate?.toLocaleString() ?? '—'}</td>
                         <td className="px-4 py-3">
                           {slips.length > 0 ? (
                             <div>
@@ -550,12 +835,19 @@ export default function ContractorsPage() {
                         <td className="px-4 py-3">
                           <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${statusColor[t.status as keyof typeof statusColor] ?? 'bg-gray-100 text-gray-600'}`}>{t.status}</span>
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <button onClick={() => openEditTicket(t)} className="p-1 text-gray-400 hover:text-[var(--brand-primary)] transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
-                            <button onClick={() => handleDeleteTicket(t.id)} className="p-1 text-gray-400 hover:text-red-500 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
-                          </div>
-                        </td>
+                        {ticketTab === 'paid' ? (
+                          <td className="px-4 py-3 text-right text-xs">
+                            <p className="text-green-600 font-semibold">Paid {fmtDate(t.paid_at)}</p>
+                            <p className="text-gray-400">{t.payment_method}{t.payment_reference ? ` · ${t.payment_reference}` : ''}</p>
+                          </td>
+                        ) : (
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <button onClick={() => openEditTicket(t)} className="p-1 text-gray-400 hover:text-[var(--brand-primary)] transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
+                              <button onClick={() => handleDeleteTicket(t.id)} className="p-1 text-gray-400 hover:text-red-500 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     )
                   })}
@@ -565,6 +857,56 @@ export default function ContractorsPage() {
           )
           })()}
         </div>
+          </>
+        )}
+
+        {/* Record Payment modal */}
+        {paymentModal && selectedForPay.length > 0 && (() => {
+          const selectedTickets = tickets.filter(t => selectedForPay.includes(t.id))
+          const total = selectedTickets.reduce((s, t) => s + (t.rate || 0), 0)
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/50" onClick={() => setPaymentModal(false)} />
+              <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+                <h2 className="text-lg font-bold mb-1">Record Payment</h2>
+                <p className="text-sm text-gray-500 mb-5">
+                  {selected.name} · {selectedTickets.length} ticket{selectedTickets.length !== 1 ? 's' : ''} · <strong className="text-green-700">${total.toLocaleString()}</strong>
+                </p>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">Payment Method</label>
+                    <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20">
+                      <option value="check">Check</option>
+                      <option value="ach">ACH / Bank Transfer</option>
+                      <option value="cash">Cash</option>
+                      <option value="zelle">Zelle</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">Reference # (check number, ACH trace, etc.)</label>
+                    <input type="text" value={paymentReference} onChange={e => setPaymentReference(e.target.value)} placeholder="e.g. Check #1042" className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">Payment Date</label>
+                    <input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">Notes (optional)</label>
+                    <input type="text" value={paymentNotes} onChange={e => setPaymentNotes(e.target.value)} placeholder="Any notes about this payment..." className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
+                  </div>
+                </div>
+                <div className="flex gap-3 mt-6">
+                  <button onClick={() => setPaymentModal(false)} className="flex-1 py-3 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                  <button onClick={handleRecordPayment} disabled={savingPayment} className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
+                    {savingPayment && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {savingPayment ? 'Saving…' : 'Record Payment'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Ticket form modal */}
         {showTicketForm && (
@@ -906,12 +1248,24 @@ export default function ContractorsPage() {
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {contractors.map(c => (
+          {contractors.map(c => {
+            const complianceStatus = getComplianceStatus(c)
+            const complianceDotColor = complianceStatus === 'compliant' ? 'bg-green-500' : complianceStatus === 'expiring' ? 'bg-amber-500' : complianceStatus === 'expired' ? 'bg-red-500' : 'bg-gray-300'
+            const cTickets = contractorTicketSummary.filter(t => t.contractor_id === c.id)
+            const lastWorked = cTickets.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]?.date ?? null
+            const now = new Date()
+            const thisMonthJobs = cTickets.filter(t => {
+              const d = new Date(t.date)
+              return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+            }).length
+            const coiDays = c.coi_expiry ? Math.floor((new Date(c.coi_expiry).getTime() - Date.now()) / 86400000) : null
+            return (
             <div key={c.id} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-[var(--brand-dark)] flex items-center justify-center text-sm font-bold text-white shrink-0">
+                  <div className="relative h-10 w-10 rounded-full bg-[var(--brand-dark)] flex items-center justify-center text-sm font-bold text-white shrink-0">
                     {c.name.slice(0, 2).toUpperCase()}
+                    <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${complianceDotColor}`} title={complianceStatus} />
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900 text-sm">{c.name}</p>
@@ -924,17 +1278,29 @@ export default function ContractorsPage() {
                 </div>
               </div>
               {(c.address || c.phone || c.email) && (
-                <div className="space-y-1 mb-4">
+                <div className="space-y-1 mb-3">
                   {c.address && <p className="text-xs text-gray-500">{c.address}</p>}
                   {c.phone && <p className="flex items-center gap-1.5 text-xs text-gray-500"><Phone className="h-3 w-3 text-gray-400" />{c.phone}</p>}
                   {c.email && <p className="flex items-center gap-1.5 text-xs text-gray-500"><Mail className="h-3 w-3 text-gray-400" />{c.email}</p>}
                 </div>
               )}
+              {/* COI expiry alert */}
+              {coiDays !== null && coiDays <= 30 && (
+                <div className={`mt-1 mb-3 px-2 py-1 rounded-lg text-xs font-medium ${coiDays < 0 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                  {coiDays < 0 ? '❌ COI Expired — contact before dispatching' : `⚠️ COI expires in ${coiDays} days`}
+                </div>
+              )}
+              {/* Last active / this month */}
+              <div className="flex items-center gap-3 mb-3 text-xs text-gray-500">
+                {lastWorked ? <span>Last worked: {fmtDate(lastWorked)}</span> : <span className="text-gray-300 italic">No tickets yet</span>}
+                {thisMonthJobs > 0 && <span className="text-green-600 font-medium">{thisMonthJobs} job{thisMonthJobs !== 1 ? 's' : ''} this month</span>}
+              </div>
               <button onClick={() => selectContractor(c)} className="w-full rounded-lg bg-[var(--brand-primary)]/10 hover:bg-[var(--brand-primary)]/20 text-[var(--brand-primary)] text-sm font-medium py-2 transition-colors">
                 View Tickets →
               </button>
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -975,6 +1341,22 @@ export default function ContractorsPage() {
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
                 <textarea value={contractorForm.notes} onChange={e => setContractorForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] resize-none" placeholder="Optional notes..." />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Default Day Rate</label>
+                  <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/20 focus-within:border-[var(--brand-primary)]">
+                    <span className="flex items-center px-3 bg-gray-50 text-sm text-gray-400 border-r border-gray-200">$</span>
+                    <input type="number" min="0" step="0.01" value={contractorForm.day_rate} onChange={e => setContractorForm(p => ({ ...p, day_rate: e.target.value }))} placeholder="0.00" className="flex-1 px-3 py-2.5 text-sm focus:outline-none bg-white" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Default Night Rate</label>
+                  <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/20 focus-within:border-[var(--brand-primary)]">
+                    <span className="flex items-center px-3 bg-gray-50 text-sm text-gray-400 border-r border-gray-200">$</span>
+                    <input type="number" min="0" step="0.01" value={contractorForm.night_rate} onChange={e => setContractorForm(p => ({ ...p, night_rate: e.target.value }))} placeholder="0.00" className="flex-1 px-3 py-2.5 text-sm focus:outline-none bg-white" />
+                  </div>
+                </div>
               </div>
               <div className="flex gap-3 pt-1">
                 <button type="button" onClick={() => setShowContractorForm(false)} className="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>

@@ -268,6 +268,19 @@ export type Contractor = {
   status: 'active' | 'inactive'
   notes: string | null
   created_at: string
+  coi_expiry: string | null
+  coi_url: string | null
+  w9_on_file: boolean | null
+  w9_url: string | null
+  contract_url: string | null
+  license_url: string | null
+  compliance_status: string | null
+  day_rate: number | null
+  night_rate: number | null
+  default_rate_type: string | null
+  last_worked_at: string | null
+  ytd_paid: number | null
+  lifetime_paid: number | null
 }
 
 export type ContractorTicketSlip = {
@@ -295,6 +308,11 @@ export type ContractorTicket = {
   status: 'pending' | 'invoiced' | 'paid'
   notes: string | null
   created_at: string
+  payment_status: string | null
+  paid_at: string | null
+  payment_method: string | null
+  payment_reference: string | null
+  payment_batch_id: string | null
   contractor_ticket_slips?: ContractorTicketSlip[]
 }
 
