@@ -1038,7 +1038,7 @@ export default function ContractorsPage() {
                       />
                     )}
                   </div>
-                  <div>
+                  <div className="col-span-full">
                     <label className="block text-xs font-medium text-gray-700 mb-1">Date *</label>
                     <input required type="date" value={ticketForm.date} onChange={e => setTicketForm(p => ({ ...p, date: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
                   </div>
