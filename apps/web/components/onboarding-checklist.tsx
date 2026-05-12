@@ -11,6 +11,7 @@ import {
 import {
   MASTER_STEPS,
   getStepsForPlan,
+  getSectionsForPlan,
   estimatedMinutes,
   type OnboardingStep,
   type StepStatus,
@@ -20,7 +21,8 @@ import { normalizePlan } from '@/lib/plan-gate'
 const DISMISS_KEY = 'dtb_checklist_dismissed'
 
 // Event name for the re-summon ? button in the sidebar
-export const OPEN_CHECKLIST_EVENT = 'open-onboarding-checklist'
+export const OPEN_CHECKLIST_EVENT     = 'open-onboarding-checklist'
+export const CHECKLIST_PROGRESS_EVENT = 'checklist-progress'
 
 type StepStates = Record<string, StepStatus>
 
@@ -80,13 +82,24 @@ export default function OnboardingChecklist() {
   const [celebrating,   setCelebrating]   = useState(false)
   const [invoiceBoom,   setInvoiceBoom]   = useState(false)
 
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set())
+
   const companyIdRef   = useRef<string | null>(null)
   const celebratedRef  = useRef(false)
   const dismissedRef   = useRef(false)
   const prevDoneRef    = useRef<Set<string>>(new Set())
 
   // Derived: steps filtered by plan
-  const steps = useMemo(() => getStepsForPlan(plan), [plan])
+  const steps    = useMemo(() => getStepsForPlan(plan), [plan])
+  const sections = useMemo(() => getSectionsForPlan(plan), [plan])
+
+  function toggleSection(section: string) {
+    setCollapsedSections(prev => {
+      const next = new Set(prev)
+      next.has(section) ? next.delete(section) : next.add(section)
+      return next
+    })
+  }
 
   // A step is "done" if validated from DB OR manually marked complete/skipped in JSONB
   const doneIds = useMemo(() => {
@@ -266,16 +279,20 @@ export default function OnboardingChecklist() {
       const recheck = () => { if (!dismissedRef.current) refreshValidations() }
       channel = supabase
         .channel('onboarding-checklist')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'trucks'           }, recheck)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers'          }, recheck)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'client_companies' }, recheck)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs'             }, recheck)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'loads'            }, recheck)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices'         }, recheck)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'contractors'      }, recheck)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'leads'            }, recheck)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'documents'        }, recheck)
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'companies'   }, recheck)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'trucks'              }, recheck)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers'             }, recheck)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'client_companies'    }, recheck)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs'                }, recheck)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'loads'               }, recheck)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices'            }, recheck)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'contractors'         }, recheck)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'contractor_trucks'   }, recheck)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'leads'               }, recheck)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'company_documents'   }, recheck)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses'            }, recheck)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'dispatches'          }, recheck)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'ticket_imports'      }, recheck)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'companies'      }, recheck)
         .subscribe()
     }
 
@@ -293,6 +310,14 @@ export default function OnboardingChecklist() {
     window.addEventListener(OPEN_CHECKLIST_EVENT, handler)
     return () => window.removeEventListener(OPEN_CHECKLIST_EVENT, handler)
   }, [])
+
+  // ── Broadcast progress to sidebar badge ────────────────────────────────────
+  useEffect(() => {
+    if (!ready) return
+    window.dispatchEvent(new CustomEvent(CHECKLIST_PROGRESS_EVENT, {
+      detail: { done: doneCount, total: totalSteps, complete: doneCount >= totalSteps },
+    }))
+  }, [doneCount, totalSteps, ready])
 
   // ── Auto-dismiss when all done ──────────────────────────────────────────────
   useEffect(() => {
@@ -388,36 +413,64 @@ export default function OnboardingChecklist() {
         </div>
       </div>
 
-      {/* Collapsed step list overview */}
+      {/* Collapsed step list — grouped by section */}
       {minimized ? (
-        <div className="max-h-52 overflow-y-auto divide-y divide-gray-50">
-          {steps.map((step, idx) => {
-            const isDone   = doneIds.has(step.id)
-            const isActive = idx === activeIdx
+        <div className="max-h-64 overflow-y-auto">
+          {sections.map(section => {
+            const sectionSteps = steps.filter(s => s.section === section)
+            const sectionDone  = sectionSteps.filter(s => doneIds.has(s.id)).length
+            const allDone      = sectionDone === sectionSteps.length
+            const isCollapsed  = collapsedSections.has(section)
             return (
-              <button
-                key={step.id}
-                onClick={() => { setActiveIdx(idx); setMinimized(false) }}
-                className={`w-full text-left px-4 py-2.5 flex items-center gap-2.5 transition-colors ${isActive ? 'bg-amber-50' : 'hover:bg-gray-50'}`}
-              >
-                <div
-                  className="h-4 w-4 rounded-full flex items-center justify-center shrink-0 border-2 transition-all"
-                  style={isDone
-                    ? { background: '#2d7a4f', borderColor: '#2d7a4f' }
-                    : isActive
-                    ? { background: 'transparent', borderColor: '#F5B731' }
-                    : { background: 'transparent', borderColor: '#d1d5db' }
-                  }
+              <div key={section}>
+                {/* Section header */}
+                <button
+                  onClick={() => toggleSection(section)}
+                  className="w-full flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-100 hover:bg-gray-100 transition-colors"
                 >
-                  {isDone && <Check className="h-2.5 w-2.5 text-white" />}
-                </div>
-                <span className="text-xs" style={isDone ? { textDecoration: 'line-through', color: '#9ca3af' } : { color: '#374151' }}>
-                  {step.emoji} {step.title}
-                </span>
-                {stepStates[step.id] === 'skipped' && (
-                  <span className="ml-auto text-[9px] text-gray-400 font-medium">skipped</span>
-                )}
-              </button>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${allDone ? 'text-green-600' : 'text-gray-500'}`}>
+                    {allDone ? '✓ ' : ''}{section}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] text-gray-400">{sectionDone}/{sectionSteps.length}</span>
+                    {isCollapsed
+                      ? <ChevronRight className="h-3 w-3 text-gray-400" />
+                      : <ChevronDown className="h-3 w-3 text-gray-400" />
+                    }
+                  </div>
+                </button>
+                {/* Section steps */}
+                {!isCollapsed && sectionSteps.map(step => {
+                  const idx    = steps.indexOf(step)
+                  const isDone   = doneIds.has(step.id)
+                  const isActive = idx === activeIdx
+                  return (
+                    <button
+                      key={step.id}
+                      onClick={() => { setActiveIdx(idx); setMinimized(false) }}
+                      className={`w-full text-left px-4 py-2.5 flex items-center gap-2.5 transition-colors border-b border-gray-50 ${isActive ? 'bg-amber-50' : 'hover:bg-gray-50'}`}
+                    >
+                      <div
+                        className="h-4 w-4 rounded-full flex items-center justify-center shrink-0 border-2 transition-all"
+                        style={isDone
+                          ? { background: '#2d7a4f', borderColor: '#2d7a4f' }
+                          : isActive
+                          ? { background: 'transparent', borderColor: '#F5B731' }
+                          : { background: 'transparent', borderColor: '#d1d5db' }
+                        }
+                      >
+                        {isDone && <Check className="h-2.5 w-2.5 text-white" />}
+                      </div>
+                      <span className="text-xs flex-1 text-left" style={isDone ? { textDecoration: 'line-through', color: '#9ca3af' } : { color: '#374151' }}>
+                        {step.emoji} {step.title}
+                      </span>
+                      {stepStates[step.id] === 'skipped' && (
+                        <span className="text-[9px] text-gray-400 font-medium">skipped</span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
             )
           })}
         </div>

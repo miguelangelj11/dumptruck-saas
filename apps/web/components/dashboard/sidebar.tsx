@@ -22,7 +22,7 @@ import {
   LucideIcon,
   HelpCircle,
 } from 'lucide-react'
-import { OPEN_CHECKLIST_EVENT } from '@/components/onboarding-checklist'
+import { OPEN_CHECKLIST_EVENT, CHECKLIST_PROGRESS_EVENT } from '@/components/onboarding-checklist'
 import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
@@ -185,7 +185,17 @@ export default function Sidebar({ user, logoUrl, companyName: companyNameProp, p
   const [mobileOpen, setMobileOpen] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [checklistProgress, setChecklistProgress] = useState<{ done: number; total: number; complete: boolean } | null>(null)
   const t = useTranslations('nav')
+
+  // Listen for checklist progress events from OnboardingChecklist
+  useEffect(() => {
+    const handler = (e: CustomEvent<{ done: number; total: number; complete: boolean }>) => {
+      setChecklistProgress(e.detail)
+    }
+    window.addEventListener(CHECKLIST_PROGRESS_EVENT, handler as EventListener)
+    return () => window.removeEventListener(CHECKLIST_PROGRESS_EVENT, handler as EventListener)
+  }, [])
 
   // Build the full nav item definitions (locked state depends on plan/role)
   const buildNavDefs = useCallback((): NavItem[] => {
@@ -338,8 +348,16 @@ export default function Sidebar({ user, logoUrl, companyName: companyNameProp, p
           onClick={() => window.dispatchEvent(new CustomEvent(OPEN_CHECKLIST_EVENT))}
           className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-white/50 hover:text-white hover:bg-white/8 transition-all mb-0.5"
         >
-          <HelpCircle className="h-4 w-4" />
-          Setup guide
+          <HelpCircle className="h-4 w-4 shrink-0" />
+          <span>Setup guide</span>
+          {checklistProgress && !checklistProgress.complete && (
+            <span className="ml-auto text-[10px] font-bold bg-[#F5B731] text-black px-1.5 py-0.5 rounded-full shrink-0">
+              {checklistProgress.done}/{checklistProgress.total}
+            </span>
+          )}
+          {checklistProgress?.complete && (
+            <span className="ml-auto text-[10px] font-bold bg-green-500/20 text-green-300 px-1.5 py-0.5 rounded-full shrink-0">✓</span>
+          )}
         </button>
         <button
           onClick={handleLogout}
