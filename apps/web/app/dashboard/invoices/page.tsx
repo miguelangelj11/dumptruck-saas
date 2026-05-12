@@ -1029,7 +1029,11 @@ export default function InvoicesPage() {
       null
     if (ticketStatus) {
       if (invoiceType === 'contractor') {
-        await supabase.from('contractor_tickets').update({ status: ticketStatus }).eq('invoice_id', id)
+        // Also update payment_status so the contractor page Paid YTD / Lifetime Paid stats reflect correctly
+        const ctUpdate = ticketStatus === 'paid'
+          ? { status: 'paid', payment_status: 'paid', paid_at: today }
+          : { status: ticketStatus, payment_status: null as string | null, paid_at: null as string | null }
+        await supabase.from('contractor_tickets').update(ctUpdate).eq('invoice_id', id)
       } else if (invoiceType === 'client' || invoiceType === null || invoiceType === undefined) {
         await supabase.from('loads').update({ status: ticketStatus }).eq('invoice_id', id)
       }

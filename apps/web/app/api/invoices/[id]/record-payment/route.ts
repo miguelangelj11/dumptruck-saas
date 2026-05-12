@@ -98,7 +98,9 @@ export async function POST(
   if (newStatus === 'paid') {
     const invoiceType = (invoice as { invoice_type?: string | null }).invoice_type
     if (invoiceType === 'contractor') {
-      await supabase.from('contractor_tickets').update({ status: 'paid' }).eq('invoice_id', id)
+      await supabase.from('contractor_tickets')
+        .update({ status: 'paid', payment_status: 'paid', paid_at: payment_date })
+        .eq('invoice_id', id)
     } else {
       await supabase.from('loads').update({ status: 'paid' }).eq('invoice_id', id)
     }
