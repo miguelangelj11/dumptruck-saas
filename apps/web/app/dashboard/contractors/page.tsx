@@ -62,6 +62,51 @@ function fmtDate(s: string | null | undefined): string {
   return `${parseInt(m!)}/${parseInt(d!)}/${y}`
 }
 
+function parseTimeToDecimal(t: string): number | null {
+  const m = t.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
+  if (!m) return null
+  let h = parseInt(m[1]!, 10)
+  const min = parseInt(m[2]!, 10)
+  const pm = /pm/i.test(m[3]!)
+  if (h === 12) h = pm ? 12 : 0
+  else if (pm) h += 12
+  return h + min / 60
+}
+
+function calculateHoursWorked(timeIn: string, timeOut: string): number | null {
+  const start = parseTimeToDecimal(timeIn)
+  const end   = parseTimeToDecimal(timeOut)
+  if (start === null || end === null) return null
+  let diff = end - start
+  if (diff < 0) diff += 24
+  return Math.round(diff * 100) / 100
+}
+
+function TimeInput({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const hasPM   = /PM/i.test(value)
+  const period  = hasPM ? 'PM' : 'AM'
+  const timeStr = value.replace(/\s*(AM|PM)\s*/i, '').trim()
+  const active  = timeStr.length > 0
+  return (
+    <div>
+      <label className="block text-xs font-medium text-gray-700 mb-1">{label}</label>
+      <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/20 focus-within:border-[var(--brand-primary)]">
+        <input
+          type="text"
+          value={timeStr}
+          onChange={e => onChange(e.target.value ? `${e.target.value} ${period}` : '')}
+          placeholder="8:00"
+          className="flex-1 px-3 py-2.5 text-sm focus:outline-none bg-white min-w-0"
+        />
+        <button type="button" onClick={() => onChange(timeStr ? `${timeStr} AM` : '')}
+          className={`px-2.5 py-2 text-xs font-semibold border-l border-gray-200 transition-colors ${active && period === 'AM' ? 'bg-[var(--brand-primary)] text-white' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}>AM</button>
+        <button type="button" onClick={() => onChange(timeStr ? `${timeStr} PM` : '')}
+          className={`px-2.5 py-2 text-xs font-semibold border-l border-gray-200 transition-colors ${active && period === 'PM' ? 'bg-[var(--brand-primary)] text-white' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}>PM</button>
+      </div>
+    </div>
+  )
+}
+
 function calcContractorTotal(unitRate: string, rateType: string, qty: string): string {
   const r = parseFloat(unitRate)
   const q = parseFloat(qty)
@@ -71,6 +116,7 @@ function calcContractorTotal(unitRate: string, rateType: string, qty: string): s
 
 const EMPTY_TICKET = {
   job_name: '', client_company: '', date: '',
+  time_in: '', time_out: '',
   hours_worked: '', truck_number: '', ticket_number: '', material: '',
   unit_rate: '', rate_quantity: '', rate: '', rate_type: 'load', status: 'pending', notes: '',
 }
@@ -173,10 +219,23 @@ export default function ContractorsPage() {
   useEffect(() => { init() }, [])
 
   useEffect(() => {
-    const total = calcContractorTotal(ticketForm.unit_rate, ticketForm.rate_type, ticketForm.rate_quantity)
-    if (total !== '') setTicketForm(p => ({ ...p, rate: total }))
+    if (ticketForm.rate_type === 'hr') {
+      const hrs = calculateHoursWorked(ticketForm.time_in, ticketForm.time_out)
+      if (hrs !== null && hrs > 0) {
+        const total = (parseFloat(ticketForm.unit_rate) * hrs).toFixed(2)
+        setTicketForm(p => ({
+          ...p,
+          rate_quantity: String(hrs),
+          rate: isNaN(parseFloat(ticketForm.unit_rate)) ? p.rate : total,
+          hours_worked: `${ticketForm.time_in}-${ticketForm.time_out}`,
+        }))
+      }
+    } else {
+      const total = calcContractorTotal(ticketForm.unit_rate, ticketForm.rate_type, ticketForm.rate_quantity)
+      if (total !== '') setTicketForm(p => ({ ...p, rate: total }))
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ticketForm.unit_rate, ticketForm.rate_type, ticketForm.rate_quantity])
+  }, [ticketForm.unit_rate, ticketForm.rate_type, ticketForm.rate_quantity, ticketForm.time_in, ticketForm.time_out])
 
   async function fetchTickets(contractorId: string) {
     setLoadingTickets(true)
@@ -358,6 +417,8 @@ export default function ContractorsPage() {
       truck_number: existingTruck,
       ticket_number: t.ticket_number ?? '',
       material: t.material ?? '',
+      time_in: (t as { time_in?: string | null }).time_in ?? '',
+      time_out: (t as { time_out?: string | null }).time_out ?? '',
       rate: String(t.rate), unit_rate: String(t.unit_rate ?? ''), rate_quantity: String(t.rate_quantity ?? ''), rate_type: t.rate_type ?? 'load', status: t.status, notes: t.notes ?? '',
     })
     const allTrucks = [...contractorTrucks, ...trucks]
@@ -407,6 +468,8 @@ export default function ContractorsPage() {
       client_company: ticketForm.client_company || null,
       date: ticketForm.date,
       hours_worked: ticketForm.hours_worked || null,
+      time_in: ticketForm.time_in || null,
+      time_out: ticketForm.time_out || null,
       truck_number: ticketForm.truck_number || null,
       ticket_number: ticketForm.ticket_number || null,
       material: ticketForm.material || null,
@@ -421,8 +484,8 @@ export default function ContractorsPage() {
     }
 
     if (editingTicket) {
-      const { job_name, client_company, date, hours_worked, truck_number, ticket_number, material, rate, unit_rate, rate_quantity, rate_type, status, notes } = basePayload
-      const { error } = await supabase.from('contractor_tickets').update({ job_name, client_company, date, hours_worked, truck_number, ticket_number, material, rate, unit_rate, rate_quantity, rate_type, status, notes }).eq('id', editingTicket.id)
+      const { job_name, client_company, date, hours_worked, time_in, time_out, truck_number, ticket_number, material, rate, unit_rate, rate_quantity, rate_type, status, notes } = basePayload
+      const { error } = await supabase.from('contractor_tickets').update({ job_name, client_company, date, hours_worked, time_in, time_out, truck_number, ticket_number, material, rate, unit_rate, rate_quantity, rate_type, status, notes }).eq('id', editingTicket.id)
       if (error) { toast.error(error.message); setSavingTicket(false); return }
       const newSlips = slipRows.filter(r => r.tonnage || r.imageFile)
       if (newSlips.length > 0) {
@@ -980,8 +1043,10 @@ export default function ContractorsPage() {
                     <input required type="date" value={ticketForm.date} onChange={e => setTicketForm(p => ({ ...p, date: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Hours Worked</label>
-                    <input value={ticketForm.hours_worked} onChange={e => setTicketForm(p => ({ ...p, hours_worked: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="7:30am – 5:30pm" />
+                    <TimeInput label="Time In" value={ticketForm.time_in} onChange={v => setTicketForm(p => ({ ...p, time_in: v }))} />
+                  </div>
+                  <div>
+                    <TimeInput label="Time Out" value={ticketForm.time_out} onChange={v => setTicketForm(p => ({ ...p, time_out: v }))} />
                   </div>
                   <div className="col-span-2">
                     {(() => {
@@ -1082,7 +1147,14 @@ export default function ContractorsPage() {
                     <label className="block text-xs font-medium text-gray-700 mb-1">
                       {ticketForm.rate_type === 'hr' ? 'Hours Worked' : ticketForm.rate_type === 'ton' ? 'Total Tons' : '# of Jobs'}
                     </label>
-                    <input type="number" min="0" step="0.01" value={ticketForm.rate_quantity} onChange={e => setTicketForm(p => ({ ...p, rate_quantity: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="0" />
+                    <input
+                      type="number" min="0" step="0.01"
+                      value={ticketForm.rate_quantity}
+                      readOnly={ticketForm.rate_type === 'hr'}
+                      onChange={e => setTicketForm(p => ({ ...p, rate_quantity: e.target.value }))}
+                      className={`w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] ${ticketForm.rate_type === 'hr' ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''}`}
+                      placeholder={ticketForm.rate_type === 'hr' ? 'Auto from time in/out' : '0'}
+                    />
                   </div>
                   {parseFloat(ticketForm.unit_rate) > 0 && parseFloat(ticketForm.rate_quantity) > 0 && (
                     <div className="col-span-2 -mt-2">
