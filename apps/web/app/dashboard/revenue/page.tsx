@@ -3,9 +3,8 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { getCompanyId } from '@/lib/get-company-id'
-import { Loader2, Plus, DollarSign, TrendingUp, TrendingDown, AlertCircle, CreditCard, Download, Percent, Pencil, Trash2 } from 'lucide-react'
+import { Loader2, DollarSign, TrendingUp, TrendingDown, AlertCircle, CreditCard, Download, Percent } from 'lucide-react'
 import LockedFeature from '@/components/dashboard/locked-feature'
-import { toast } from 'sonner'
 import {
   RevenueByDriverChart,
   RevenueByMonthChart,
@@ -14,8 +13,7 @@ import {
 } from '@/components/dashboard/revenue-charts'
 import type { Load, Expense, ContractorTicket, Invoice, Payment, Driver } from '@/lib/types'
 import { calculateDriverOwed } from '@/lib/drivers/calculate-owed'
-
-const categories = ['Fuel', 'DEF', 'Tires', 'Maintenance', 'Insurance', 'Labor', 'Equipment', 'Tolls', 'Other']
+import { getCategoryConfig } from '@/lib/expenses/categories'
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const BILLABLE_STATUSES = ['approved', 'invoiced', 'paid'] as const
 
@@ -197,15 +195,6 @@ export default function RevenuePage() {
   const [drivers, setDrivers] = useState<Driver[]>([])
   const [contractorNames, setContractorNames] = useState<Map<string, string>>(new Map())
   const [loading, setLoading] = useState(true)
-  const [showExpenseForm, setShowExpenseForm] = useState(false)
-  const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
-  const [expForm, setExpForm] = useState({
-    description: '', amount: '', category: 'Fuel',
-    date: new Date().toISOString().split('T')[0]!,
-  })
-  const [expCategoryFilter, setExpCategoryFilter] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [userId, setUserId] = useState('')
   const [activeTab, setActiveTab] = useState<'overview' | 'driverpay'>('overview')
   const [payWeek, setPayWeek] = useState<0 | -1>(0)
   const [dateRange, setDateRange] = useState<DateRange>('month')
@@ -228,8 +217,7 @@ export default function RevenuePage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get('new-expense') === '1') {
-      setShowExpenseForm(true)
-      window.history.replaceState({}, '', '/dashboard/revenue')
+      window.location.replace('/dashboard/expenses')
     }
   }, [])
 
@@ -238,7 +226,6 @@ export default function RevenuePage() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      setUserId(user.id)
       const orgId = await getCompanyId()
       if (!orgId) return
 
@@ -278,52 +265,6 @@ export default function RevenuePage() {
 
   useEffect(() => { fetchData() }, [])
 
-  function openAddExpense() {
-    setEditingExpense(null)
-    setExpForm({ description: '', amount: '', category: 'Fuel', date: new Date().toISOString().split('T')[0]! })
-    setShowExpenseForm(true)
-  }
-
-  function openEditExpense(exp: Expense) {
-    setEditingExpense(exp)
-    setExpForm({ description: exp.description, amount: String(exp.amount), category: exp.category, date: exp.date })
-    setShowExpenseForm(true)
-  }
-
-  async function handleSaveExpense(e: React.FormEvent) {
-    e.preventDefault()
-    const orgId = await getCompanyId()
-    if (!orgId) { toast.error('Not authenticated'); return }
-    setSaving(true)
-    const payload = {
-      description: expForm.description,
-      amount: parseFloat(expForm.amount) || 0,
-      category: expForm.category,
-      date: expForm.date,
-    }
-    if (editingExpense) {
-      const { error } = await supabase.from('expenses').update(payload).eq('id', editingExpense.id)
-      if (error) { toast.error('Failed to update expense'); setSaving(false); return }
-      toast.success('Expense updated')
-    } else {
-      const { error } = await supabase.from('expenses').insert({ ...payload, company_id: orgId })
-      if (error) { toast.error('Failed to add expense'); setSaving(false); return }
-      toast.success('Expense added')
-    }
-    setSaving(false)
-    setShowExpenseForm(false)
-    setEditingExpense(null)
-    fetchData()
-  }
-
-  async function handleDeleteExpense(id: string) {
-    if (!confirm('Delete this expense?')) return
-    const { error } = await supabase.from('expenses').delete().eq('id', id)
-    if (error) { toast.error('Failed to delete expense'); return }
-    toast.success('Expense deleted')
-    fetchData()
-  }
-
   // ── Date range filtering ──────────────────────────────────────────────────
   const bounds = getRangeBounds(dateRange)
   const lastBounds = getLastPeriodBounds(bounds)
@@ -334,7 +275,6 @@ export default function RevenuePage() {
     return d >= bounds.start && d <= bounds.end
   })
   const filteredExpenses = expenses.filter(e => (e.date ?? '') >= bounds.start && (e.date ?? '') <= bounds.end)
-  const displayedExpenses = expCategoryFilter ? filteredExpenses.filter(e => e.category === expCategoryFilter) : filteredExpenses
 
   // Last period filtered data
   const lastInvoices = invoices.filter(i => {
@@ -533,6 +473,14 @@ export default function RevenuePage() {
     week: 'This Week', month: 'This Month', quarter: 'This Quarter', year: 'This Year',
   }
 
+  // Top expense categories for summary band
+  const topExpenseCategories = Object.entries(
+    filteredExpenses.reduce<Record<string, number>>((acc, e) => {
+      acc[e.category] = (acc[e.category] ?? 0) + e.amount
+      return acc
+    }, {})
+  ).sort((a, b) => b[1] - a[1]).slice(0, 4)
+
   if (planLocked) {
     return <LockedFeature title="Revenue & Profit Tracking" description="Get a full picture of your revenue, profit, and expenses. See what each driver and job is making you." plan={planLocked.plan} price={planLocked.price} />
   }
@@ -681,8 +629,7 @@ export default function RevenuePage() {
             </p>
           </div>
           <a
-            href="/dashboard/revenue"
-            onClick={e => { e.preventDefault(); openAddExpense() }}
+            href="/dashboard/expenses"
             className="flex-shrink-0 text-xs font-bold text-amber-700 hover:text-amber-900 underline whitespace-nowrap"
           >
             Add Expenses →
@@ -1049,169 +996,34 @@ export default function RevenuePage() {
         </div>
       )}
 
-      {/* Expense Tracker */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <h2 className="font-semibold text-sm text-gray-900">Expense Tracker</h2>
-            <p className="text-xs text-gray-400">{filteredExpenses.length} expenses · ${totalExpenses.toLocaleString()} total</p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <select
-              value={expCategoryFilter}
-              onChange={e => setExpCategoryFilter(e.target.value)}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20"
-            >
-              <option value="">All categories</option>
-              {categories.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-            <button
-              onClick={openAddExpense}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-200 transition-colors"
-            >
-              <Plus className="h-3.5 w-3.5" /> Add Expense
-            </button>
+      {/* Expenses summary band */}
+      {filteredExpenses.length > 0 ? (
+        <div className="mt-2 p-4 bg-gray-50 rounded-xl border border-gray-200">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Top Expenses This Period</p>
+              <div className="flex gap-4 flex-wrap">
+                {topExpenseCategories.map(([cat, amount]) => {
+                  const catConfig = getCategoryConfig(cat)
+                  return (
+                    <span key={cat} className="text-sm text-gray-700">
+                      {catConfig.emoji} {catConfig.label}: <strong>${(amount as number).toLocaleString()}</strong>
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
+            <a href="/dashboard/expenses" className="text-sm font-bold text-[var(--brand-primary)] hover:underline whitespace-nowrap">View all →</a>
           </div>
         </div>
-
-        {filteredExpenses.length > 0 && (() => {
-          const byCategory = categories
-            .map(cat => ({ cat, total: filteredExpenses.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0) }))
-            .filter(r => r.total > 0)
-            .sort((a, b) => b.total - a.total)
-          if (byCategory.length === 0) return null
-          const max = byCategory[0]!.total
-          return (
-            <div className="px-5 py-4 border-b border-gray-100 grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2">
-              {byCategory.map(({ cat, total }) => (
-                <div key={cat}>
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-xs text-gray-500">{cat}</span>
-                    <span className="text-xs font-semibold text-gray-700">${total.toLocaleString()}</span>
-                  </div>
-                  <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                    <div className="h-full rounded-full bg-red-400" style={{ width: `${Math.round((total / max) * 100)}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )
-        })()}
-
-        {displayedExpenses.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-sm text-gray-400">
-              {expCategoryFilter ? `No ${expCategoryFilter} expenses for ${rangeLabels[dateRange].toLowerCase()}` : `No expenses for ${rangeLabels[dateRange].toLowerCase()}`}
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[400px] text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  {['Description', 'Category', 'Amount', 'Date', ''].map(h => (
-                    <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {displayedExpenses.map(exp => (
-                  <tr key={exp.id} className="hover:bg-gray-50/50 group">
-                    <td className="px-5 py-3 font-medium text-gray-900">{exp.description}</td>
-                    <td className="px-5 py-3">
-                      <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">{exp.category}</span>
-                    </td>
-                    <td className="px-5 py-3 font-semibold text-red-500">-${exp.amount.toLocaleString()}</td>
-                    <td className="px-5 py-3 text-gray-500 whitespace-nowrap">{new Date(exp.date + 'T00:00:00').toLocaleDateString()}</td>
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => openEditExpense(exp)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors" title="Edit">
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
-                        <button onClick={() => handleDeleteExpense(exp.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors" title="Delete">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      </>)} {/* end overview tab */}
-
-      {showExpenseForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-semibold text-gray-900">{editingExpense ? 'Edit Expense' : 'Add Expense'}</h2>
-              <button onClick={() => { setShowExpenseForm(false); setEditingExpense(null) }} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
-            </div>
-            <form onSubmit={handleSaveExpense} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Description *</label>
-                <input
-                  required
-                  value={expForm.description}
-                  onChange={e => setExpForm(p => ({ ...p, description: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
-                  placeholder="Fuel for truck #3"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Amount ($) *</label>
-                  <input
-                    required type="number" min="0" step="0.01"
-                    value={expForm.amount}
-                    onChange={e => setExpForm(p => ({ ...p, amount: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
-                    placeholder="350.00"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Category</label>
-                  <select
-                    value={expForm.category}
-                    onChange={e => setExpForm(p => ({ ...p, category: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white"
-                  >
-                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Date *</label>
-                <input
-                  required type="date"
-                  value={expForm.date}
-                  onChange={e => setExpForm(p => ({ ...p, date: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => { setShowExpenseForm(false); setEditingExpense(null) }}
-                  className="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex-1 rounded-lg bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] disabled:opacity-50"
-                >
-                  {saving ? (editingExpense ? 'Saving…' : 'Adding…') : (editingExpense ? 'Save Changes' : 'Add Expense')}
-                </button>
-              </div>
-            </form>
-          </div>
+      ) : (
+        <div className="mt-2 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between gap-4">
+          <p className="text-sm text-amber-800">No expenses tracked this period — add costs to see real margins.</p>
+          <a href="/dashboard/expenses" className="text-sm font-bold text-amber-700 hover:underline whitespace-nowrap">Add Expenses →</a>
         </div>
       )}
+
+      </>)} {/* end overview tab */}
     </div>
   )
 }

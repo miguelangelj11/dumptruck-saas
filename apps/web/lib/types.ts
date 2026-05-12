@@ -380,6 +380,18 @@ export type Expense = {
   category: string
   date: string
   created_at: string
+  vendor_name: string | null
+  payment_method: string | null
+  receipt_url: string | null
+  notes: string | null
+  link_type: string | null
+  link_id: string | null
+  is_mileage: boolean | null
+  miles: number | null
+  odometer_start: number | null
+  odometer_end: number | null
+  truck_number: string | null
+  is_duplicate_flag: boolean | null
 }
 
 export type ReceivedInvoice = {
