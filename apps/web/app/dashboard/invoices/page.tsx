@@ -615,6 +615,10 @@ export default function InvoicesPage() {
   const drivers = [...new Set(allLoads.map(l => l.driver_name))].filter(Boolean)
 
   const filteredLoads = allLoads.filter(l => {
+    // Hide loads already on a client invoice from the client invoice picker
+    if (invoiceType === 'client' && l.client_invoice_id != null) return false
+    // Hide loads already on a pay stub from the paystub picker
+    if (invoiceType === 'paystub' && (l.invoice_id != null || l.status === 'invoiced' || l.status === 'paid')) return false
     if (driverFilter && l.driver_name !== driverFilter) return false
     if (createForm.date_from && l.date < createForm.date_from) return false
     if (createForm.date_to && l.date > createForm.date_to) return false

@@ -40,6 +40,8 @@ export type Load = {
   driver_start_time: string | null
   driver_end_time: string | null
   created_at: string
+  invoice_id?: string | null
+  client_invoice_id?: string | null
   load_tickets?: LoadTicket[]
   // Rate breakdown columns
   total_pay?: number | null
