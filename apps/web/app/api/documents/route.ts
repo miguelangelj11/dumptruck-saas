@@ -12,6 +12,12 @@ export type DocumentItem = {
   job_name: string | null
   created_at: string
   meta: Record<string, unknown>
+  // uploaded-doc-only enrichment fields
+  doc_type?: string | null
+  expiry_date?: string | null
+  entity_type?: string | null
+  entity_name?: string | null
+  version?: number | null
 }
 
 export async function GET(request: Request) {
@@ -176,7 +182,7 @@ export async function GET(request: Request) {
   if (category === 'all' || category === 'uploaded') {
     const { data: uploaded } = await supabase
       .from('company_documents')
-      .select('id, name, url, mime, notes, created_at')
+      .select('id, name, url, mime, notes, created_at, doc_type, expiry_date, entity_type, entity_name, version')
       .eq('company_id', companyId)
       .order('created_at', { ascending: false })
       .limit(500)
@@ -185,14 +191,19 @@ export async function GET(request: Request) {
       if (!u.url) continue
       if (search && !u.name.toLowerCase().includes(search)) continue
       docs.push({
-        id:         `upload_${u.id}`,
-        category:   'uploaded',
-        name:       u.name,
-        url:        u.url,
-        mime:       u.mime ?? 'application/octet-stream',
-        job_name:   null,
-        created_at: u.created_at,
-        meta:       u.notes ? { notes: u.notes } : {},
+        id:           `upload_${u.id}`,
+        category:     'uploaded',
+        name:         u.name,
+        url:          u.url,
+        mime:         u.mime ?? 'application/octet-stream',
+        job_name:     null,
+        created_at:   u.created_at,
+        meta:         u.notes ? { notes: u.notes } : {},
+        doc_type:     u.doc_type ?? null,
+        expiry_date:  u.expiry_date ?? null,
+        entity_type:  u.entity_type ?? null,
+        entity_name:  u.entity_name ?? null,
+        version:      u.version ?? null,
       })
     }
   }
@@ -209,6 +220,48 @@ export async function GET(request: Request) {
   return NextResponse.json({ docs: filtered, total: filtered.length })
 }
 
+export async function DELETE(request: Request) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('organization_id')
+    .eq('id', user.id)
+    .maybeSingle()
+  const companyId = profile?.organization_id ?? user.id
+
+  const { searchParams } = new URL(request.url)
+  const rawIds = searchParams.get('ids') ?? ''
+  const dbIds = rawIds.split(',').map(s => s.trim()).filter(s => s.startsWith('upload_')).map(s => s.replace(/^upload_/, ''))
+
+  if (dbIds.length === 0) return NextResponse.json({ deleted: 0 })
+
+  const { data: rows } = await supabase
+    .from('company_documents')
+    .select('id, url')
+    .in('id', dbIds)
+    .eq('company_id', companyId)
+
+  const paths = (rows ?? [])
+    .map(r => r.url?.split('/company-documents/')[1])
+    .filter(Boolean) as string[]
+  if (paths.length > 0) {
+    await supabase.storage.from('company-documents').remove(paths)
+  }
+
+  const { error } = await supabase
+    .from('company_documents')
+    .delete()
+    .in('id', dbIds)
+    .eq('company_id', companyId)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ deleted: dbIds.length })
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -222,11 +275,35 @@ export async function POST(request: Request) {
   const companyId = profile?.organization_id ?? user.id
 
   const formData = await request.formData()
-  const file  = formData.get('file') as File | null
-  const name  = (formData.get('name') as string | null)?.trim() || null
-  const notes = (formData.get('notes') as string | null)?.trim() || null
+  const file        = formData.get('file') as File | null
+  const name        = (formData.get('name') as string | null)?.trim() || null
+  const notes       = (formData.get('notes') as string | null)?.trim() || null
+  const doc_type    = (formData.get('doc_type') as string | null)?.trim() || null
+  const expiry_date = (formData.get('expiry_date') as string | null)?.trim() || null
+  const entity_type = (formData.get('entity_type') as string | null)?.trim() || null
+  const entity_id   = (formData.get('entity_id') as string | null)?.trim() || null
+  const entity_name = (formData.get('entity_name') as string | null)?.trim() || null
 
   if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
+
+  // Version detection: find existing doc with same type+entity
+  let existingVersionId: string | null = null
+  let newVersion = 1
+  if (doc_type && entity_type && entity_id) {
+    const { data: existing } = await supabase
+      .from('company_documents')
+      .select('id, version')
+      .eq('company_id', companyId)
+      .eq('doc_type', doc_type)
+      .eq('entity_type', entity_type)
+      .eq('entity_id', entity_id)
+      .eq('is_latest_version', true)
+      .maybeSingle()
+    if (existing) {
+      existingVersionId = existing.id
+      newVersion = (existing.version ?? 1) + 1
+    }
+  }
 
   const ext      = file.name.split('.').pop() ?? 'bin'
   const safeName = name || file.name
@@ -242,13 +319,39 @@ export async function POST(request: Request) {
     .from('company-documents')
     .getPublicUrl(path)
 
+  // If superseding an existing version, mark it as not latest
+  if (existingVersionId) {
+    await supabase
+      .from('company_documents')
+      .update({ is_latest_version: false })
+      .eq('id', existingVersionId)
+  }
+
   const { data: doc, error: dbErr } = await supabase
     .from('company_documents')
-    .insert({ company_id: companyId, name: safeName, url: publicUrl, mime: file.type || 'application/octet-stream', notes })
+    .insert({
+      company_id:        companyId,
+      name:              safeName,
+      url:               publicUrl,
+      mime:              file.type || 'application/octet-stream',
+      notes,
+      doc_type,
+      expiry_date:       expiry_date || null,
+      entity_type,
+      entity_id,
+      entity_name,
+      version:           newVersion,
+      is_latest_version: true,
+    })
     .select('id')
     .single()
 
   if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 })
 
-  return NextResponse.json({ id: doc.id, url: publicUrl })
+  return NextResponse.json({
+    id:               doc.id,
+    url:              publicUrl,
+    version:          newVersion,
+    superseded_id:    existingVersionId,
+  })
 }

@@ -152,7 +152,7 @@ export default async function DashboardPage() {
   // ── Batch 2 (needs companyId) ─────────────────────────────────────────────
   const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString()
 
-  const [dispTodayRes, dispDetailRes, missingRes, noResponseRes, missingRevenueRes, workingRes, pendingRDRes, coiRes, driverComplianceRes] = companyId
+  const [dispTodayRes, dispDetailRes, missingRes, noResponseRes, missingRevenueRes, workingRes, pendingRDRes, coiRes, driverComplianceRes, expiringDocsRes] = companyId
     ? await Promise.all([
         supabase.from('dispatches').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('dispatch_date', todayStr).neq('status', 'completed').neq('status', 'cancelled'),
         supabase.from('dispatches').select('id, driver_name, status, start_time, jobs(job_name)').eq('company_id', companyId).eq('dispatch_date', todayStr).neq('status', 'cancelled').order('created_at', { ascending: false }).limit(6),
@@ -168,6 +168,8 @@ export default async function DashboardPage() {
         supabase.from('contractors').select('name, coi_expiry').eq('company_id', companyId).eq('status', 'active').not('coi_expiry', 'is', null),
         // Driver compliance (CDL + medical)
         supabase.from('drivers').select('name, cdl_expiry, medical_card_expiry').eq('company_id', companyId).eq('status', 'active'),
+        // Expiring uploaded documents (within 30 days)
+        supabase.from('company_documents').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('is_latest_version', true).not('expiry_date', 'is', null).lte('expiry_date', new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]!),
       ])
     : [
         { count: 0, error: null },
@@ -179,6 +181,7 @@ export default async function DashboardPage() {
         { count: 0, error: null },
         { data: [],  error: null },
         { data: [],  error: null },
+        { count: 0, error: null },
       ] as const
 
   const dispatchedToday      = dispTodayRes.count  ?? 0
@@ -197,6 +200,7 @@ export default async function DashboardPage() {
   })
   const workingDrivers       = workingRes.count    ?? 0
   const pendingReceivedCount = (pendingRDRes as { count?: number | null }).count ?? 0
+  const expiringDocsCount    = (expiringDocsRes as { count?: number | null }).count ?? 0
 
   // Estimate missing revenue from dispatches with unclaimed loads
   const missingRevenueEst: number = ((missingRevenueRes as { data: unknown[] | null }).data ?? []).reduce((sum: number, d: unknown) => {
@@ -464,6 +468,12 @@ export default async function DashboardPage() {
               <Link href="/dashboard/drivers" className="flex items-center justify-between gap-2 group border-t pt-2.5">
                 <span className="text-sm text-amber-700 font-medium group-hover:underline">⚠️ {complianceAlerts.length} driver{complianceAlerts.length > 1 ? 's' : ''} with expiring CDL or medical</span>
                 <span className="text-xs font-bold text-amber-600 shrink-0">Review →</span>
+              </Link>
+            )}
+            {expiringDocsCount > 0 && (
+              <Link href="/dashboard/documents?category=expiring" className="flex items-center justify-between gap-2 group border-t pt-2.5">
+                <span className="text-sm text-orange-700 font-medium group-hover:underline">📄 {expiringDocsCount} document{expiringDocsCount > 1 ? 's' : ''} expiring soon</span>
+                <span className="text-xs font-bold text-orange-600 shrink-0">View →</span>
               </Link>
             )}
           </div>
