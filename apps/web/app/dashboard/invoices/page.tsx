@@ -261,12 +261,14 @@ function buildDriverPayLineItems(
   return items.sort((a, b) => (a.line_date ?? '') < (b.line_date ?? '') ? -1 : 1)
 }
 
-function buildContractorLineItems(tickets: CTWithSlips[], deductionPct: number): InvoiceLineItem[] {
+// singleLinePerTicket=true → one line per ticket (used for client invoices)
+// singleLinePerTicket=false → one line per slip (used for contractor pay stubs)
+function buildContractorLineItems(tickets: CTWithSlips[], deductionPct: number, singleLinePerTicket = false): InvoiceLineItem[] {
   const items: InvoiceLineItem[] = []
   let order = 0
   for (const ticket of tickets) {
     const slips = ticket.contractor_ticket_slips ?? []
-    if (slips.length === 0) {
+    if (slips.length === 0 || singleLinePerTicket) {
       const base = ticket.rate
       const amount = deductionPct > 0 ? base * (1 - deductionPct / 100) : base
       items.push({
@@ -630,7 +632,7 @@ export default function InvoicesPage() {
       )
     : [
         ...buildLineItems(selectedLoads, 0),
-        ...buildContractorLineItems(selectedCTsForClient, parseFloat(deductionPct) || 0),
+        ...buildContractorLineItems(selectedCTsForClient, parseFloat(deductionPct) || 0, true),
       ]
   const ticketsSubtotal    = previewItems.reduce((s, i) => s + i.amount, 0)
   const customItemsTotal   = customLineItems.reduce((s, i) => s + i.amount, 0)
