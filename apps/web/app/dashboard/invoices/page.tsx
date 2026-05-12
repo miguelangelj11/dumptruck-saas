@@ -1098,7 +1098,7 @@ export default function InvoicesPage() {
   }
 
   async function openSendModal(inv: InvoiceWithItems) {
-    const typeLabel = inv.invoice_type === 'paystub' ? 'Driver Pay Invoice' : inv.invoice_type === 'contractor' ? 'Subcontractor Invoice' : 'Invoice'
+    const typeLabel = inv.invoice_type === 'paystub' ? 'Driver Pay Stub' : inv.invoice_type === 'contractor' ? 'Subcontractor Invoice' : 'Invoice'
 
     let toEmail = inv.client_email ?? ''
     let toPhone = inv.client_phone ?? ''
@@ -1550,7 +1550,7 @@ export default function InvoicesPage() {
                       <td className="px-4 py-3 font-mono font-medium text-gray-900">{inv.invoice_number}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${inv.invoice_type === 'paystub' ? 'bg-purple-100 text-purple-700' : inv.invoice_type === 'contractor' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
-                          {inv.invoice_type === 'paystub' ? 'Driver Pay' : inv.invoice_type === 'contractor' ? 'Subcontractor' : 'Client Invoice'}
+                          {inv.invoice_type === 'paystub' ? 'Pay Stub' : inv.invoice_type === 'contractor' ? 'Subcontractor' : 'Client Invoice'}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-700 font-medium">{inv.client_name}</td>
@@ -1763,7 +1763,7 @@ export default function InvoicesPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {([
                 { type: 'client',     label: 'Client Invoice',        desc: 'Bill a client for work completed',          locked: false },
-                { type: 'paystub',    label: 'Driver Pay Invoice',    desc: 'Pay your drivers for jobs completed',       locked: companyPlan === 'pro' || companyPlan === 'owner_operator' },
+                { type: 'paystub',    label: 'Driver Pay Stub',       desc: 'Pay your drivers for jobs completed',       locked: companyPlan === 'pro' || companyPlan === 'owner_operator' },
                 { type: 'contractor', label: 'Subcontractor Invoice', desc: 'Pay a subcontractor for work completed',    locked: companyPlan === 'pro' || companyPlan === 'owner_operator' },
               ] as const).map(({ type, label, desc, locked }) => (
                 <div key={type} className="relative">
@@ -2503,7 +2503,7 @@ export default function InvoicesPage() {
                 {/* Left: INVOICE label + number */}
                 <div>
                   <p className="text-xs font-bold text-[var(--brand-primary)] uppercase tracking-[0.18em] mb-2">
-                    {inv.invoice_type === 'paystub' ? 'Driver Payment' : inv.invoice_type === 'contractor' ? 'Payment Voucher' : 'Invoice'}
+                    {inv.invoice_type === 'paystub' ? 'Pay Stub' : inv.invoice_type === 'contractor' ? 'Payment Voucher' : 'Invoice'}
                   </p>
                   <p className="text-4xl font-extrabold text-gray-900 tracking-tight leading-none">
                     {inv.invoice_number}
