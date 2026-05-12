@@ -89,7 +89,7 @@ export default async function DashboardPage() {
   const fetchCutoffStr = fetchCutoff.toISOString().split('T')[0]!
 
   // ── Batch 1 ───────────────────────────────────────────────────────────────
-  const [loadsRes, invoicesRes, companyRes, activityRes, leadsRes] = await Promise.all([
+  const [loadsRes, invoicesRes, companyRes, activityRes, leadsRes, paymentsRes] = await Promise.all([
     supabase
       .from('loads')
       .select('id, rate, total_pay, status, driver_name, job_name, date, created_at, source, submitted_by_driver, client_company')
@@ -98,7 +98,7 @@ export default async function DashboardPage() {
       .order('date', { ascending: false }),
     supabase
       .from('invoices')
-      .select('id, status, total, invoice_type, date_paid, created_at')
+      .select('id, status, total, invoice_type, date_paid, created_at, amount_paid')
       .eq('company_id', effectiveCompanyId),
     supabase
       .from('companies')
@@ -116,10 +116,17 @@ export default async function DashboardPage() {
       .select('id, value, status')
       .eq('company_id', effectiveCompanyId)
       .not('status', 'in', '("won","lost")'),
+    supabase
+      .from('payments')
+      .select('amount, payment_date, payment_type')
+      .eq('company_id', effectiveCompanyId)
+      .gte('payment_date', fetchCutoffStr),
   ])
 
   const loads       = loadsRes.data    ?? []
   const invoices    = invoicesRes.data ?? []
+  type PaymentRow = { amount: number; payment_date: string; payment_type: string | null }
+  const allPayments = (paymentsRes.data ?? []) as PaymentRow[]
   const companyId          = companyRes.data?.id
   const companyName        = companyRes.data?.name ?? ''
   const companyPlan        = (companyRes.data as Record<string, unknown> | null)?.plan as string | null ?? null
@@ -240,9 +247,16 @@ export default async function DashboardPage() {
   const partialInvs     = invoices.filter(i => i.status === 'partially_paid')
   const partialTotal    = partialInvs.reduce((s, i) => s + ((i as { amount_remaining?: number | null }).amount_remaining ?? i.total ?? 0), 0)
   const loadsToday      = loads.filter(l => l.date === todayStr)
-  const weekRevCollected = clientPaidInvs
+  // Revenue collected = actual payments received this week (from payments table)
+  // Falls back to paid-invoice totals if payments table is empty (legacy data)
+  const weekPayments = allPayments.filter(p => p.payment_date >= thisWeekStartStr && p.payment_date <= todayStr)
+  const weekRevCollectedFromPayments = weekPayments.reduce((s, p) => s + (p.amount ?? 0), 0)
+  const weekRevCollectedFromInvoices = clientPaidInvs
     .filter(i => i.date_paid >= thisWeekStartStr && i.date_paid <= todayStr)
     .reduce((s, i) => s + (i.total ?? 0), 0)
+  const weekRevCollected = weekRevCollectedFromPayments > 0
+    ? weekRevCollectedFromPayments
+    : weekRevCollectedFromInvoices
   const weekRevProjected = loads
     .filter(l => l.date >= thisWeekStartStr && l.date <= todayStr)
     .reduce((s, l) => s + ((l.total_pay ?? l.rate) ?? 0), 0)
