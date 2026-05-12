@@ -94,14 +94,15 @@ export async function POST(
     return NextResponse.json({ error: 'Failed to update invoice: ' + updErr.message }, { status: 500 })
   }
 
-  // Cascade ticket status when invoice reaches 'paid'
+  // Cascade ticket status when pay stub reaches 'paid'
+  // Client invoices do NOT cascade — client payment ≠ worker being paid
   if (newStatus === 'paid') {
     const invoiceType = (invoice as { invoice_type?: string | null }).invoice_type
     if (invoiceType === 'contractor') {
       await supabase.from('contractor_tickets')
         .update({ status: 'paid', payment_status: 'paid', paid_at: payment_date })
         .eq('invoice_id', id)
-    } else {
+    } else if (invoiceType === 'paystub') {
       await supabase.from('loads').update({ status: 'paid' }).eq('invoice_id', id)
     }
   }

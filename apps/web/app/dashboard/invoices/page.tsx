@@ -357,6 +357,9 @@ export default function InvoicesPage() {
   const [selectedContractorId, setSelectedContractorId] = useState('')
   const [contractorTickets, setContractorTickets] = useState<CTWithSlips[]>([])
   const [selectedCTIds, setSelectedCTIds] = useState<Set<string>>(new Set())
+  // Subcontractor tickets available for client invoices (separate from pay stub flow)
+  const [allContractorTicketsForClient, setAllContractorTicketsForClient] = useState<CTWithSlips[]>([])
+  const [selectedCTIdsForClient, setSelectedCTIdsForClient] = useState<Set<string>>(new Set())
   const [taxRate, setTaxRate] = useState('')
   const [saving, setSaving] = useState(false)
   const [companyPlan, setCompanyPlan] = useState<string | null>(null)
@@ -546,6 +549,21 @@ export default function InvoicesPage() {
     setSelectedCTIds(new Set())
   }
 
+  async function fetchAllContractorTicketsForClient() {
+    const uid = await getCompanyId()
+    if (!uid) return
+    const { data } = await supabase
+      .from('contractor_tickets')
+      .select('*, contractor_ticket_slips(*)')
+      .eq('company_id', uid)
+      .not('payment_status', 'eq', 'paid')
+      .not('status', 'eq', 'paid')
+      .is('client_invoice_id', null)
+      .order('date', { ascending: false })
+    setAllContractorTicketsForClient((data ?? []) as CTWithSlips[])
+    setSelectedCTIdsForClient(new Set())
+  }
+
   useEffect(() => { fetchInvoices(); fetchUninvoicedCount() }, [])
 
   async function sendReminder(inv: Invoice) {
@@ -579,6 +597,7 @@ export default function InvoicesPage() {
       fetchContractors()
       fetchClientCompaniesForCreate()
       fetchDriversForCreate()
+      fetchAllContractorTicketsForClient()
     }
   }, [view])
 
@@ -597,6 +616,7 @@ export default function InvoicesPage() {
 
   const selectedLoads = allLoads.filter(l => selectedLoadIds.has(l.id))
   const selectedCTs = contractorTickets.filter(t => selectedCTIds.has(t.id))
+  const selectedCTsForClient = allContractorTicketsForClient.filter(t => selectedCTIdsForClient.has(t.id))
 
   const previewItems = invoiceType === 'contractor'
     ? buildContractorLineItems(selectedCTs, parseFloat(deductionPct) || 0)
@@ -608,14 +628,21 @@ export default function InvoicesPage() {
         parseFloat(driverHourlyRate) || 0,
         parseFloat(driverTotalHours) || 0,
       )
-    : buildLineItems(selectedLoads, 0)
+    : [
+        ...buildLineItems(selectedLoads, 0),
+        ...buildContractorLineItems(selectedCTsForClient, parseFloat(deductionPct) || 0),
+      ]
   const ticketsSubtotal    = previewItems.reduce((s, i) => s + i.amount, 0)
   const customItemsTotal   = customLineItems.reduce((s, i) => s + i.amount, 0)
   const subtotal           = ticketsSubtotal + customItemsTotal
   const taxRateNum         = invoiceType === 'client' ? (parseFloat(taxRate) || 0) : 0
   const taxAmountCalc      = subtotal * taxRateNum / 100
   const invoiceTotal       = subtotal + taxAmountCalc
-  const activeSelectionSize = invoiceType === 'contractor' ? selectedCTIds.size : selectedLoadIds.size
+  const activeSelectionSize = invoiceType === 'contractor'
+    ? selectedCTIds.size
+    : invoiceType === 'client'
+    ? selectedLoadIds.size + selectedCTIdsForClient.size
+    : selectedLoadIds.size
 
   // Approved loads not yet selected — used for the "you're leaving money behind" warning
   const unselectedApprovedLoads = allLoads.filter(l => l.status === 'approved' && !selectedLoadIds.has(l.id))
@@ -869,8 +896,16 @@ export default function InvoicesPage() {
 
     if (invoiceType === 'contractor') {
       await supabase.from('contractor_tickets').update({ status: 'invoiced', invoice_id: invoiceId }).in('id', [...selectedCTIds])
-    } else {
+    } else if (invoiceType === 'paystub') {
       await supabase.from('loads').update({ status: 'invoiced', invoice_id: invoiceId }).in('id', [...selectedLoadIds])
+    } else {
+      // Client invoice: link via client_invoice_id so pay stub links (invoice_id) remain separate
+      if (selectedLoadIds.size > 0) {
+        await supabase.from('loads').update({ client_invoice_id: invoiceId }).in('id', [...selectedLoadIds])
+      }
+      if (selectedCTIdsForClient.size > 0) {
+        await supabase.from('contractor_tickets').update({ client_invoice_id: invoiceId }).in('id', [...selectedCTIdsForClient])
+      }
     }
 
     toast.success('Invoice created')
@@ -931,8 +966,10 @@ export default function InvoicesPage() {
     setDriverTotalHours('')
     setSelectedLoadIds(new Set())
     setSelectedCTIds(new Set())
+    setSelectedCTIdsForClient(new Set())
     setSelectedContractorId('')
     setContractorTickets([])
+    setAllContractorTicketsForClient([])
     setDriverFilter('')
     setCustomLineItems([])
     setTaxExemptDisplay(false)
@@ -1022,19 +1059,19 @@ export default function InvoicesPage() {
     setInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, ...patch } : inv))
     if (detailInvoice?.id === id) setDetailInvoice(prev => prev ? { ...prev, ...patch } : prev)
 
-    // Cascade ticket status when invoice is paid or reverted
+    // Cascade ticket status when pay stub is paid or reverted
+    // Client invoices do NOT cascade — client payment ≠ worker being paid
     const ticketStatus =
       status === 'paid' ? 'paid' :
       ['draft', 'sent', 'overdue'].includes(status) ? 'invoiced' :
       null
     if (ticketStatus) {
       if (invoiceType === 'contractor') {
-        // Also update payment_status so the contractor page Paid YTD / Lifetime Paid stats reflect correctly
         const ctUpdate = ticketStatus === 'paid'
           ? { status: 'paid', payment_status: 'paid', paid_at: today }
           : { status: ticketStatus, payment_status: null as string | null, paid_at: null as string | null }
         await supabase.from('contractor_tickets').update(ctUpdate).eq('invoice_id', id)
-      } else if (invoiceType === 'client' || invoiceType === null || invoiceType === undefined) {
+      } else if (invoiceType === 'paystub') {
         await supabase.from('loads').update({ status: ticketStatus }).eq('invoice_id', id)
       }
     }
@@ -2168,6 +2205,60 @@ export default function InvoicesPage() {
                     )
                   })}
                 </div>
+
+                {/* Subcontractor tickets — only for client invoices */}
+                {invoiceType === 'client' && (
+                  <div className="mt-5 pt-4 border-t border-gray-100">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                        Subcontractor Tickets
+                        {allContractorTicketsForClient.length > 0 && (
+                          <span className="ml-1.5 text-gray-400 font-normal normal-case">({allContractorTicketsForClient.length} available)</span>
+                        )}
+                      </p>
+                      <div className="flex items-center gap-3">
+                        {allContractorTicketsForClient.length > 0 && (
+                          <button type="button" onClick={() => setSelectedCTIdsForClient(new Set(allContractorTicketsForClient.map(t => t.id)))} className="text-xs text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] font-medium">Select all</button>
+                        )}
+                        {selectedCTIdsForClient.size > 0 && (
+                          <button type="button" onClick={() => setSelectedCTIdsForClient(new Set())} className="text-xs text-red-400 hover:text-red-600 font-medium">Clear ({selectedCTIdsForClient.size})</button>
+                        )}
+                      </div>
+                    </div>
+                    {allContractorTicketsForClient.length === 0 ? (
+                      <p className="text-sm text-gray-400 text-center py-4">No subcontractor tickets available</p>
+                    ) : (
+                      <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                        {allContractorTicketsForClient.map(ticket => {
+                          const sel = selectedCTIdsForClient.has(ticket.id)
+                          const contractorName = contractors.find(c => c.id === ticket.contractor_id)?.name ?? 'Subcontractor'
+                          return (
+                            <label key={ticket.id} className={`flex items-start gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${sel ? 'border-orange-400 bg-orange-50' : 'border-gray-100 hover:border-gray-200'}`}>
+                              <div className={`mt-0.5 h-5 w-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${sel ? 'bg-orange-400 border-orange-400' : 'border-gray-300'}`}>
+                                {sel && <Check className="h-3 w-3 text-white" />}
+                              </div>
+                              <input type="checkbox" className="hidden" checked={sel} onChange={() => setSelectedCTIdsForClient(prev => { const n = new Set(prev); n.has(ticket.id) ? n.delete(ticket.id) : n.add(ticket.id); return n })} />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 truncate">{ticket.job_name || ticket.client_company || 'Ticket'}</p>
+                                    <p className="text-xs text-orange-600 font-medium">{contractorName}</p>
+                                  </div>
+                                  <p className="text-sm font-semibold text-gray-700 shrink-0">${fmt(ticket.rate)}<span className="text-xs font-normal text-gray-400">/{ticket.rate_type ?? 'job'}</span></p>
+                                </div>
+                                <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                                  {ticket.truck_number && <span className="text-xs text-gray-400">Truck {ticket.truck_number}</span>}
+                                  <span className="text-xs text-gray-400">{fmtDate(ticket.date)}</span>
+                                  {ticket.material && <span className="text-xs text-gray-400">{ticket.material}</span>}
+                                </div>
+                              </div>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </>
             )}
           </div>
