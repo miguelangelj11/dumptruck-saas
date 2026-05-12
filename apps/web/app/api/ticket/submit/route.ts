@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { verifyDispatchToken } from '@/lib/dispatch-token'
+import { checkForDuplicate, checkForAnomaly } from '@/lib/tickets/duplicate-detection'
+import { logTicketAudit } from '@/lib/tickets/audit'
 
 function getAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
@@ -70,6 +72,38 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: loadErr.message }, { status: 500 })
   }
 
+  const newLoadId = (load as Record<string, unknown>).id as string
+  const companyId = d.company_id as string
+  const driverName = (d.driver_name as string) ?? ''
+  const tons = tonnage ? parseFloat(tonnage) : null
+
+  // Duplicate detection (silent flag)
+  const duplicate = await checkForDuplicate(admin, companyId, {
+    driver_name: driverName,
+    date: (d.dispatch_date as string) ?? new Date().toISOString().split('T')[0]!,
+    job_name: (d.job_name as string) ?? '',
+    total_pay: d.rate as number | null,
+  })
+  if (duplicate) {
+    await admin.from('loads').update({ is_duplicate: true, duplicate_of_id: duplicate.id }).eq('id', newLoadId)
+  }
+
+  // Anomaly flagging (silent flag)
+  const anomalyReason = await checkForAnomaly(admin, companyId, driverName, tons, d.rate as number | null)
+  if (anomalyReason) {
+    await admin.from('loads').update({ anomaly_flag: true, anomaly_reason: anomalyReason }).eq('id', newLoadId)
+  }
+
+  // Audit trail
+  await logTicketAudit(admin, {
+    companyId, loadId: newLoadId,
+    action: 'created',
+    userId: d.driver_id as string ?? '',
+    userName: driverName,
+    userType: 'driver',
+    newValues: { job_name: d.job_name, driver_name: driverName, source: 'driver' },
+  })
+
   // Flip dispatch to working if still dispatched
   if (d.status === 'dispatched' || d.status === 'accepted') {
     await admin.from('dispatches')
@@ -77,5 +111,5 @@ export async function POST(request: NextRequest) {
       .eq('id', dispatchId)
   }
 
-  return NextResponse.json({ ok: true, loadId: (load as Record<string, unknown>).id })
+  return NextResponse.json({ ok: true, loadId: newLoadId })
 }

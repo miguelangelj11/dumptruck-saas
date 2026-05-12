@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCompanyId } from '@/lib/get-company-id'
+import { logTicketAudit } from '@/lib/tickets/audit'
 
 export const runtime = 'nodejs'
 
@@ -226,6 +227,31 @@ export async function POST(request: Request) {
       paidIds.push(newLoad.id)
       paidTotal += amount
     }
+
+    // Store AI field confidence
+    const conf = row.confidence != null ? Number(row.confidence) : null
+    if (conf != null) {
+      await supabase.from('loads').update({
+        ai_field_confidence: {
+          tons:      row.confidence_by_field ? (row.confidence_by_field as Record<string, number>).tons  ?? conf : conf,
+          origin:    row.confidence_by_field ? (row.confidence_by_field as Record<string, number>).origin ?? conf : conf,
+          total_pay: row.confidence_by_field ? (row.confidence_by_field as Record<string, number>).amount ?? conf : conf,
+          driver:    row.confidence_by_field ? (row.confidence_by_field as Record<string, number>).driver ?? conf : conf,
+          date:      row.confidence_by_field ? (row.confidence_by_field as Record<string, number>).date   ?? conf : conf,
+        },
+      }).eq('id', newLoad.id)
+    }
+
+    // Audit trail for AI import
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    await logTicketAudit(supabase, {
+      companyId, loadId: newLoad.id,
+      action: 'created',
+      userId:    authUser?.id ?? '',
+      userName:  authUser?.email ?? 'AI Import',
+      userType:  'ai',
+      newValues: { job_name: jobName, driver_name: driver, source: 'ai', generated_by_ai: true },
+    })
 
     // Create load_ticket for tonnage / ticket number
     const ticketNumber = row.ticket_number ? String(row.ticket_number) : null

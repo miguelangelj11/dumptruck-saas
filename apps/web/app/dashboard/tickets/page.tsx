@@ -3,7 +3,9 @@
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Pencil, Trash2, Loader2, FileText, Camera, X, ImageIcon, ChevronLeft, ChevronRight, Search, Filter, CheckCircle2, XCircle, DollarSign, Send, Bot } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, FileText, Camera, X, ImageIcon, ChevronLeft, ChevronRight, Search, Filter, CheckCircle2, XCircle, DollarSign, Send, Bot, History, AlertTriangle } from 'lucide-react'
+import { computeCompletenessScore, COMPLETENESS_BADGE, INVOICE_BLOCKING_FIELDS } from '@/lib/tickets/completeness'
+import { logTicketAudit } from '@/lib/tickets/audit'
 import { toast } from 'sonner'
 import type { Load, LoadTicket, Contractor } from '@/lib/types'
 import { linkTicketToDispatch, approveTicket } from '@/lib/workflows'
@@ -132,6 +134,75 @@ function makeEmptyRow(): TicketRow {
   return { id: crypto.randomUUID(), ticket_number: '', tonnage: '', imageFile: null, imagePreview: null }
 }
 
+// ── Step 6: Audit Trail Drawer ─────────────────────────────────────────────
+
+type AuditEvent = { id: string; action: string; changed_by_name: string | null; changed_by_type: string | null; new_values: Record<string, unknown> | null; created_at: string }
+
+function AuditTrailDrawer({ ticketId, isOpen, onClose }: { ticketId: string | null; isOpen: boolean; onClose: () => void }) {
+  const supabase = createClient()
+  const [trail, setTrail] = useState<AuditEvent[]>([])
+
+  useEffect(() => {
+    if (!ticketId || !isOpen) return
+    supabase.from('ticket_audit_trail').select('*').eq('load_id', ticketId).order('created_at', { ascending: false })
+      .then(({ data }: { data: AuditEvent[] | null }) => setTrail((data ?? []) as AuditEvent[]))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticketId, isOpen])
+
+  const typeIcon: Record<string, string> = { office: '💼', driver: '🚛', ai: '🤖', system: '⚙️' }
+  const actionColor: Record<string, string> = {
+    created: 'text-green-600', edited: 'text-blue-600',
+    status_changed: 'text-purple-600', photo_added: 'text-amber-600', approved: 'text-green-700',
+  }
+
+  return (
+    <>
+      {isOpen && <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} />}
+      <div className={`fixed right-0 top-0 h-full w-96 bg-white shadow-2xl z-50 transform transition-transform duration-200 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="p-5 border-b flex items-center justify-between">
+          <div>
+            <h2 className="font-bold text-gray-900">Ticket History</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Full audit trail with timestamps</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+        </div>
+        <div className="p-4 overflow-y-auto h-full pb-20">
+          {trail.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-400 text-sm">No history yet</p>
+              <p className="text-gray-300 text-xs mt-1">Changes will appear here</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {trail.map(event => (
+                <div key={event.id} className="flex gap-3 p-3 bg-gray-50 rounded-xl">
+                  <span className="text-lg flex-shrink-0 mt-0.5">{typeIcon[event.changed_by_type ?? ''] ?? '📝'}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-xs font-semibold capitalize ${actionColor[event.action] ?? 'text-gray-600'}`}>
+                        {event.action?.replace('_', ' ')}
+                      </span>
+                      <span className="text-xs text-gray-400">by {event.changed_by_name ?? 'System'}</span>
+                    </div>
+                    {event.new_values && (
+                      <div className="text-xs text-gray-600">
+                        {Object.entries(event.new_values).slice(0, 3).map(([k, v]) => (
+                          <p key={k}><span className="font-medium">{k}:</span> {String(v)}</p>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-400 mt-1">{new Date(event.created_at).toLocaleString()}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
+
 export default function TicketsPage() {
   const [loads, setLoads]         = useState<Load[]>([])
   const [loadingMore, setLoadingMore] = useState(false)
@@ -177,6 +248,20 @@ export default function TicketsPage() {
 
   // Source filter
   const [sourceFilter, setSourceFilter] = useState<'all' | 'office' | 'driver' | 'ai'>('all')
+
+  // Step 8 — Bulk select
+  const [selectedTickets, setSelectedTickets] = useState<string[]>([])
+
+  // Step 5 — Invoice block modal
+  const [invoiceBlockModal, setInvoiceBlockModal] = useState<{
+    open: boolean; ticketId?: string; missing?: string[]; ticket?: Load; newStatus?: string
+  }>({ open: false })
+
+  // Step 6 — Audit trail drawer
+  const [auditDrawer, setAuditDrawer] = useState<string | null>(null)
+
+  // Step 10 — AI verify sub-tab
+  const [aiSubTab, setAiSubTab] = useState<'all' | 'verify'>('all')
 
   // Missing tickets
   type MissingDispatch = {
@@ -304,10 +389,21 @@ export default function TicketsPage() {
     [loads],
   )
 
+  const needsReviewCount = useMemo(
+    () => loads.filter(l => l.generated_by_ai && (l as Record<string, unknown>).ai_field_confidence &&
+      Object.values((l as Record<string, unknown>).ai_field_confidence as Record<string, number>).some(c => c < 0.8)
+    ).length,
+    [loads],
+  )
+
   const filtered = useMemo(() => loads.filter(l => {
     if (sourceFilter === 'office' && (l.source === 'driver' || l.generated_by_ai)) return false
     if (sourceFilter === 'driver' && l.source !== 'driver') return false
     if (sourceFilter === 'ai'     && !l.generated_by_ai) return false
+    if (sourceFilter === 'ai' && aiSubTab === 'verify') {
+      const conf = (l as Record<string, unknown>).ai_field_confidence as Record<string, number> | null
+      if (!conf || !Object.values(conf).some(c => c < 0.8)) return false
+    }
     if (filterStatus && l.status !== filterStatus) return false
     if (filterContractor && l.client_company !== filterContractor) return false
     if (filterTruck && l.truck_number !== filterTruck) return false
@@ -321,7 +417,9 @@ export default function TicketsPage() {
       if (!match) return false
     }
     return true
-  }), [loads, sourceFilter, filterStatus, filterContractor, filterTruck, filterDriver, filterFrom, filterTo, debouncedSearch])
+  }), [loads, sourceFilter, aiSubTab, filterStatus, filterContractor, filterTruck, filterDriver, filterFrom, filterTo, debouncedSearch])
+
+  const allSelected = selectedTickets.length === filtered.length && filtered.length > 0
 
   function updateRow(id: string, updates: Partial<TicketRow>) {
     setTicketRows(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r))
@@ -425,6 +523,15 @@ export default function TicketsPage() {
         })
         if (slipErr) toast.error('Slip save failed: ' + slipErr.message)
       }
+      // Audit trail for edit
+      await logTicketAudit(supabase, {
+        companyId: orgId, loadId: editing.id,
+        action: 'edited',
+        userId: uid, userName: editing.driver_name ?? 'Office',
+        userType: 'office',
+        oldValues: { job_name: editing.job_name, driver_name: editing.driver_name, status: editing.status },
+        newValues: { job_name: payload.job_name, driver_name: payload.driver_name, status: payload.status },
+      })
       toast.success('Ticket updated')
     } else {
       const jobId = crypto.randomUUID()
@@ -440,6 +547,14 @@ export default function TicketsPage() {
         })
         if (slipErr) toast.error('Slip save failed: ' + slipErr.message)
       }
+      // Audit trail for create
+      await logTicketAudit(supabase, {
+        companyId: orgId, loadId: jobId,
+        action: 'created',
+        userId: uid, userName: payload.driver_name ?? 'Office',
+        userType: 'office',
+        newValues: { job_name: payload.job_name, driver_name: payload.driver_name, source: 'office' },
+      })
       // Workflow 1: auto-link to active dispatch for this driver on this date
       const { linked } = await linkTicketToDispatch(jobId, payload.driver_name, payload.date, supabase)
       toast.success(linked ? 'Ticket added & linked to dispatch' : 'Ticket added')
@@ -461,7 +576,69 @@ export default function TicketsPage() {
   async function quickStatus(id: string, status: Load['status']) {
     const { error } = await supabase.from('loads').update({ status }).eq('id', id)
     if (error) { toast.error('Status update failed: ' + error.message); return }
+    // Audit log
+    const orgId = await getCompanyId()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (orgId && user) {
+      await logTicketAudit(supabase, {
+        companyId: orgId, loadId: id,
+        action: 'status_changed',
+        userId: user.id, userName: user.email ?? 'Office',
+        userType: 'office',
+        newValues: { status },
+      })
+    }
     setLoads(prev => prev.map(l => l.id === id ? { ...l, status } : l))
+  }
+
+  // Step 5 — intercept status change to 'invoiced' with completeness gate
+  function handleStatusChange(ticket: Load, newStatus: string) {
+    if (newStatus === 'invoiced') {
+      const { missing } = computeCompletenessScore(ticket as unknown as Record<string, unknown>)
+      const blockingMissing = missing.filter(f => INVOICE_BLOCKING_FIELDS.includes(f))
+      if (blockingMissing.length > 0) {
+        setInvoiceBlockModal({ open: true, ticketId: ticket.id, missing: blockingMissing, ticket, newStatus })
+        return
+      }
+    }
+    void quickStatus(ticket.id, newStatus as Load['status'])
+  }
+
+  // Step 8 — bulk actions
+  async function bulkUpdateStatus(status: string) {
+    const orgId = await getCompanyId()
+    if (!orgId) return
+    const { error } = await supabase.from('loads').update({ status }).in('id', selectedTickets).eq('company_id', orgId)
+    if (error) { toast.error(error.message); return }
+    setLoads(prev => prev.map(l => selectedTickets.includes(l.id) ? { ...l, status: status as Load['status'] } : l))
+    toast.success(`Updated ${selectedTickets.length} tickets`)
+    setSelectedTickets([])
+  }
+
+  function handleBulkExport() {
+    const tickets = filtered.filter(t => selectedTickets.includes(t.id))
+    const csv = [
+      ['Date', 'Job', 'Driver', 'Truck', 'Material', 'Total Pay', 'Status'].join(','),
+      ...tickets.map(t => [t.date, t.job_name, t.driver_name, t.truck_number, t.material, t.total_pay ?? t.rate, t.status].map(v => `"${v ?? ''}"`).join(',')),
+    ].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `tickets-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function handleBulkDelete() {
+    if (!confirm(`Delete ${selectedTickets.length} tickets? This cannot be undone.`)) return
+    const orgId = await getCompanyId()
+    if (!orgId) return
+    const { error } = await supabase.from('loads').delete().in('id', selectedTickets).eq('company_id', orgId)
+    if (error) { toast.error(error.message); return }
+    setLoads(prev => prev.filter(l => !selectedTickets.includes(l.id)))
+    toast.success(`Deleted ${selectedTickets.length} tickets`)
+    setSelectedTickets([])
   }
 
   async function fetchMissingTickets() {
@@ -752,6 +929,32 @@ export default function TicketsPage() {
 
       {activeTab === 'tickets' && (<>
 
+      {/* Step 10 — Verify Queue sub-tab (only when AI filter active) */}
+      {sourceFilter === 'ai' && (
+        <div className="px-6 mb-4">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setAiSubTab('all')}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${aiSubTab === 'all' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-700'}`}>
+              All AI Imported
+            </button>
+            <button
+              onClick={() => setAiSubTab('verify')}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-all ${aiSubTab === 'verify' ? 'bg-amber-500 text-white' : 'text-gray-500 hover:text-gray-700'}`}>
+              Verify Queue
+              {needsReviewCount > 0 && (
+                <span className="bg-red-500 text-white text-xs px-1.5 rounded-full">{needsReviewCount}</span>
+              )}
+            </button>
+          </div>
+          {aiSubTab === 'verify' && (
+            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
+              These AI-imported tickets have low confidence fields. Review and confirm before invoicing.
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Search + Filters */}
       <div className="space-y-3 mb-5">
         <div className="flex gap-3">
@@ -807,13 +1010,31 @@ export default function TicketsPage() {
             <button onClick={openAdd} className="mt-3 text-sm text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)]">Add your first ticket →</button>
           </div>
         ) : (
+          <>
+          {/* Step 8 — Bulk action toolbar */}
+          {selectedTickets.length > 0 && (
+            <div className="flex items-center gap-3 mb-3 p-3 bg-gray-900 text-white rounded-xl flex-wrap">
+              <span className="text-sm font-semibold">{selectedTickets.length} selected</span>
+              <div className="flex gap-2 flex-wrap ml-2">
+                <button onClick={() => bulkUpdateStatus('invoiced')} className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold">✅ Mark Invoiced</button>
+                <button onClick={() => bulkUpdateStatus('pending')}  className="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-xs font-bold">↩️ Mark Pending</button>
+                <button onClick={handleBulkExport}                   className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold">📥 Export CSV</button>
+                <button onClick={handleBulkDelete}                   className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold">🗑 Delete</button>
+              </div>
+              <button onClick={() => setSelectedTickets([])} className="ml-auto text-gray-400 hover:text-white text-sm">Clear ✕</button>
+            </div>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full min-w-[500px] sm:min-w-[800px] text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
+                  <th className="w-10 px-3 py-3">
+                    <input type="checkbox" checked={allSelected} onChange={e => setSelectedTickets(e.target.checked ? filtered.map(t => t.id) : [])} className="w-4 h-4 rounded" />
+                  </th>
                   {(['Photo', 'Date', 'Job / Company'] as const).map(h => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
+                  <th className="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Quality</th>
                   <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Load Type</th>
                   <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Driver</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Truck</th>
@@ -830,8 +1051,13 @@ export default function TicketsPage() {
                   const photos  = getPhotos(l)
                   const tickets = l.load_tickets ?? []
                   const tons    = tickets.reduce((s, t) => s + (t.tonnage ?? 0), 0)
+                  const lr = l as Record<string, unknown>
                   return (
                     <tr key={l.id} className="hover:bg-gray-50/50 transition-colors">
+                      {/* Checkbox */}
+                      <td className="px-3 py-3">
+                        <input type="checkbox" checked={selectedTickets.includes(l.id)} onChange={e => setSelectedTickets(prev => e.target.checked ? [...prev, l.id] : prev.filter(id => id !== l.id))} className="w-4 h-4 rounded" />
+                      </td>
                       <td className="px-4 py-3">
                         {photos.length > 0 ? (
                           <button onClick={() => { setViewingImages(photos); setViewingIndex(0) }} className="relative h-10 w-10 overflow-hidden rounded-lg border border-gray-200 hover:border-[var(--brand-primary)] transition-colors shrink-0">
@@ -854,7 +1080,28 @@ export default function TicketsPage() {
                           )}
                         </div>
                         {l.client_company && <p className="text-xs text-gray-400">{l.client_company}</p>}
+                        {/* Duplicate / anomaly badges */}
+                        {!!lr.is_duplicate && <span className="inline-flex text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full font-medium">⚠️ Duplicate</span>}
+                        {!!lr.anomaly_flag && <span className="inline-flex text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-medium cursor-help" title={String(lr.anomaly_reason ?? '')}>🚨 Anomaly</span>}
                       </td>
+                      {/* Step 4 — Quality badge */}
+                      {(() => {
+                        const { status, missing } = computeCompletenessScore(lr)
+                        const badge = COMPLETENESS_BADGE[status]
+                        return (
+                          <td className="px-3 py-3">
+                            <div className="relative group">
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium cursor-help ${badge.color}`}>{badge.icon}</span>
+                              {missing.length > 0 && (
+                                <div className="absolute left-0 top-6 z-20 hidden group-hover:block bg-gray-900 text-white text-xs rounded-lg p-2 w-48 shadow-xl">
+                                  <p className="font-semibold mb-1">Missing:</p>
+                                  {missing.map(f => <p key={f} className="text-gray-300">• {f}</p>)}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        )
+                      })()}
                       <td className="hidden sm:table-cell px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{l.load_type || '—'}</td>
                       <td className="hidden sm:table-cell px-4 py-3 text-gray-600 whitespace-nowrap">{l.driver_name}</td>
                       <td className="px-4 py-3 text-gray-500 font-mono text-xs">{l.truck_number || '—'}</td>
@@ -873,17 +1120,22 @@ export default function TicketsPage() {
                           : l.rate != null ? `$${l.rate.toLocaleString()}` : '—'}
                       </td>
                       <td className="px-4 py-3">
-                        <select
-                          value={l.status}
-                          onChange={e => quickStatus(l.id, e.target.value as Load['status'])}
-                          className={`rounded-full px-2.5 py-0.5 text-xs font-medium border-0 cursor-pointer focus:outline-none ${statusColor[l.status as keyof typeof statusColor] ?? 'bg-gray-100 text-gray-600'}`}
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="approved">Approved</option>
-                          <option value="disputed">Disputed</option>
-                          <option value="invoiced">Invoiced</option>
-                          <option value="paid">Paid</option>
-                        </select>
+                        {/* Step 7 — invoice link pill */}
+                        {l.status === 'invoiced' && lr.invoice_id ? (
+                          <Link href={`/dashboard/invoices`} className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium hover:bg-green-200">✅ Invoiced ↗</Link>
+                        ) : (
+                          <select
+                            value={l.status}
+                            onChange={e => handleStatusChange(l, e.target.value)}
+                            className={`rounded-full px-2.5 py-0.5 text-xs font-medium border-0 cursor-pointer focus:outline-none ${statusColor[l.status as keyof typeof statusColor] ?? 'bg-gray-100 text-gray-600'}`}
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="approved">Approved</option>
+                            <option value="disputed">Disputed</option>
+                            <option value="invoiced">Invoiced</option>
+                            <option value="paid">Paid</option>
+                          </select>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
@@ -895,6 +1147,8 @@ export default function TicketsPage() {
                           )}
                           <button onClick={() => openEdit(l)} className="p-1 text-gray-400 hover:text-[var(--brand-primary)] transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
                           <button onClick={() => handleDelete(l.id)} className="p-1 text-gray-400 hover:text-red-500 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
+                          {/* Step 6 — History button */}
+                          <button onClick={() => setAuditDrawer(l.id)} title="View ticket history" className="p-1 text-gray-300 hover:text-gray-600 transition-colors"><History className="h-3.5 w-3.5" /></button>
                         </div>
                       </td>
                     </tr>
@@ -903,6 +1157,7 @@ export default function TicketsPage() {
               </tbody>
             </table>
           </div>
+        </>
         )}
 
         {/* Load more / pagination footer */}
@@ -944,6 +1199,26 @@ export default function TicketsPage() {
                     <p className="text-sm font-semibold text-amber-800">AI-Generated Record</p>
                     <p className="text-xs text-amber-700 mt-0.5">This ticket was extracted by AI. Please verify all values before using in invoices or payroll.</p>
                   </div>
+                </div>
+              )}
+              {/* Step 9 — AI field confidence panel */}
+              {!!editing?.generated_by_ai && !!(editing as Record<string, unknown>).ai_field_confidence && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                  <p className="text-xs font-bold text-amber-800 mb-2">🤖 AI-Extracted Field Confidence</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {Object.entries((editing as Record<string, unknown>).ai_field_confidence as Record<string, number>).map(([field, conf]) => {
+                      const pct = Math.round(conf * 100)
+                      return (
+                        <div key={field} className="flex items-center justify-between">
+                          <span className="text-xs text-gray-600 capitalize">{field}</span>
+                          <span className={`text-xs font-bold ${pct >= 90 ? 'text-green-600' : pct >= 70 ? 'text-amber-600' : 'text-red-500'}`}>{pct}%</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {Object.values((editing as Record<string, unknown>).ai_field_confidence as Record<string, number>).some(c => c < 0.8) && (
+                    <p className="text-xs text-amber-700 mt-2 font-medium">⚠️ Fields below 80% confidence should be verified</p>
+                  )}
                 </div>
               )}
               {/* Row 1: Job + Company */}
@@ -1271,6 +1546,44 @@ export default function TicketsPage() {
       )}
 
       </>) /* end tickets tab */}
+
+      {/* Step 5 — Invoice block modal */}
+      {invoiceBlockModal.open && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+            <span className="text-4xl block mb-3">⚠️</span>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Ticket Has Missing Data</h3>
+            <p className="text-sm text-gray-600 mb-3">This ticket is missing information that may be needed to defend this invoice if disputed:</p>
+            <ul className="mb-4 space-y-1">
+              {(invoiceBlockModal.missing ?? []).map(f => (
+                <li key={f} className="text-sm text-red-600 flex items-center gap-2"><AlertTriangle className="h-3.5 w-3.5 shrink-0" /> {f}</li>
+              ))}
+            </ul>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setInvoiceBlockModal({ open: false }); if (invoiceBlockModal.ticket) openEdit(invoiceBlockModal.ticket) }}
+                className="flex-1 py-2.5 bg-[var(--brand-primary)] text-white font-bold rounded-xl text-sm">
+                Fix Missing Data
+              </button>
+              <button
+                onClick={() => {
+                  if (invoiceBlockModal.ticketId) void quickStatus(invoiceBlockModal.ticketId, 'invoiced')
+                  setInvoiceBlockModal({ open: false })
+                }}
+                className="flex-1 py-2.5 border border-gray-300 text-gray-600 rounded-xl text-sm">
+                Invoice Anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Step 6 — Audit trail drawer */}
+      <AuditTrailDrawer
+        ticketId={auditDrawer}
+        isOpen={auditDrawer !== null}
+        onClose={() => setAuditDrawer(null)}
+      />
 
       {/* Lightbox */}
       {viewingImages.length > 0 && (
