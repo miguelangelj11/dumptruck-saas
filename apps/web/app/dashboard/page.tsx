@@ -14,6 +14,7 @@ import { DriverProfitTable } from '@/components/dashboard/driver-profit-table'
 import SoloUpgradeNudge from '@/components/dashboard/solo-upgrade-nudge'
 import DashboardStatCards from '@/components/dashboard/DashboardStatCards'
 import SetupProgressBanner from '@/components/setup-progress-banner'
+import { WeatherBanner } from '@/components/dashboard/WeatherBanner'
 import Link from 'next/link'
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -88,10 +89,10 @@ export default async function DashboardPage() {
   const fetchCutoffStr = fetchCutoff.toISOString().split('T')[0]!
 
   // ── Batch 1 ───────────────────────────────────────────────────────────────
-  const [loadsRes, invoicesRes, companyRes, activityRes] = await Promise.all([
+  const [loadsRes, invoicesRes, companyRes, activityRes, leadsRes] = await Promise.all([
     supabase
       .from('loads')
-      .select('id, rate, total_pay, status, driver_name, job_name, date, created_at, source, submitted_by_driver')
+      .select('id, rate, total_pay, status, driver_name, job_name, date, created_at, source, submitted_by_driver, client_company')
       .eq('company_id', effectiveCompanyId)
       .gte('date', fetchCutoffStr)
       .order('date', { ascending: false }),
@@ -101,7 +102,7 @@ export default async function DashboardPage() {
       .eq('company_id', effectiveCompanyId),
     supabase
       .from('companies')
-      .select('id, name, plan')
+      .select('id, name, plan, monthly_revenue_goal')
       .eq('id', effectiveCompanyId)
       .maybeSingle(),
     supabase
@@ -110,14 +111,26 @@ export default async function DashboardPage() {
       .eq('company_id', effectiveCompanyId)
       .order('created_at', { ascending: false })
       .limit(6),
+    supabase
+      .from('leads')
+      .select('id, value, status')
+      .eq('company_id', effectiveCompanyId)
+      .not('status', 'in', '("won","lost")'),
   ])
 
   const loads       = loadsRes.data    ?? []
   const invoices    = invoicesRes.data ?? []
-  const companyId   = companyRes.data?.id
-  const companyName = companyRes.data?.name ?? ''
-  const companyPlan = (companyRes.data as Record<string, unknown> | null)?.plan as string | null ?? null
-  const activityFeed = activityRes.error ? [] : (activityRes.data ?? [])
+  const companyId          = companyRes.data?.id
+  const companyName        = companyRes.data?.name ?? ''
+  const companyPlan        = (companyRes.data as Record<string, unknown> | null)?.plan as string | null ?? null
+  const monthlyRevenueGoal = (companyRes.data as Record<string, unknown> | null)?.monthly_revenue_goal as number | null ?? null
+  const activityFeed       = activityRes.error ? [] : (activityRes.data ?? [])
+
+  // Open leads (for Bid Pipeline)
+  type LeadRow = { id: string; value: number | null; status: string }
+  const openLeads     = (leadsRes.data ?? []) as LeadRow[]
+  const openLeadCount = openLeads.length
+  const openLeadValue = openLeads.reduce((s, l) => s + (l.value ?? 0), 0)
 
   // Paid client invoices — source of truth for revenue
   type InvoiceRow = { id: string; status: string; total: number | null; invoice_type: string | null; date_paid: string | null }
@@ -236,6 +249,17 @@ export default async function DashboardPage() {
   const topDrivers    = Object.entries(driverMap).map(([name, d]) => ({ name, ...d })).sort((a, b) => b.revenue - a.revenue).slice(0, 5)
   const maxDriverRev  = topDrivers[0]?.revenue ?? 1
 
+  // ── Top customers by revenue ──────────────────────────────────────────────
+  const customerMap = loads.reduce<Record<string, { loads: number; revenue: number }>>((acc, l) => {
+    const key = (l as Record<string, unknown>).client_company as string | null || l.job_name || 'Unknown'
+    if (!acc[key]) acc[key] = { loads: 0, revenue: 0 }
+    acc[key]!.loads++
+    acc[key]!.revenue += (l.total_pay ?? l.rate) ?? 0
+    return acc
+  }, {})
+  const topCustomers   = Object.entries(customerMap).map(([name, d]) => ({ name, ...d })).sort((a, b) => b.revenue - a.revenue).slice(0, 5)
+  const maxCustomerRev = topCustomers[0]?.revenue ?? 1
+
   // ── Chart data ────────────────────────────────────────────────────────────
 
   // Charts show cash collected = paid client invoices, by date_paid
@@ -309,6 +333,35 @@ export default async function DashboardPage() {
     },
   ].filter(Boolean) as { label: string; icon: React.ElementType; color: string; iconCls: string; href: string; cta: string }[]
 
+  // ── Revenue goal progress ─────────────────────────────────────────────────
+  const daysInCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+  const dayOfMonth         = now.getDate()
+  const goalProgress       = monthlyRevenueGoal && monthlyRevenueGoal > 0
+    ? Math.min(Math.round((thisMonthRev / monthlyRevenueGoal) * 100), 100)
+    : null
+  const goalPaceExpected   = monthlyRevenueGoal
+    ? Math.round((dayOfMonth / daysInCurrentMonth) * monthlyRevenueGoal)
+    : 0
+
+  // ── AI Insights (computed from existing data, no model call) ──────────────
+  const insights: string[] = []
+  if (weekMargin !== null && weekMargin < 15 && weekRevProjected > 500) {
+    insights.push(`Margin this week is ${weekMargin}% — review job costs to protect profit.`)
+  }
+  if (overdueInvs.length > 0 && overdueTotal > 500) {
+    insights.push(`${fmt(overdueTotal)} overdue across ${overdueInvs.length} invoice${overdueInvs.length !== 1 ? 's' : ''}. Chase these to free up cash.`)
+  }
+  if (pendingDriverTickets > 0) {
+    insights.push(`${pendingDriverTickets} driver ticket${pendingDriverTickets !== 1 ? 's' : ''} pending approval — approve before invoicing.`)
+  }
+  if (monthlyRevenueGoal && dayOfMonth > 5 && thisMonthRev < goalPaceExpected) {
+    const gap = goalPaceExpected - thisMonthRev
+    insights.push(`${fmt(gap)} behind pace for your ${fmt(monthlyRevenueGoal)} monthly goal.`)
+  }
+  if (thisWeekTickets === 0 && dispatchedToday === 0) {
+    insights.push('No tickets or dispatches this week — is the fleet running?')
+  }
+
   return (
     <div className="max-w-7xl">
       {/* Solo upgrade nudge */}
@@ -329,6 +382,18 @@ export default async function DashboardPage() {
 
       {/* ── Profit Alerts (client component — self-fetches) ──────────────────── */}
       {companyId && <ProfitAlerts companyId={companyId} />}
+
+      {/* ── AI Insights ──────────────────────────────────────────────────────── */}
+      {insights.length > 0 && (
+        <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+          <p className="text-xs font-bold uppercase tracking-wider text-amber-700 mb-2">💡 Insights</p>
+          <ul className="space-y-1">
+            {insights.map((insight, i) => (
+              <li key={i} className="text-sm text-amber-800">• {insight}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* ── Action Panels ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -398,6 +463,17 @@ export default async function DashboardPage() {
         {/* Panel 3: Money This Week */}
         <div className="rounded-xl border border-green-100 bg-green-50/30 p-4">
           <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">💰 {t('moneyThisWeek')}</p>
+          {monthlyRevenueGoal && goalProgress !== null && (
+            <div className="mb-3 pb-3 border-b border-green-100">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-gray-500">Monthly goal: {fmt(monthlyRevenueGoal)}</span>
+                <span className="text-xs font-bold text-green-700">{goalProgress}%</span>
+              </div>
+              <div className="h-2 bg-green-100 rounded-full overflow-hidden">
+                <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${goalProgress}%` }} />
+              </div>
+            </div>
+          )}
           <div className="space-y-2.5">
             <Link href="/dashboard/revenue" className="flex items-center justify-between gap-2 group">
               <span className="text-sm text-gray-700 group-hover:underline">{t('revenue')}</span>
@@ -445,6 +521,8 @@ export default async function DashboardPage() {
         thisWeekStartStr={thisWeekStartStr}
         todayStr={todayStr}
         thisMonthStr={thisMonthStr}
+        weekProfit={weekProfit}
+        weekMargin={weekMargin}
       />
 
       {/* Quick Actions */}
@@ -486,8 +564,8 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* Chart + Top Drivers */}
-      <div className="grid lg:grid-cols-3 gap-6 mb-6">
+      {/* Chart + Top Drivers + Top Customers */}
+      <div className="grid lg:grid-cols-4 gap-6 mb-6">
 
         {/* Revenue Chart */}
         <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 p-5">
@@ -513,6 +591,7 @@ export default async function DashboardPage() {
             <div className="space-y-4">
               {topDrivers.map((d, i) => {
                 const barPct = maxDriverRev > 0 ? Math.round((d.revenue / maxDriverRev) * 100) : 0
+                const perLoad = d.loads > 0 ? Math.round(d.revenue / d.loads) : 0
                 return (
                   <div key={d.name}>
                     <div className="flex items-center gap-2 mb-1">
@@ -524,7 +603,41 @@ export default async function DashboardPage() {
                       <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                         <div className="h-full bg-[var(--brand-primary)] rounded-full" style={{ width: `${barPct}%` }} />
                       </div>
-                      <span className="text-[10px] text-gray-400 shrink-0 w-14 text-right">{d.loads} job{d.loads !== 1 ? 's' : ''}</span>
+                      <span className="text-[10px] text-gray-400 shrink-0 w-20 text-right">{d.loads} ld · {fmt(perLoad)}/ld</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Top Customers */}
+        <div className="bg-white rounded-xl border border-gray-100 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-gray-900 text-sm">Top Customers</h2>
+          </div>
+          {topCustomers.length === 0 ? (
+            <div className="text-center py-8">
+              <Users className="h-8 w-8 text-gray-200 mx-auto mb-2" />
+              <p className="text-sm text-gray-400">No customer data</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {topCustomers.map((c, i) => {
+                const barPct = maxCustomerRev > 0 ? Math.round((c.revenue / maxCustomerRev) * 100) : 0
+                return (
+                  <div key={c.name}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="h-5 w-5 rounded-full bg-blue-800 flex items-center justify-center text-[10px] font-bold text-white shrink-0">{i + 1}</div>
+                      <p className="text-sm font-medium text-gray-900 truncate flex-1">{c.name}</p>
+                      <span className="text-xs font-semibold text-blue-600 shrink-0">{fmt(c.revenue)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-400 rounded-full" style={{ width: `${barPct}%` }} />
+                      </div>
+                      <span className="text-[10px] text-gray-400 shrink-0 w-14 text-right">{c.loads} load{c.loads !== 1 ? 's' : ''}</span>
                     </div>
                   </div>
                 )
@@ -534,8 +647,34 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      {/* Bid Pipeline */}
+      {openLeadCount > 0 && (
+        <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="font-semibold text-gray-900 text-sm">🎯 Bid Pipeline</h2>
+              <p className="text-xs text-gray-400 mt-0.5">{openLeadCount} open bid{openLeadCount !== 1 ? 's' : ''}</p>
+            </div>
+            <Link href="/dashboard/leads" className="text-xs text-[var(--brand-primary)] font-medium hover:underline">View all →</Link>
+          </div>
+          <div className="flex items-center gap-8">
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{fmt(openLeadValue)}</p>
+              <p className="text-xs text-gray-500">Total pipeline value</p>
+            </div>
+            <div>
+              <p className="text-lg font-semibold text-gray-700">{openLeadCount}</p>
+              <p className="text-xs text-gray-500">Open bids</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Driver Profit Table (client component — self-fetches) */}
       {companyId && <DriverProfitTable companyId={companyId} />}
+
+      {/* Weather Banner */}
+      <WeatherBanner />
 
       {/* Today's Dispatches */}
       {companyId && (

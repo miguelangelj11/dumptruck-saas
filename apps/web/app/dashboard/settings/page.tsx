@@ -142,10 +142,11 @@ export default function SettingsPage() {
   const [userId,         setUserId]         = useState('')
   const [email,          setEmail]          = useState('')
   const [fullName,       setFullName]       = useState('')
-  const [companyId,      setCompanyId]      = useState('')
-  const [companyName,    setCompanyName]    = useState('')
-  const [companyAddress, setCompanyAddress] = useState('')
-  const [companyPhone,   setCompanyPhone]   = useState('')
+  const [companyId,        setCompanyId]        = useState('')
+  const [companyName,      setCompanyName]      = useState('')
+  const [companyAddress,   setCompanyAddress]   = useState('')
+  const [companyPhone,     setCompanyPhone]     = useState('')
+  const [revenueGoal,      setRevenueGoal]      = useState('')
 
   // ── Logo / branding state ───────────────────────────────────────────────
   const [logoUrl,       setLogoUrl]       = useState<string | null>(null)
@@ -260,7 +261,7 @@ export default function SettingsPage() {
       setUserId(user.id)
       setEmail(user.email ?? '')
 
-      const companySelect = 'id, name, address, phone, logo_url, primary_color, accent_color'
+      const companySelect = 'id, name, address, phone, logo_url, primary_color, accent_color, monthly_revenue_goal'
 
       // 1. Profile lookup — single source of truth for both owners and team members
       const { data: prof, error: profFetchErr } = await supabase
@@ -324,6 +325,8 @@ export default function SettingsPage() {
         setCompanyName(c.name ?? '')
         setCompanyAddress(c.address ?? '')
         setCompanyPhone(c.phone ?? '')
+        const goal = (c as unknown as Record<string, unknown>).monthly_revenue_goal
+        if (goal != null) setRevenueGoal(String(goal))
         setLogoUrl(c.logo_url ?? null)
         setPrimaryColor(c.primary_color ?? '#1e3a2a')
         setAccentColor(c.accent_color ?? '#2d7a4f')
@@ -491,9 +494,10 @@ export default function SettingsPage() {
       const { error } = await supabase
         .from('companies')
         .update({
-          name:    companyName.trim(),
-          address: companyAddress.trim() || null,
-          phone:   companyPhone.trim() || null,
+          name:                 companyName.trim(),
+          address:              companyAddress.trim() || null,
+          phone:                companyPhone.trim() || null,
+          monthly_revenue_goal: revenueGoal.trim() ? parseInt(revenueGoal.trim(), 10) || null : null,
         })
         .eq('id', companyId)
       if (error) { toast.error('Failed to save: ' + error.message); setSaving(false); return }
@@ -959,6 +963,21 @@ export default function SettingsPage() {
               className={inputCls}
               placeholder="(555) 123-4567"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Monthly Revenue Goal</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+              <input
+                type="number"
+                min="0"
+                value={revenueGoal}
+                onChange={e => setRevenueGoal(e.target.value)}
+                className="w-full rounded-lg border border-gray-200 pl-7 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
+                placeholder="e.g. 50000"
+              />
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Shows a progress bar on your dashboard. Leave blank to hide.</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Your Full Name</label>

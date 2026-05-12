@@ -86,7 +86,7 @@ const EMPTY_JOB = {
   start_date: new Date().toISOString().split('T')[0]!, end_date: '', notes: '',
 }
 
-const EMPTY_DISPATCH = { job_id: '', driver_id: '', truck_number: '', start_time: '07:00', instructions: '' }
+const EMPTY_DISPATCH = { job_id: '', driver_id: '', truck_number: '', start_time: '07:00', end_time: '', estimated_loads: '', instructions: '' }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -181,6 +181,146 @@ function JobProfitPanel({ job, revenue, supabase }: {
   )
 }
 
+// ─── Timeline helpers ─────────────────────────────────────────────────────────
+
+const TIMELINE_HOURS = Array.from({ length: 14 }, (_, i) => i + 5) // 5am–7pm
+
+function parseTimeToHour(t: string): number {
+  const [h, m] = t.split(':').map(Number)
+  return (h ?? 8) + (m ?? 0) / 60
+}
+
+function parseTimeToMin(t: string): number {
+  const [h, m] = t.split(':').map(Number)
+  return (h ?? 0) * 60 + (m ?? 0)
+}
+
+type JobTemplate = {
+  id: string; name: string; job_name: string | null; location: string | null
+  material: string | null; rate: number | null; rate_type: string | null
+  estimated_loads: number | null; notes: string | null; use_count: number
+}
+
+// ─── Timeline view (Step 3) ───────────────────────────────────────────────────
+// 🗺️ Map view — coming when GPS is integrated
+
+function TimelineView({ dispatches, drivers, jobs }: { dispatches: Dispatch[]; drivers: DriverBasic[]; jobs: JobWithLoads[] }) {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <div className="overflow-x-auto">
+        {/* Time header */}
+        <div className="flex border-b border-gray-100 min-w-[560px]">
+          <div className="w-28 flex-shrink-0" />
+          {TIMELINE_HOURS.map(h => (
+            <div key={h} className="flex-1 text-[10px] text-gray-400 text-center py-2 border-l border-gray-50 min-w-[44px]">
+              {h === 12 ? '12pm' : h > 12 ? `${h - 12}pm` : `${h}am`}
+            </div>
+          ))}
+        </div>
+        {/* Driver rows */}
+        <div className="min-w-[560px]">
+          {drivers.length === 0 ? (
+            <p className="py-12 text-center text-sm text-gray-400">No drivers to show on timeline</p>
+          ) : drivers.map(driver => {
+            const driverDisps = dispatches.filter(d => d.driver_id === driver.id || d.driver_name === driver.name)
+            return (
+              <div key={driver.id} className="flex items-center border-b border-gray-50 last:border-0">
+                <div className="w-28 flex-shrink-0 px-3 py-2">
+                  <p className="text-xs font-semibold text-gray-800 truncate">{driver.name}</p>
+                  <p className="text-[10px] text-gray-400">{driverDisps.length} job{driverDisps.length !== 1 ? 's' : ''}</p>
+                </div>
+                <div className="flex-1 relative h-9 bg-gray-50">
+                  {driverDisps.length === 0 && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <p className="text-[10px] text-gray-300">Available</p>
+                    </div>
+                  )}
+                  {driverDisps.map(d => {
+                    if (!d.start_time) return null
+                    const startH = parseTimeToHour(d.start_time)
+                    const endTime = (d as Record<string, unknown>).end_time as string | null
+                    const endH    = endTime ? parseTimeToHour(endTime) : startH + 4
+                    const left    = Math.max(0, ((startH - 5) / 14) * 100)
+                    const width   = Math.max(2, ((endH - startH) / 14) * 100)
+                    const job     = d.job_id ? jobs.find(j => j.id === d.job_id) : null
+                    const bg      = d.status === 'working'   ? 'bg-green-400'
+                                  : d.status === 'completed' ? 'bg-emerald-500'
+                                  : d.status === 'accepted'  ? 'bg-blue-400'
+                                  : 'bg-amber-400'
+                    return (
+                      <div
+                        key={d.id}
+                        className={`absolute top-1 bottom-1 rounded flex items-center px-1.5 overflow-hidden ${bg} opacity-90 hover:opacity-100 transition-opacity cursor-default`}
+                        style={{ left: `${left}%`, width: `${Math.min(width, 100 - left)}%` }}
+                        title={`${d.driver_name} — ${job?.job_name ?? 'No job'} · ${d.start_time}${endTime ? ` → ${endTime}` : ''}`}
+                      >
+                        <p className="text-[10px] text-white font-medium truncate">{job?.job_name ?? d.driver_name}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Live activity feed (Step 11) ─────────────────────────────────────────────
+
+function DispatchActivityFeed({ companyId, collapsed, onToggle }: { companyId: string; collapsed: boolean; onToggle: () => void }) {
+  const supabase = createClient()
+  const [activities, setActivities] = useState<{ id: string; type: string; message: string; created_at: string }[]>([])
+
+  useEffect(() => {
+    if (!companyId) return
+    let active = true
+    async function load() {
+      const { data } = await supabase.from('activity_feed').select('id,type,message,created_at').eq('company_id', companyId).order('created_at', { ascending: false }).limit(20)
+      if (active) setActivities(data ?? [])
+    }
+    void load()
+    const channel = supabase.channel('dispatch-activity-feed')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'activity_feed', filter: `company_id=eq.${companyId}` }, () => void load())
+      .subscribe()
+    return () => { active = false; void supabase.removeChannel(channel) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyId])
+
+  function timeAgo(ts: string) {
+    const m = Math.floor((Date.now() - new Date(ts).getTime()) / 60000)
+    if (m < 1) return 'just now'
+    if (m < 60) return `${m}m ago`
+    const h = Math.floor(m / 60)
+    return h < 24 ? `${h}h ago` : `${Math.floor(h / 24)}d ago`
+  }
+
+  return (
+    <div className={`border-l border-gray-200 flex-shrink-0 transition-all duration-200 ${collapsed ? 'w-9' : 'w-56'} hidden xl:flex flex-col sticky top-0 max-h-screen`}>
+      <div className={`flex items-center px-2 py-3 border-b border-gray-100 ${collapsed ? 'justify-center' : 'justify-between'}`}>
+        {!collapsed && <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Live Activity</span>}
+        <button onClick={onToggle} className="text-gray-400 hover:text-gray-600 p-1 rounded" title={collapsed ? 'Show activity' : 'Hide activity'}>
+          {collapsed ? '◀' : '▶'}
+        </button>
+      </div>
+      {!collapsed && (
+        <div className="overflow-y-auto flex-1">
+          {activities.length === 0 ? (
+            <p className="text-[11px] text-gray-400 p-3 text-center">No activity yet</p>
+          ) : activities.map(a => (
+            <div key={a.id} className="px-3 py-2.5 border-b border-gray-50 last:border-0 hover:bg-gray-50">
+              <p className="text-[11px] text-gray-800 leading-relaxed">{a.message}</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">{timeAgo(a.created_at)}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DispatchPage() {
@@ -211,6 +351,31 @@ export default function DispatchPage() {
   const [mainTab,     setMainTab]     = useState<'board' | 'today' | 'subs' | 'received'>('board')
   const [jobFilter,   setJobFilter]   = useState<'active' | 'on_hold' | 'completed' | 'all'>('active')
   const [expandedJob, setExpandedJob] = useState<string | null>(null)
+
+  // Step 3 — View mode (List | Timeline)
+  const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list')
+
+  // Step 5 — Templates
+  const [templates,      setTemplates]      = useState<JobTemplate[]>([])
+  const [savingTemplate, setSavingTemplate] = useState(false)
+
+  // Step 4 — Conflict detection
+  const [conflict, setConflict] = useState<{ id: string; job_name: string; start_time: string } | null>(null)
+
+  // Step 6 — Copy yesterday
+  const [yesterdayCount,   setYesterdayCount]   = useState(0)
+  const [copyingYesterday, setCopyingYesterday] = useState(false)
+
+  // Step 7 — Search / filter
+  const [searchQuery,  setSearchQuery]  = useState('')
+  const [filterStatus, setFilterStatus] = useState<string>('all')
+  const [filterDriver, setFilterDriver] = useState<string>('all')
+
+  // Step 9 — Resend
+  const [resendingId, setResendingId] = useState<string | null>(null)
+
+  // Step 11 — Activity feed collapsed state
+  const [activityCollapsed, setActivityCollapsed] = useState(true)
 
   // Job form
   const [showJobForm,     setShowJobForm]     = useState(false)
@@ -279,7 +444,10 @@ export default function DispatchPage() {
     if (!companyId) { setLoading(false); return }
     setOrgId(companyId)
 
-    const [loadsRes, driversRes, jobsRes, dispRes, contractorsRes, clientCoRes, coRes, rdRes] = await Promise.all([
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1)
+    const yDate = yesterday.toISOString().split('T')[0]!
+
+    const [loadsRes, driversRes, jobsRes, dispRes, contractorsRes, clientCoRes, coRes, rdRes, templatesRes, yCountRes] = await Promise.all([
       supabase.from('loads').select('id,job_name,driver_name,truck_number,date,status,rate,rate_type').eq('company_id', companyId).gte('date', cutoff),
       supabase.from('drivers').select('id,name,email,phone').eq('company_id', companyId).eq('status', 'active').order('name'),
       supabase.from('jobs').select('*').eq('company_id', companyId).order('created_at', { ascending: false }),
@@ -288,6 +456,8 @@ export default function DispatchPage() {
       supabase.from('client_companies').select('id,name,address').eq('company_id', companyId).order('name'),
       supabase.from('companies').select('plan').eq('id', companyId).maybeSingle(),
       supabase.from('received_dispatches').select('*').eq('company_id', companyId).order('created_at', { ascending: false }),
+      supabase.from('job_templates').select('id,name,job_name,location,material,rate,rate_type,estimated_loads,notes,use_count').eq('company_id', companyId).order('use_count', { ascending: false }),
+      supabase.from('dispatches').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('dispatch_date', yDate).neq('status', 'cancelled'),
     ])
 
     if (jobsRes.error && !jobsRes.error.message.includes('schema cache'))
@@ -306,6 +476,8 @@ export default function DispatchPage() {
     if (!dispRes.error || dispRes.error.message.includes('schema cache'))
       setDispatches((dispRes.data ?? []) as Dispatch[])
     if (!rdRes.error) setReceivedDispatches((rdRes.data ?? []) as ReceivedDispatch[])
+    if (!templatesRes.error) setTemplates((templatesRes.data ?? []) as JobTemplate[])
+    setYesterdayCount(yCountRes.count ?? 0)
 
     // Auto-complete dispatches from previous days that are still in 'working' state
     if (companyId && !dispRes.error) {
@@ -423,6 +595,17 @@ export default function DispatchPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showDispForm, dispFormType])
 
+  // Step 4 — reactive conflict detection while filling dispatch form
+  useEffect(() => {
+    if (!showDispForm || editingDispatch || !dispForm.driver_id || !dispForm.start_time) { setConflict(null); return }
+    let cancelled = false
+    checkConflict(dispForm.driver_id, dispForm.start_time, dispForm.end_time).then(hit => {
+      if (!cancelled) setConflict(hit)
+    })
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showDispForm, dispForm.driver_id, dispForm.start_time, dispForm.end_time])
+
   // Debounced rate insight when job form material/rate changes
   useEffect(() => {
     if (rateInsightTimerRef.current) clearTimeout(rateInsightTimerRef.current)
@@ -463,6 +646,19 @@ export default function DispatchPage() {
   })
 
   const availableDrivers = drivers.filter(d => !driverDispMap.has(d.id))
+
+  // Step 7 — filtered driver dispatches for Today tab
+  const uniqueDriverNames = [...new Set(driverDispatches.map(d => d.driver_name).filter(Boolean))]
+  const filteredDispatches = driverDispatches.filter(d => {
+    const q = searchQuery.toLowerCase()
+    const matchesSearch = !q || (d.driver_name ?? '').toLowerCase().includes(q) || (d.job_id ? (jobs.find(j => j.id === d.job_id)?.job_name ?? '').toLowerCase().includes(q) : false)
+    const matchesStatus = filterStatus === 'all' || (() => {
+      if (filterStatus === 'no_response') return d.status === 'dispatched' && Date.now() - new Date(d.created_at).getTime() > ONE_HOUR_MS
+      return d.status === filterStatus
+    })()
+    const matchesDriver = filterDriver === 'all' || d.driver_name === filterDriver
+    return matchesSearch && matchesStatus && matchesDriver
+  })
 
   // Load counts per driver name → "suggested" driver in dispatch form
   const driverLoadCountMap = new Map<string, number>()
@@ -707,12 +903,15 @@ export default function DispatchPage() {
     setEditingDispatch(d)
     setDispFormType(d.dispatch_type ?? 'driver')
     setSubcontractorId(d.subcontractor_id ?? '')
+    setConflict(null)
     setDispForm({
-      job_id: d.job_id ?? '',
-      driver_id: d.driver_id ?? '',
-      truck_number: d.truck_number ?? '',
-      start_time: d.start_time ?? '07:00',
-      instructions: d.instructions ?? '',
+      job_id:          d.job_id          ?? '',
+      driver_id:       d.driver_id       ?? '',
+      truck_number:    d.truck_number    ?? '',
+      start_time:      d.start_time      ?? '07:00',
+      end_time:        (d as Record<string, unknown>).end_time        as string ?? '',
+      estimated_loads: String((d as Record<string, unknown>).estimated_loads ?? ''),
+      instructions:    d.instructions    ?? '',
     })
     setShowDispForm(true)
   }
@@ -729,11 +928,23 @@ export default function DispatchPage() {
     const sub    = contractors.find(c => c.id === subcontractorId)
     const displayName = isSub ? (sub?.name ?? '') : (driver?.name ?? '')
 
+    // Step 4 — conflict check before saving
+    if (!isSub && dispForm.driver_id && dispForm.start_time && !editingDispatch) {
+      const hit = await checkConflict(dispForm.driver_id, dispForm.start_time, dispForm.end_time)
+      if (hit) {
+        setConflict(hit)
+        setSavingDispatch(false)
+        return
+      }
+    }
+
     const payload = {
       driver_id:        isSub ? null : dispForm.driver_id,
       driver_name:      displayName,
       truck_number:     dispForm.truck_number || null,
       start_time:       dispForm.start_time || null,
+      end_time:         dispForm.end_time   || null,
+      estimated_loads:  dispForm.estimated_loads ? parseInt(dispForm.estimated_loads, 10) : null,
       instructions:     dispForm.instructions || null,
       job_id:           dispForm.job_id || null,
       dispatch_type:    dispFormType,
@@ -893,6 +1104,111 @@ export default function DispatchPage() {
     }
   }
 
+  // ── Step 4: Conflict detection ───────────────────────────────────────────────
+
+  async function checkConflict(driverId: string, startTime: string, endTime: string, excludeId?: string): Promise<{ id: string; job_name: string; start_time: string } | null> {
+    if (!driverId || !startTime) return null
+    const companyId = await getCompanyId(); if (!companyId) return null
+    const { data } = await supabase.from('dispatches')
+      .select('id, job_id, start_time, end_time')
+      .eq('company_id', companyId).eq('dispatch_date', today).eq('driver_id', driverId)
+      .not('status', 'in', '("completed","cancelled")')
+    if (!data?.length) return null
+    const newStart = parseTimeToMin(startTime)
+    const newEnd   = endTime ? parseTimeToMin(endTime) : newStart + 240
+    const hit = (data as Record<string, unknown>[]).find(d => {
+      if (!d.start_time || d.id === excludeId) return false
+      const existStart = parseTimeToMin(d.start_time as string)
+      const existEnd   = d.end_time ? parseTimeToMin(d.end_time as string) : existStart + 240
+      return newStart < existEnd && newEnd > existStart
+    })
+    if (!hit) return null
+    const jobName = jobs.find(j => j.id === hit.job_id as string)?.job_name ?? 'another job'
+    return { id: hit.id as string, job_name: jobName, start_time: hit.start_time as string }
+  }
+
+  // ── Step 5: Job templates ─────────────────────────────────────────────────────
+
+  async function saveAsTemplate(job: Job) {
+    const companyId = await getCompanyId(); if (!companyId) return
+    const name = window.prompt('Template name:', job.job_name) ?? job.job_name
+    if (!name) return
+    setSavingTemplate(true)
+    const { data, error } = await supabase.from('job_templates').insert({
+      company_id:     companyId,
+      name,
+      job_name:       job.job_name,
+      location:       (job as Record<string, unknown>).pick_up_location as string ?? null,
+      material:       job.material ?? null,
+      rate:           job.rate ?? null,
+      rate_type:      job.rate_type ?? null,
+      notes:          job.notes ?? null,
+    }).select().maybeSingle()
+    setSavingTemplate(false)
+    if (error) { toast.error(error.message); return }
+    if (data) {
+      setTemplates(prev => [data as JobTemplate, ...prev])
+      toast.success(`Template "${name}" saved!`)
+    }
+  }
+
+  // ── Step 6: Copy yesterday's dispatches ──────────────────────────────────────
+
+  async function copyYesterdaysDispatches() {
+    const companyId = await getCompanyId(); if (!companyId) return
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1)
+    const yDate = yesterday.toISOString().split('T')[0]!
+    const { data: yDisps } = await supabase.from('dispatches').select('*').eq('company_id', companyId).eq('dispatch_date', yDate).neq('status', 'cancelled')
+    if (!yDisps?.length) { toast.error('No dispatches from yesterday'); return }
+    if (!confirm(`Copy ${yDisps.length} dispatch${yDisps.length > 1 ? 'es' : ''} from yesterday to today?`)) return
+    setCopyingYesterday(true)
+    const newDisps = (yDisps as Dispatch[]).map(d => ({
+      company_id:      d.company_id,
+      driver_id:       d.driver_id,
+      driver_name:     d.driver_name,
+      job_id:          d.job_id,
+      truck_number:    d.truck_number,
+      start_time:      d.start_time,
+      end_time:        (d as Record<string, unknown>).end_time as string ?? null,
+      estimated_loads: (d as Record<string, unknown>).estimated_loads as number ?? null,
+      instructions:    d.instructions,
+      dispatch_type:   d.dispatch_type,
+      subcontractor_id: d.subcontractor_id,
+      dispatch_date:   today,
+      status:          'dispatched' as const,
+      loads_completed: 0,
+    }))
+    const { data: created, error } = await supabase.from('dispatches').insert(newDisps).select()
+    setCopyingYesterday(false)
+    if (error) { toast.error(error.message); return }
+    toast.success(`✅ Copied ${newDisps.length} dispatch${newDisps.length !== 1 ? 'es' : ''} to today!`)
+    setDispatches(prev => [...(created as Dispatch[]), ...prev])
+    setYesterdayCount(0)
+  }
+
+  // ── Step 9: Resend no-response dispatch ───────────────────────────────────────
+
+  async function resendDispatch(d: Dispatch) {
+    const companyId = await getCompanyId(); if (!companyId) return
+    const driver = drivers.find(dr => dr.id === d.driver_id)
+    setResendingId(d.id)
+    await supabase.from('dispatches')
+      .update({ followup_count: (d.followup_count ?? 0) + 1, last_followup_sent_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq('id', d.id)
+    setDispatches(prev => prev.map(dp => dp.id === d.id ? { ...dp, followup_count: (dp.followup_count ?? 0) + 1, last_followup_sent_at: new Date().toISOString() } : dp))
+    const job = d.job_id ? jobs.find(j => j.id === d.job_id) : null
+    if (driver?.phone) {
+      const msg = [`🔔 Reminder: You have a dispatch today!`, job ? `Job: ${job.job_name}` : null, d.start_time ? `Start: ${d.start_time}` : null, `Respond: https://dumptruckboss.com/portal?c=${companyId}`].filter(Boolean).join('\n')
+      window.open(toSmsHref(driver.phone, msg), '_blank')
+    } else if (driver?.email) {
+      await fetch('/api/dispatches/notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ driverEmail: driver.email, driverName: d.driver_name, jobName: job?.job_name, companyId }) }).catch(console.error)
+      toast.success('Reminder email sent')
+    } else {
+      toast.warning('No contact info for this driver — add phone/email in Drivers page')
+    }
+    setResendingId(null)
+  }
+
   // ── Render ───────────────────────────────────────────────────────────────────
 
   if (planLocked) {
@@ -1045,24 +1361,36 @@ export default function DispatchPage() {
                 </div>
               )}
 
-              {/* Job filter */}
-              <div className="flex gap-1.5 mb-4 flex-wrap">
-                {(['active', 'on_hold', 'completed', 'all'] as const).map(tab => (
+              {/* Job filter + Copy Yesterday */}
+              <div className="flex items-center gap-2 mb-4 flex-wrap">
+                <div className="flex gap-1.5 flex-wrap flex-1">
+                  {(['active', 'on_hold', 'completed', 'all'] as const).map(tab => (
+                    <button
+                      key={tab}
+                      onClick={() => setJobFilter(tab)}
+                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                        jobFilter === tab ? 'bg-[var(--brand-dark)] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      {tab === 'on_hold' ? 'On Hold' : tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                      {tab !== 'all' && (
+                        <span className={`ml-1 ${jobFilter === tab ? 'text-white/60' : 'text-gray-400'}`}>
+                          {jobs.filter(j => j.status === tab).length}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                {yesterdayCount > 0 && (
                   <button
-                    key={tab}
-                    onClick={() => setJobFilter(tab)}
-                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                      jobFilter === tab ? 'bg-[var(--brand-dark)] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
+                    onClick={copyYesterdaysDispatches}
+                    disabled={copyingYesterday}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors shrink-0"
                   >
-                    {tab === 'on_hold' ? 'On Hold' : tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1)}
-                    {tab !== 'all' && (
-                      <span className={`ml-1 ${jobFilter === tab ? 'text-white/60' : 'text-gray-400'}`}>
-                        {jobs.filter(j => j.status === tab).length}
-                      </span>
-                    )}
+                    {copyingYesterday ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                    Copy Yesterday ({yesterdayCount})
                   </button>
-                ))}
+                )}
               </div>
 
               {displayedJobs.length === 0 ? (
@@ -1121,6 +1449,14 @@ export default function DispatchPage() {
                               >
                                 {sharingJobId === job.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
                               </button>
+                              <button
+                                onClick={() => saveAsTemplate(job)}
+                                disabled={savingTemplate}
+                                title="Save as job template"
+                                className="h-8 w-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-amber-600"
+                              >
+                                {savingTemplate ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PackageOpen className="h-3.5 w-3.5" />}
+                              </button>
                               <button onClick={e => openEditJob(job, e)} className="h-8 w-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600">
                                 <Pencil className="h-3.5 w-3.5" />
                               </button>
@@ -1167,6 +1503,25 @@ export default function DispatchPage() {
                               })}
                             </div>
                           )}
+
+                          {/* Step 8 — Cycle progress bar */}
+                          {(() => {
+                            const totalEst = jobDisps.reduce((s, d) => s + ((d as Record<string, unknown>).estimated_loads as number | null ?? 0), 0)
+                            const totalDone = jobDisps.reduce((s, d) => s + (d.loads_completed ?? 0), 0)
+                            if (totalEst <= 0) return null
+                            const pct = Math.min(100, Math.round((totalDone / totalEst) * 100))
+                            return (
+                              <div className="mt-2.5">
+                                <div className="flex justify-between text-[10px] text-gray-400 mb-1">
+                                  <span>Cycle Progress</span>
+                                  <span>{totalDone} / {totalEst} loads ({pct}%)</span>
+                                </div>
+                                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                  <div className={`h-full rounded-full transition-all ${pct >= 100 ? 'bg-emerald-500' : 'bg-[var(--brand-primary)]'}`} style={{ width: `${pct}%` }} />
+                                </div>
+                              </div>
+                            )
+                          })()}
                         </div>
 
                         {/* Expanded */}
@@ -1278,6 +1633,15 @@ export default function DispatchPage() {
                 )}
               </div>
             </div>
+
+            {/* Step 11 — Live activity feed */}
+            {orgId && (
+              <DispatchActivityFeed
+                companyId={orgId}
+                collapsed={activityCollapsed}
+                onToggle={() => setActivityCollapsed(c => !c)}
+              />
+            )}
           </div>
         </div>
 
@@ -1286,8 +1650,22 @@ export default function DispatchPage() {
            YOUR DRIVERS VIEW
         ══════════════════════════════════════════════════════════════ */
         <div className="px-6 pb-8">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-gray-500">{driverDispatches.length} driver dispatch{driverDispatches.length !== 1 ? 'es' : ''} today</p>
+          {/* Step 3 — View toggle + dispatch button */}
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-gray-500">{filteredDispatches.length} dispatch{filteredDispatches.length !== 1 ? 'es' : ''}</p>
+              <div className="flex bg-gray-100 rounded-lg p-0.5">
+                {(['list', 'timeline'] as const).map(mode => (
+                  <button
+                    key={mode}
+                    onClick={() => setViewMode(mode)}
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${viewMode === mode ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                  >
+                    {mode === 'list' ? 'List' : 'Timeline'}
+                  </button>
+                ))}
+              </div>
+            </div>
             <button
               onClick={() => openNewDispatch('driver')}
               className="flex items-center gap-2 bg-[var(--brand-dark)] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[var(--brand-primary-hover)] transition-colors"
@@ -1296,17 +1674,47 @@ export default function DispatchPage() {
             </button>
           </div>
 
+          {/* Step 7 — Search + filter bar */}
+          <div className="flex gap-2 mb-4 flex-wrap">
+            <input
+              type="text"
+              placeholder="Search driver or job…"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="flex-1 min-w-[160px] h-9 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
+            />
+            <select
+              value={filterStatus}
+              onChange={e => setFilterStatus(e.target.value)}
+              className="h-9 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30"
+            >
+              <option value="all">All statuses</option>
+              {DISPATCH_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              <option value="no_response">No Response</option>
+            </select>
+            <select
+              value={filterDriver}
+              onChange={e => setFilterDriver(e.target.value)}
+              className="h-9 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30"
+            >
+              <option value="all">All drivers</option>
+              {uniqueDriverNames.map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </div>
+
           {driverDispatches.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-2xl border border-gray-100">
               <Send className="h-10 w-10 mx-auto mb-3 text-gray-200" />
               <p className="font-medium text-gray-400">No dispatches today</p>
               <p className="text-sm text-gray-300 mt-1">Click "Dispatch" on a job card to assign drivers</p>
             </div>
+          ) : viewMode === 'timeline' ? (
+            <TimelineView dispatches={filteredDispatches} drivers={drivers} jobs={jobs} />
           ) : (
             <>
               {/* Mobile cards */}
               <div className="lg:hidden space-y-3">
-                {driverDispatches.map(d => {
+                {filteredDispatches.map(d => {
                   const sc       = getDispCfg(d)
                   const job      = d.job_id ? jobs.find(j => j.id === d.job_id) : null
                   const minsAgo  = Math.floor((Date.now() - new Date(d.updated_at).getTime()) / 60000)
@@ -1353,6 +1761,21 @@ export default function DispatchPage() {
                         </div>
                       </div>
                       {d.instructions && <p className="text-xs text-gray-500 bg-gray-50 rounded-lg p-2">{d.instructions}</p>}
+                      {/* Step 9 — No response alert + resend */}
+                      {d.status === 'dispatched' && Date.now() - new Date(d.created_at).getTime() > ONE_HOUR_MS && (
+                        <div className="flex items-center gap-2 bg-yellow-50 rounded-lg px-2.5 py-1.5">
+                          <AlertTriangle className="h-3.5 w-3.5 text-yellow-600 shrink-0" />
+                          <p className="text-xs text-yellow-700 flex-1">No response in 1h+</p>
+                          <button
+                            onClick={() => resendDispatch(d)}
+                            disabled={resendingId === d.id}
+                            className="text-xs font-semibold text-yellow-800 hover:text-yellow-900 flex items-center gap-1"
+                          >
+                            {resendingId === d.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                            Resend
+                          </button>
+                        </div>
+                      )}
                       <div className="flex items-center gap-2">
                         <select
                           value={d.status}
@@ -1361,6 +1784,28 @@ export default function DispatchPage() {
                         >
                           {DISPATCH_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                         </select>
+                        {/* Step 10 — Call/Text buttons */}
+                        {(() => {
+                          const driver = drivers.find(dr => dr.id === d.driver_id)
+                          return driver?.phone ? (
+                            <>
+                              <a
+                                href={`tel:${driver.phone.replace(/\D/g, '')}`}
+                                title="Call driver"
+                                className="h-8 w-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:text-green-600"
+                              >
+                                <MessageSquare className="h-3.5 w-3.5" />
+                              </a>
+                              <a
+                                href={toSmsHref(driver.phone, `Hey ${d.driver_name}, checking in on your dispatch today.`)}
+                                title="Text driver"
+                                className="h-8 w-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:text-blue-600"
+                              >
+                                <Mail className="h-3.5 w-3.5" />
+                              </a>
+                            </>
+                          ) : null
+                        })()}
                         <button
                           onClick={() => copyMobileTicketLink(d.id)}
                           title="Copy mobile ticket link"
@@ -1387,11 +1832,13 @@ export default function DispatchPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {driverDispatches.map(d => {
+                    {filteredDispatches.map(d => {
                       const sc        = getDispCfg(d)
                       const job       = d.job_id ? jobs.find(j => j.id === d.job_id) : null
                       const minsAgo   = Math.floor((Date.now() - new Date(d.updated_at).getTime()) / 60000)
                       const isFlashTr = flashingIds.has(d.id)
+                      const isNoResp  = d.status === 'dispatched' && Date.now() - new Date(d.created_at).getTime() > ONE_HOUR_MS
+                      const driverInfo = drivers.find(dr => dr.id === d.driver_id)
                       return (
                         <tr key={d.id} className={`hover:bg-gray-50/50 transition-colors ${isFlashTr ? 'ticket-flash' : ''}`}>
                           <td className="px-4 py-3 whitespace-nowrap">
@@ -1435,6 +1882,24 @@ export default function DispatchPage() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1.5">
+                              {/* Step 9 — resend */}
+                              {isNoResp && (
+                                <button
+                                  onClick={() => resendDispatch(d)}
+                                  disabled={resendingId === d.id}
+                                  title="Resend — no response"
+                                  className="p-1.5 text-yellow-500 hover:text-yellow-700 transition-colors"
+                                >
+                                  {resendingId === d.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <AlertTriangle className="h-3.5 w-3.5" />}
+                                </button>
+                              )}
+                              {/* Step 10 — call/text */}
+                              {driverInfo?.phone && (
+                                <>
+                                  <a href={`tel:${driverInfo.phone.replace(/\D/g, '')}`} title="Call driver" className="p-1.5 text-gray-400 hover:text-green-600 transition-colors"><MessageSquare className="h-3.5 w-3.5" /></a>
+                                  <a href={toSmsHref(driverInfo.phone, `Hey ${d.driver_name}, checking in on your dispatch today.`)} title="Text driver" className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors"><Mail className="h-3.5 w-3.5" /></a>
+                                </>
+                              )}
                               <button onClick={() => copyMobileTicketLink(d.id)} title="Copy mobile ticket link" className="p-1.5 text-gray-400 hover:text-[var(--brand-primary)] transition-colors"><Smartphone className="h-3.5 w-3.5" /></button>
                               <button onClick={() => openEditDispatch(d)} className="p-1.5 text-gray-400 hover:text-[var(--brand-primary)] transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
                               <button onClick={() => deleteDispatch(d.id)} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
@@ -1596,6 +2061,35 @@ export default function DispatchPage() {
                 </div>
               )}
 
+              {/* Step 5 — Template selector */}
+              {templates.length > 0 && !editingDispatch && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Load from Template</label>
+                  <select
+                    defaultValue=""
+                    onChange={e => {
+                      const tpl = templates.find(t => t.id === e.target.value)
+                      if (!tpl) return
+                      const matchedJob = jobs.find(j => j.job_name === tpl.job_name)
+                      setDispForm(f => ({
+                        ...f,
+                        job_id:          matchedJob?.id ?? f.job_id,
+                        estimated_loads: tpl.estimated_loads != null ? String(tpl.estimated_loads) : f.estimated_loads,
+                      }))
+                      void supabase.from('job_templates').update({ use_count: (tpl.use_count ?? 0) + 1 }).eq('id', tpl.id)
+                      setTemplates(prev => prev.map(t => t.id === tpl.id ? { ...t, use_count: (t.use_count ?? 0) + 1 } : t))
+                      toast.success(`Template "${tpl.name}" loaded`)
+                    }}
+                    className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
+                  >
+                    <option value="">— Select a template —</option>
+                    {templates.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}{t.job_name ? ` (${t.job_name})` : ''}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {/* Job selector */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Job</label>
@@ -1697,6 +2191,20 @@ export default function DispatchPage() {
                 </div>
               )}
 
+              {/* Step 4 — Conflict warning */}
+              {conflict && (
+                <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                  <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-amber-800">Schedule conflict</p>
+                    <p className="text-xs text-amber-700 mt-0.5">
+                      Driver already has a dispatch for <strong>{conflict.job_name}</strong> at {conflict.start_time}. You can still save.
+                    </p>
+                  </div>
+                  <button type="button" onClick={() => setConflict(null)} className="text-amber-400 hover:text-amber-600"><X className="h-3.5 w-3.5" /></button>
+                </div>
+              )}
+
               {/* Truck + Time */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -1714,6 +2222,30 @@ export default function DispatchPage() {
                     type="time"
                     value={dispForm.start_time}
                     onChange={e => setDispForm(f => ({ ...f, start_time: e.target.value }))}
+                    className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
+                  />
+                </div>
+              </div>
+
+              {/* End Time + Estimated Loads */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+                  <input
+                    type="time"
+                    value={dispForm.end_time}
+                    onChange={e => setDispForm(f => ({ ...f, end_time: e.target.value }))}
+                    className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Est. Loads</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={dispForm.estimated_loads}
+                    onChange={e => setDispForm(f => ({ ...f, estimated_loads: e.target.value }))}
+                    placeholder="e.g. 8"
                     className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
                   />
                 </div>

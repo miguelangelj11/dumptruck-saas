@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTranslations } from 'next-intl'
-import { Truck, TrendingUp, Receipt, Radio, X } from 'lucide-react'
+import { Truck, TrendingUp, TrendingDown, Receipt, Radio, X } from 'lucide-react'
 import Link from 'next/link'
 
 type Panel = 'tickets' | 'revenue' | 'outstanding' | 'dispatched' | null
@@ -20,6 +20,8 @@ interface Props {
   thisWeekStartStr: string
   todayStr: string
   thisMonthStr: string
+  weekProfit: number
+  weekMargin: number | null
 }
 
 const ticketStatusColor: Record<string, string> = {
@@ -119,6 +121,7 @@ export default function DashboardStatCards({
   companyId, thisWeekTickets, ticketPct, thisMonthRev, revPct,
   outstandingTotal, outstandingCount, dispatchedToday,
   thisWeekStartStr, todayStr, thisMonthStr,
+  weekProfit, weekMargin,
 }: Props) {
   const t = useTranslations('dashboard')
   const [openPanel, setOpenPanel] = useState<Panel>(null)
@@ -232,10 +235,13 @@ export default function DashboardStatCards({
     { key: 'dispatched'  as Panel, label: t('dispatchedToday'),    value: dispatchedToday.toString(), sub: <span className="text-xs font-medium text-gray-400">{t('activeDriversOut')}</span>, icon: Radio, color: dispatchedToday > 0 ? 'text-purple-600 bg-purple-100' : 'text-gray-400 bg-gray-100' },
   ]
 
+  const profitColor = weekProfit >= 0 ? 'text-emerald-600 bg-emerald-100' : 'text-red-500 bg-red-100'
+  const profitValue = weekProfit >= 0 ? fmt(weekProfit) : `-${fmt(Math.abs(weekProfit))}`
+
   return (
     <>
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-3">
         {cards.map(({ key, label, value, sub, icon: Icon, color }) => (
           <button
             key={label}
@@ -251,6 +257,34 @@ export default function DashboardStatCards({
             <span className="absolute top-3 right-3 text-gray-300 group-hover:text-gray-400 transition-colors text-xs select-none" title="Click for details">ⓘ</span>
           </button>
         ))}
+      </div>
+
+      {/* Profit tile — full-width non-clickable */}
+      <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6 flex items-center gap-6">
+        <div className={`inline-flex rounded-lg p-2 ${profitColor}`}>
+          {weekProfit >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs text-gray-500">Net Profit (This Week)</p>
+          <p className="text-2xl font-bold text-gray-900 mt-0.5">{profitValue}</p>
+        </div>
+        {weekMargin !== null && (
+          <div className="text-right shrink-0">
+            <p className={`text-lg font-bold ${weekProfit >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>{weekMargin}%</p>
+            <p className="text-xs text-gray-400">margin</p>
+          </div>
+        )}
+        {weekMargin !== null && (
+          <div className="flex-1 max-w-[200px] hidden sm:block">
+            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full ${weekProfit >= 0 ? 'bg-emerald-400' : 'bg-red-400'}`}
+                style={{ width: `${Math.min(Math.abs(weekMargin), 100)}%` }}
+              />
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1">margin bar</p>
+          </div>
+        )}
       </div>
 
       {/* ── Tickets This Week Panel ─────────────────────────────────────────── */}
@@ -364,6 +398,39 @@ export default function DashboardStatCards({
         {invLoading ? <Spinner /> : invRows.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-8">No outstanding invoices</p>
         ) : (
+          <>
+            {/* AR Aging */}
+            {(() => {
+              const now = new Date()
+              const buckets = [
+                { label: 'Current', min: -Infinity, max: 0, total: 0, count: 0, cls: 'text-gray-700' },
+                { label: '1–30 days', min: 1, max: 30, total: 0, count: 0, cls: 'text-yellow-700' },
+                { label: '31–60 days', min: 31, max: 60, total: 0, count: 0, cls: 'text-orange-700' },
+                { label: '60+ days', min: 61, max: Infinity, total: 0, count: 0, cls: 'text-red-700' },
+              ]
+              invRows.forEach(inv => {
+                const days = inv.due_date
+                  ? Math.floor((now.getTime() - new Date(inv.due_date + 'T00:00:00').getTime()) / 86400000)
+                  : 0
+                const b = buckets.find(b => days >= b.min && days <= b.max)
+                if (b) { b.total += inv.total; b.count++ }
+              })
+              const active = buckets.filter(b => b.count > 0)
+              if (active.length === 0) return null
+              return (
+                <div className="mb-5 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">AR Aging</p>
+                  <div className="space-y-1.5">
+                    {active.map(b => (
+                      <div key={b.label} className="flex items-center justify-between">
+                        <span className={`text-xs ${b.cls}`}>{b.label} · {b.count} inv</span>
+                        <span className={`text-sm font-semibold ${b.cls}`}>{fmt(b.total)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
           <div className="space-y-2">
             {invRows.map(inv => {
               const isOverdue = inv.status === 'overdue'
@@ -395,6 +462,7 @@ export default function DashboardStatCards({
               <span className="text-sm font-bold text-orange-600">{fmt(outstandingTotal)}</span>
             </div>
           </div>
+          </>
         )}
         <div className="pt-4 border-t border-gray-100 mt-4">
           <Link href="/dashboard/invoices" onClick={close} className="text-sm font-semibold text-[var(--brand-primary)] hover:underline">View all invoices →</Link>
