@@ -12,7 +12,8 @@ import {
   LoadsPerDayChart,
   RevenueByJobChart,
 } from '@/components/dashboard/revenue-charts'
-import type { Load, Expense, ContractorTicket, Invoice, Payment } from '@/lib/types'
+import type { Load, Expense, ContractorTicket, Invoice, Payment, Driver } from '@/lib/types'
+import { calculateDriverOwed } from '@/lib/drivers/calculate-owed'
 
 const categories = ['Fuel', 'DEF', 'Tires', 'Maintenance', 'Insurance', 'Labor', 'Equipment', 'Tolls', 'Other']
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -39,6 +40,23 @@ function getRangeBounds(range: DateRange): { start: string; end: string } {
     return { start: mon.toISOString().split('T')[0]!, end: today }
   }
   return { start: `${now.getFullYear()}-01-01`, end: today }
+}
+
+function getLastPeriodBounds(bounds: { start: string; end: string }): { start: string; end: string } {
+  const start = new Date(bounds.start + 'T00:00:00')
+  const end = new Date(bounds.end + 'T00:00:00')
+  const diffDays = Math.round((end.getTime() - start.getTime()) / 86400000) + 1
+  const lastEnd = new Date(start.getTime() - 86400000)
+  const lastStart = new Date(lastEnd.getTime() - (diffDays - 1) * 86400000)
+  return {
+    start: lastStart.toISOString().split('T')[0]!,
+    end: lastEnd.toISOString().split('T')[0]!,
+  }
+}
+
+function trendPct(current: number, last: number): number | null {
+  if (last <= 0) return null
+  return ((current - last) / last) * 100
 }
 
 function invDate(inv: Invoice): string {
@@ -176,7 +194,8 @@ export default function RevenuePage() {
   const [contractorTickets, setContractorTickets] = useState<ContractorTicket[]>([])
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [payments, setPayments] = useState<Payment[]>([])
-  const [jobNames, setJobNames] = useState<Map<string, string>>(new Map())
+  const [drivers, setDrivers] = useState<Driver[]>([])
+  const [contractorNames, setContractorNames] = useState<Map<string, string>>(new Map())
   const [loading, setLoading] = useState(true)
   const [showExpenseForm, setShowExpenseForm] = useState(false)
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
@@ -216,42 +235,45 @@ export default function RevenuePage() {
 
   async function fetchData() {
     setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setLoading(false); return }
-    setUserId(user.id)
-    const orgId = await getCompanyId()
-    if (!orgId) { setLoading(false); return }
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      setUserId(user.id)
+      const orgId = await getCompanyId()
+      if (!orgId) return
 
-    const cutoff = new Date()
-    cutoff.setFullYear(cutoff.getFullYear() - 1)
-    const fetchCutoff = cutoff.toISOString().split('T')[0]!
+      const cutoff = new Date()
+      cutoff.setFullYear(cutoff.getFullYear() - 1)
+      const fetchCutoff = cutoff.toISOString().split('T')[0]!
 
-    const [lRes, eRes, ctRes, invRes, payRes, jobsRes] = await Promise.all([
-      supabase.from('loads')
-        .select('*, dispatches!loads_dispatch_id_fkey(job_id, jobs!dispatches_job_id_fkey(job_name))')
-        .eq('company_id', orgId).gte('date', fetchCutoff),
-      supabase.from('expenses').select('*').eq('company_id', orgId).order('date', { ascending: false }),
-      supabase.from('contractor_tickets').select('*').eq('company_id', orgId).gte('date', fetchCutoff),
-      supabase.from('invoices').select('*').eq('company_id', orgId),
-      supabase.from('payments').select('*').eq('company_id', orgId),
-      supabase.from('jobs').select('id, job_name').eq('company_id', orgId),
-    ])
+      const [lRes, eRes, ctRes, invRes, payRes, contractorsRes, driversRes] = await Promise.all([
+        supabase.from('loads').select('*').eq('company_id', orgId).gte('date', fetchCutoff),
+        supabase.from('expenses').select('*').eq('company_id', orgId).order('date', { ascending: false }),
+        supabase.from('contractor_tickets').select('*').eq('company_id', orgId).gte('date', fetchCutoff),
+        supabase.from('invoices').select('*').eq('company_id', orgId),
+        supabase.from('payments').select('*').eq('company_id', orgId),
+        supabase.from('contractors').select('id, name').eq('company_id', orgId),
+        supabase.from('drivers').select('id, name, pay_type, pay_rate_value, pay_percent, ytd_paid').eq('company_id', orgId).eq('status', 'active'),
+      ])
 
-    if (lRes.error) console.error('[revenue] loads:', lRes.error.message)
-    if (invRes.error) console.error('[revenue] invoices:', invRes.error.message)
+      if (lRes.error) console.error('[revenue] loads:', lRes.error.message)
+      if (invRes.error) console.error('[revenue] invoices:', invRes.error.message)
 
-    const jobMap = new Map<string, string>()
-    for (const j of (jobsRes.data ?? [])) {
-      jobMap.set(j.id, j.job_name)
+      const cMap = new Map<string, string>()
+      for (const c of (contractorsRes.data ?? [])) cMap.set(c.id, c.name)
+      setContractorNames(cMap)
+
+      setLoads((lRes.data ?? []) as Load[])
+      setExpenses(eRes.data ?? [])
+      setContractorTickets(ctRes.data ?? [])
+      setInvoices(invRes.data ?? [])
+      setPayments(payRes.data ?? [])
+      setDrivers((driversRes.data ?? []) as Driver[])
+    } catch (err) {
+      console.error('[revenue] fetchData error:', err)
+    } finally {
+      setLoading(false)
     }
-    setJobNames(jobMap)
-
-    setLoads((lRes.data ?? []) as Load[])
-    setExpenses(eRes.data ?? [])
-    setContractorTickets(ctRes.data ?? [])
-    setInvoices(invRes.data ?? [])
-    setPayments(payRes.data ?? [])
-    setLoading(false)
   }
 
   useEffect(() => { fetchData() }, [])
@@ -304,6 +326,7 @@ export default function RevenuePage() {
 
   // ── Date range filtering ──────────────────────────────────────────────────
   const bounds = getRangeBounds(dateRange)
+  const lastBounds = getLastPeriodBounds(bounds)
 
   const filteredLoads = loads.filter(l => l.date >= bounds.start && l.date <= bounds.end)
   const filteredInvoices = invoices.filter(i => {
@@ -313,6 +336,13 @@ export default function RevenuePage() {
   const filteredExpenses = expenses.filter(e => (e.date ?? '') >= bounds.start && (e.date ?? '') <= bounds.end)
   const displayedExpenses = expCategoryFilter ? filteredExpenses.filter(e => e.category === expCategoryFilter) : filteredExpenses
 
+  // Last period filtered data
+  const lastInvoices = invoices.filter(i => {
+    const d = invDate(i)
+    return d >= lastBounds.start && d <= lastBounds.end
+  })
+  const lastExpenses = expenses.filter(e => (e.date ?? '') >= lastBounds.start && (e.date ?? '') <= lastBounds.end)
+
   // ── Derived stats (all scoped to selected date range) ─────────────────────
 
   // Payments map: invoice_id → total paid
@@ -321,9 +351,16 @@ export default function RevenuePage() {
     return acc
   }, {})
 
-  // Cash Collected: for paid invoices in range, use payment records if available else invoice total
+  // Cash Collected: for paid invoices in range
   const paidInvoices = filteredInvoices.filter(i => i.status === 'paid' && i.invoice_type === 'client')
   const cashCollected = paidInvoices.reduce((s, i) => {
+    const pmtSum = paymentsByInvoiceId[i.id]
+    return s + (pmtSum !== undefined ? pmtSum : i.total)
+  }, 0)
+
+  // Last period cash collected
+  const lastPaidInvoices = lastInvoices.filter(i => i.status === 'paid' && i.invoice_type === 'client')
+  const lastCashCollected = lastPaidInvoices.reduce((s, i) => {
     const pmtSum = paymentsByInvoiceId[i.id]
     return s + (pmtSum !== undefined ? pmtSum : i.total)
   }, 0)
@@ -332,7 +369,11 @@ export default function RevenuePage() {
   const outstandingInvoices = filteredInvoices.filter(i => ['draft', 'sent'].includes(i.status))
   const outstandingTotal = outstandingInvoices.reduce((s, i) => s + (i.total ?? 0), 0)
 
-  // Lost / at-risk revenue: partially_paid + overdue with remaining balance (all-time, not date-filtered)
+  const lastOutstandingTotal = lastInvoices
+    .filter(i => ['draft', 'sent'].includes(i.status))
+    .reduce((s, i) => s + (i.total ?? 0), 0)
+
+  // Lost / at-risk revenue
   const partialInvoices = invoices.filter(i => i.status === 'partially_paid' && (i.amount_remaining ?? 0) > 0)
   const overdueWithBalance = invoices.filter(i => i.status === 'overdue')
   const lostRevenueItems = [
@@ -348,55 +389,73 @@ export default function RevenuePage() {
   const totalOverpaid = overpaidInvoices.reduce((s, i) => s + (i.overpaid_amount ?? 0), 0)
 
   const totalExpenses = filteredExpenses.reduce((s, e) => s + (e.amount ?? 0), 0)
+  const lastExpensesTotal = lastExpenses.reduce((s, e) => s + (e.amount ?? 0), 0)
 
-  // Driver costs = paystub invoices (what we pay drivers)
+  // Driver costs = paystub invoices
   const driverCostInvoices = filteredInvoices.filter(i => i.invoice_type === 'paystub')
   const driverCosts = driverCostInvoices.reduce((s, i) => s + (i.total ?? 0), 0)
+  const lastDriverCosts = lastInvoices.filter(i => i.invoice_type === 'paystub').reduce((s, i) => s + (i.total ?? 0), 0)
 
   // Net profit
   const profit = cashCollected - totalExpenses
+  const lastProfit = lastCashCollected - lastExpensesTotal
 
-  // Profit margin: (Revenue - Driver Costs) / Revenue
-  const profitMarginPct = cashCollected > 0 ? Math.round(((cashCollected - driverCosts) / cashCollected) * 100) : 0
+  // Profit margin: null when no expenses (avoids misleading 100%)
+  const profitMargin = (totalExpenses > 0 || driverCosts > 0) && cashCollected > 0
+    ? ((cashCollected - totalExpenses) / cashCollected) * 100
+    : null
 
-  // Revenue by driver
+  // Trend percentages vs last period
+  const trendCash       = trendPct(cashCollected, lastCashCollected)
+  const trendExpenses   = trendPct(totalExpenses, lastExpensesTotal)
+  const trendProfit     = trendPct(profit, lastProfit)
+  const trendDriverCosts = trendPct(driverCosts, lastDriverCosts)
+  const trendOutstanding = trendPct(outstandingTotal, lastOutstandingTotal)
+
+  // Cost per load / revenue per load metrics
+  const totalLoads      = filteredLoads.length
+  const revenuePerLoad  = totalLoads > 0 && cashCollected > 0 ? cashCollected / totalLoads : null
+  const costPerLoad     = totalLoads > 0 && totalExpenses > 0 ? totalExpenses / totalLoads : null
+
+  // Revenue by driver — use total_pay (actual billing amount) not rate
   const billableLoads = filteredLoads.filter(l => (BILLABLE_STATUSES as readonly string[]).includes(l.status))
   const driverData = Object.entries(
     billableLoads.reduce<Record<string, number>>((acc, l) => {
       const key = l.driver_name || 'Unknown'
-      acc[key] = (acc[key] ?? 0) + (l.rate ?? 0)
+      acc[key] = (acc[key] ?? 0) + (l.total_pay ?? l.rate ?? 0)
       return acc
     }, {})
   ).map(([name, revenue]) => ({ name, revenue }))
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 6)
 
-  // Revenue by job — resolve job name via dispatch join if available
+  // Revenue by job — use total_pay
   const jobData = Object.entries(
     billableLoads.reduce<Record<string, number>>((acc, l) => {
-      const raw = l as Load & { dispatches?: { job_id?: string | null; jobs?: { job_name?: string } | null } | null }
-      const resolvedName = raw.dispatches?.jobs?.job_name
-        ?? (raw.dispatches?.job_id ? jobNames.get(raw.dispatches.job_id) : undefined)
-        ?? l.job_name
-        ?? 'No Job'
-      acc[resolvedName] = (acc[resolvedName] ?? 0) + (l.rate ?? 0)
+      const name = l.job_name ?? 'No Job'
+      acc[name] = (acc[name] ?? 0) + (l.total_pay ?? l.rate ?? 0)
       return acc
     }, {})
   ).map(([name, revenue]) => ({ name, revenue }))
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 6)
 
-  // Top contractors
+  // Top contractors — group by contractor name (via contractorNames map), not job_name
   const filteredCTs = contractorTickets.filter(t => (t.date ?? '') >= bounds.start && (t.date ?? '') <= bounds.end)
   const contractorData = Object.entries(
     filteredCTs.reduce<Record<string, number>>((acc, t) => {
-      const key = t.job_name || 'No Job'
-      acc[key] = (acc[key] ?? 0) + (t.rate ?? 0)
+      const name = contractorNames.get(t.contractor_id) || t.job_name || 'Unknown'
+      acc[name] = (acc[name] ?? 0) + (t.rate ?? 0)
       return acc
     }, {})
   ).map(([name, revenue]) => ({ name, revenue }))
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 5)
+
+  // Fixed costs for break-even (Insurance + Other from expense categories)
+  const fixedCosts = filteredExpenses
+    .filter(e => ['Insurance', 'Other'].includes(e.category))
+    .reduce((s, e) => s + e.amount, 0)
 
   // Chart data
   const chartData = buildRevExpChartData(dateRange, bounds, filteredInvoices, filteredExpenses)
@@ -405,13 +464,9 @@ export default function RevenuePage() {
   // Export CSV
   function handleExportCSV() {
     const headers = ['Date', 'Driver', 'Job', 'Truck #', 'Material', 'Rate', 'Rate Type', 'Status']
-    const rows = filteredLoads.map(l => {
-      const raw = l as Load & { dispatches?: { job_id?: string | null; jobs?: { job_name?: string } | null } | null }
-      const jobName = raw.dispatches?.jobs?.job_name
-        ?? (raw.dispatches?.job_id ? jobNames.get(raw.dispatches.job_id) : undefined)
-        ?? l.job_name ?? ''
-      return [l.date, l.driver_name, jobName, l.truck_number ?? '', l.material ?? '', l.rate, l.rate_type ?? 'load', l.status]
-    })
+    const rows = filteredLoads.map(l => [
+      l.date, l.driver_name, l.job_name ?? '', l.truck_number ?? '', l.material ?? '', l.rate, l.rate_type ?? 'load', l.status,
+    ])
     const csv = [headers, ...rows]
       .map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(','))
       .join('\n')
@@ -436,6 +491,22 @@ export default function RevenuePage() {
   const weekBounds = getWeekBounds(payWeek)
   const weekLoads  = loads.filter(l => l.date >= weekBounds.start && l.date <= weekBounds.end && (BILLABLE_STATUSES as readonly string[]).includes(l.status))
 
+  // Enhanced driver pay: use calculateDriverOwed for each driver
+  const driverPayData = drivers.map(driver => {
+    const driverLoads = weekLoads.filter(l => l.driver_name === driver.name)
+    const owed = calculateDriverOwed(driverLoads, driver)
+    const revenue = driverLoads.reduce((s, l) => s + (l.total_pay ?? l.rate ?? 0), 0)
+    return {
+      name: driver.name,
+      revenue,
+      owed,
+      ticketCount: driverLoads.length,
+      payType: driver.pay_type,
+      payRate: driver.pay_rate_value,
+    }
+  }).filter(d => d.ticketCount > 0)
+
+  // Fallback: loads grouped by contractor/driver for drivers not in our driver list
   type DriverRow = { name: string; loads: number; total: number }
   type ContractorBlock = { contractor: string; drivers: DriverRow[]; total: number }
 
@@ -447,7 +518,7 @@ export default function RevenuePage() {
       if (!map[c]) map[c] = {}
       if (!map[c]![d]) map[c]![d] = { name: d, loads: 0, total: 0 }
       map[c]![d]!.loads++
-      map[c]![d]!.total += l.rate ?? 0
+      map[c]![d]!.total += l.total_pay ?? l.rate ?? 0
     }
     return Object.entries(map).map(([contractor, drivers]) => ({
       contractor,
@@ -499,9 +570,38 @@ export default function RevenuePage() {
             </div>
           </div>
 
+          {/* Per-driver owed view */}
+          {driverPayData.length > 0 && (
+            <div className="space-y-3 mb-6">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Driver Pay Breakdown</h3>
+              {driverPayData.map(driver => (
+                <div key={driver.name} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl">
+                  <div>
+                    <p className="font-semibold text-gray-900">{driver.name}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {driver.ticketCount} ticket{driver.ticketCount !== 1 ? 's' : ''} ·{' '}
+                      {driver.payRate
+                        ? ` $${driver.payRate}/${(driver.payType ?? '').replace('_', ' ')}`
+                        : ' No rate set'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-gray-900">${driver.revenue.toLocaleString()} revenue</p>
+                    {driver.owed > 0 ? (
+                      <p className="text-sm font-black text-red-600">${driver.owed.toFixed(2)} owed</p>
+                    ) : (
+                      <p className="text-xs text-green-600 font-medium">✅ Paid up</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {contractorBlocks.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-xl border border-gray-100">
               <p className="text-sm text-gray-400">No approved/invoiced/paid loads for this week</p>
+              <a href="/dashboard/tickets" className="text-xs text-[var(--brand-primary)] underline mt-1 block">Add tickets →</a>
             </div>
           ) : (
             <div className="space-y-4">
@@ -570,8 +670,28 @@ export default function RevenuePage() {
         </button>
       </div>
 
+      {/* Data quality banner — only when no expenses but revenue exists */}
+      {totalExpenses === 0 && cashCollected > 0 && (
+        <div className="mb-5 flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
+          <span className="text-amber-500 text-xl flex-shrink-0 mt-0.5">⚠️</span>
+          <div className="flex-1">
+            <p className="text-sm font-bold text-amber-800">Profit numbers may be incomplete</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              No expenses tracked this period. Add fuel, driver pay, and maintenance costs to see real profit margins.
+            </p>
+          </div>
+          <a
+            href="/dashboard/revenue"
+            onClick={e => { e.preventDefault(); openAddExpense() }}
+            className="flex-shrink-0 text-xs font-bold text-amber-700 hover:text-amber-900 underline whitespace-nowrap"
+          >
+            Add Expenses →
+          </a>
+        </div>
+      )}
+
       {/* Summary cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-4">
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <div className="inline-flex rounded-lg p-2 mb-3 text-[var(--brand-primary)] bg-[var(--brand-primary)]/10">
             <CreditCard className="h-4 w-4" />
@@ -579,6 +699,12 @@ export default function RevenuePage() {
           <p className="text-xl font-bold text-gray-900">${cashCollected.toLocaleString()}</p>
           <p className="text-xs text-gray-400 mt-0.5">Cash Collected</p>
           <p className="text-xs text-gray-300 mt-0.5">{paidInvoices.length} paid invoices</p>
+          {trendCash !== null && (
+            <span className={`text-xs font-bold mt-1 block ${trendCash >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+              {trendCash >= 0 ? '↑' : '↓'} {Math.abs(trendCash).toFixed(0)}%
+              <span className="text-gray-400 font-normal ml-1">vs last period</span>
+            </span>
+          )}
         </div>
 
         <div className="bg-white rounded-xl border border-gray-100 p-5">
@@ -588,6 +714,12 @@ export default function RevenuePage() {
           <p className="text-xl font-bold text-gray-900">${totalExpenses.toLocaleString()}</p>
           <p className="text-xs text-gray-400 mt-0.5">Expenses</p>
           <p className="text-xs text-gray-300 mt-0.5">{filteredExpenses.length} entries</p>
+          {trendExpenses !== null && (
+            <span className={`text-xs font-bold mt-1 block ${trendExpenses <= 0 ? 'text-green-600' : 'text-red-500'}`}>
+              {trendExpenses >= 0 ? '↑' : '↓'} {Math.abs(trendExpenses).toFixed(0)}%
+              <span className="text-gray-400 font-normal ml-1">vs last period</span>
+            </span>
+          )}
         </div>
 
         <div className="bg-white rounded-xl border border-gray-100 p-5">
@@ -597,15 +729,33 @@ export default function RevenuePage() {
           <p className={`text-xl font-bold ${profit >= 0 ? 'text-gray-900' : 'text-red-600'}`}>${profit.toLocaleString()}</p>
           <p className="text-xs text-gray-400 mt-0.5">Net Profit</p>
           <p className="text-xs text-gray-300 mt-0.5">Revenue − Expenses</p>
+          {trendProfit !== null && (
+            <span className={`text-xs font-bold mt-1 block ${trendProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+              {trendProfit >= 0 ? '↑' : '↓'} {Math.abs(trendProfit).toFixed(0)}%
+              <span className="text-gray-400 font-normal ml-1">vs last period</span>
+            </span>
+          )}
         </div>
 
         <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <div className={`inline-flex rounded-lg p-2 mb-3 ${profitMarginPct >= 0 ? 'text-[var(--brand-primary)] bg-[var(--brand-primary)]/10' : 'text-red-500 bg-red-50'}`}>
+          <div className={`inline-flex rounded-lg p-2 mb-3 ${(profitMargin ?? 0) >= 0 ? 'text-[var(--brand-primary)] bg-[var(--brand-primary)]/10' : 'text-red-500 bg-red-50'}`}>
             <Percent className="h-4 w-4" />
           </div>
-          <p className={`text-xl font-bold ${profitMarginPct >= 0 ? 'text-gray-900' : 'text-red-600'}`}>{profitMarginPct}%</p>
-          <p className="text-xs text-gray-400 mt-0.5">Profit Margin</p>
-          <p className="text-xs text-gray-300 mt-0.5">After driver costs</p>
+          {profitMargin === null ? (
+            <>
+              <p className="text-2xl font-black text-gray-300">—</p>
+              <p className="text-xs text-gray-400 mt-0.5">Profit Margin</p>
+              <p className="text-xs text-gray-300 mt-0.5 leading-relaxed">Add expenses to see real margin</p>
+            </>
+          ) : (
+            <>
+              <p className={`text-xl font-bold ${profitMargin > 14 ? 'text-gray-900' : profitMargin > 8 ? 'text-amber-600' : 'text-red-600'}`}>
+                {profitMargin.toFixed(1)}%
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">Profit Margin</p>
+              <p className="text-xs text-gray-300 mt-0.5">After expenses</p>
+            </>
+          )}
         </div>
 
         <div className="bg-white rounded-xl border border-orange-100 p-5">
@@ -615,6 +765,12 @@ export default function RevenuePage() {
           <p className="text-xl font-bold text-gray-900">${outstandingTotal.toLocaleString()}</p>
           <p className="text-xs text-gray-400 mt-0.5">Outstanding</p>
           <p className="text-xs text-gray-300 mt-0.5">{outstandingInvoices.length} invoices</p>
+          {trendOutstanding !== null && (
+            <span className={`text-xs font-bold mt-1 block ${trendOutstanding <= 0 ? 'text-green-600' : 'text-red-500'}`}>
+              {trendOutstanding >= 0 ? '↑' : '↓'} {Math.abs(trendOutstanding).toFixed(0)}%
+              <span className="text-gray-400 font-normal ml-1">vs last period</span>
+            </span>
+          )}
         </div>
 
         <div className="bg-white rounded-xl border border-gray-100 p-5">
@@ -624,8 +780,37 @@ export default function RevenuePage() {
           <p className="text-xl font-bold text-gray-900">${driverCosts.toLocaleString()}</p>
           <p className="text-xs text-gray-400 mt-0.5">Driver Costs</p>
           <p className="text-xs text-gray-300 mt-0.5">{driverCostInvoices.length} pay stubs</p>
+          {trendDriverCosts !== null && (
+            <span className={`text-xs font-bold mt-1 block ${trendDriverCosts <= 0 ? 'text-green-600' : 'text-red-500'}`}>
+              {trendDriverCosts >= 0 ? '↑' : '↓'} {Math.abs(trendDriverCosts).toFixed(0)}%
+              <span className="text-gray-400 font-normal ml-1">vs last period</span>
+            </span>
+          )}
         </div>
       </div>
+
+      {/* Cost per load / revenue per load benchmarks */}
+      {totalLoads > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
+          <div className="p-4 bg-gray-50 rounded-xl text-center">
+            <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Revenue / Load</p>
+            <p className="text-xl font-black text-gray-900">
+              {revenuePerLoad ? `$${revenuePerLoad.toFixed(2)}` : '—'}
+            </p>
+          </div>
+          <div className="p-4 bg-gray-50 rounded-xl text-center">
+            <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Cost / Load</p>
+            <p className="text-xl font-black text-gray-900">
+              {costPerLoad ? `$${costPerLoad.toFixed(2)}` : '—'}
+            </p>
+            {!costPerLoad && <p className="text-xs text-gray-300">Add expenses</p>}
+          </div>
+          <div className="p-4 bg-gray-50 rounded-xl text-center">
+            <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Total Loads</p>
+            <p className="text-xl font-black text-gray-900">{totalLoads}</p>
+          </div>
+        </div>
+      )}
 
       {/* Loads per period */}
       <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
@@ -684,6 +869,34 @@ export default function RevenuePage() {
         </div>
       </div>
 
+      {/* Break-even analysis — only when fixed cost data exists */}
+      {fixedCosts > 0 && (
+        <div className="p-5 bg-gray-900 text-white rounded-2xl mb-6">
+          <p className="text-xs text-gray-400 uppercase tracking-wide mb-3">Break-Even Analysis</p>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <p className="text-xs text-gray-400">Fixed Costs</p>
+              <p className="text-lg font-black text-white">${fixedCosts.toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400">Revenue</p>
+              <p className="text-lg font-black text-white">${cashCollected.toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400">{cashCollected >= fixedCosts ? 'Surplus' : 'Deficit'}</p>
+              <p className={`text-lg font-black ${cashCollected >= fixedCosts ? 'text-green-400' : 'text-red-400'}`}>
+                ${Math.abs(cashCollected - fixedCosts).toLocaleString()}
+              </p>
+            </div>
+          </div>
+          {cashCollected < fixedCosts && (
+            <p className="text-xs text-red-400 mt-3">
+              ⚠️ Below break-even — need ${(fixedCosts - cashCollected).toLocaleString()} more to cover fixed costs
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Outstanding invoices */}
       {outstandingInvoices.length > 0 && (
         <div className="bg-white rounded-xl border border-orange-100 overflow-hidden mb-6">
@@ -727,7 +940,6 @@ export default function RevenuePage() {
       {/* Lost Revenue / At-Risk Tracking */}
       {(lostRevenueItems.length > 0 || overpaidInvoices.length > 0) && (
         <div className="mb-6 space-y-4">
-          {/* Summary cards */}
           <div className="grid grid-cols-3 gap-3">
             <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
               <p className="text-[10px] font-bold uppercase tracking-wider text-red-500 mb-1">Outstanding / Lost</p>
@@ -746,7 +958,6 @@ export default function RevenuePage() {
             </div>
           </div>
 
-          {/* Lost revenue table */}
           {lostRevenueItems.length > 0 && (
             <div className="bg-white rounded-xl border border-red-100 overflow-hidden">
               <div className="px-5 py-4 border-b border-red-100 bg-red-50/40">
@@ -806,7 +1017,6 @@ export default function RevenuePage() {
             </div>
           )}
 
-          {/* Overpayments table */}
           {overpaidInvoices.length > 0 && (
             <div className="bg-white rounded-xl border border-purple-100 overflow-hidden">
               <div className="px-5 py-4 border-b border-purple-100 bg-purple-50/40">
@@ -864,7 +1074,6 @@ export default function RevenuePage() {
           </div>
         </div>
 
-        {/* Category breakdown */}
         {filteredExpenses.length > 0 && (() => {
           const byCategory = categories
             .map(cat => ({ cat, total: filteredExpenses.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0) }))
