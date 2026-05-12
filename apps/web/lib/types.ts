@@ -334,6 +334,8 @@ export type ContractorTicket = {
   ticket_number: string | null
   material: string | null
   rate: number
+  unit_rate?: number | null
+  rate_quantity?: number | null
   rate_type: string | null
   status: 'pending' | 'invoiced' | 'paid'
   notes: string | null

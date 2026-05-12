@@ -271,12 +271,16 @@ function buildContractorLineItems(tickets: CTWithSlips[], deductionPct: number, 
     if (slips.length === 0 || singleLinePerTicket) {
       const base = ticket.rate
       const amount = deductionPct > 0 ? base * (1 - deductionPct / 100) : base
+      // Use stored unit_rate/rate_quantity for proper QTY × RATE display when available
+      const hasBreakdown = ticket.unit_rate != null && ticket.rate_quantity != null
       items.push({
         id: crypto.randomUUID(), invoice_id: '',
         line_date: ticket.date, truck_number: ticket.truck_number ?? null,
         driver_name: ticket.job_name, material: ticket.material,
         ticket_number: ticket.ticket_number ?? null, time_worked: ticket.hours_worked,
-        quantity: 1, rate: ticket.rate, rate_type: ticket.rate_type,
+        quantity: hasBreakdown ? ticket.rate_quantity! : 1,
+        rate: hasBreakdown ? ticket.unit_rate! : ticket.rate,
+        rate_type: ticket.rate_type,
         amount, deduction_pct: deductionPct > 0 ? deductionPct : null,
         sort_order: order++,
         description: null, unit_price: null, line_type: null,
@@ -284,7 +288,8 @@ function buildContractorLineItems(tickets: CTWithSlips[], deductionPct: number, 
     } else {
       for (const slip of slips) {
         const qty = slip.tonnage ?? 1
-        const base = ticket.rate_type === 'hr' ? ticket.rate : ticket.rate * qty
+        const unitRate = ticket.unit_rate ?? ticket.rate
+        const base = ticket.rate_type === 'hr' ? ticket.rate : unitRate * qty
         const amount = deductionPct > 0 ? base * (1 - deductionPct / 100) : base
         items.push({
           id: crypto.randomUUID(), invoice_id: '',
@@ -292,7 +297,7 @@ function buildContractorLineItems(tickets: CTWithSlips[], deductionPct: number, 
           driver_name: ticket.job_name, material: ticket.material,
           ticket_number: null, time_worked: ticket.hours_worked,
           quantity: ticket.rate_type === 'hr' ? null : qty,
-          rate: ticket.rate, rate_type: ticket.rate_type,
+          rate: unitRate, rate_type: ticket.rate_type,
           amount, deduction_pct: deductionPct > 0 ? deductionPct : null,
           sort_order: order++,
           description: null, unit_price: null, line_type: null,

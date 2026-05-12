@@ -358,7 +358,7 @@ export default function ContractorsPage() {
       truck_number: existingTruck,
       ticket_number: t.ticket_number ?? '',
       material: t.material ?? '',
-      rate: String(t.rate), unit_rate: '', rate_quantity: '', rate_type: t.rate_type ?? 'load', status: t.status, notes: t.notes ?? '',
+      rate: String(t.rate), unit_rate: String(t.unit_rate ?? ''), rate_quantity: String(t.rate_quantity ?? ''), rate_type: t.rate_type ?? 'load', status: t.status, notes: t.notes ?? '',
     })
     const allTrucks = [...contractorTrucks, ...trucks]
     setTruckMode(allTrucks.some(tr => tr.truck_number === existingTruck) || !existingTruck ? 'dropdown' : 'manual')
@@ -411,6 +411,8 @@ export default function ContractorsPage() {
       ticket_number: ticketForm.ticket_number || null,
       material: ticketForm.material || null,
       rate: parseFloat(ticketForm.rate) || 0,
+      unit_rate: parseFloat(ticketForm.unit_rate) || null,
+      rate_quantity: parseFloat(ticketForm.rate_quantity) || null,
       rate_type: ticketForm.rate_type,
       status: ticketForm.status as ContractorTicket['status'],
       notes: ticketForm.notes || null,
@@ -419,8 +421,8 @@ export default function ContractorsPage() {
     }
 
     if (editingTicket) {
-      const { job_name, client_company, date, hours_worked, truck_number, ticket_number, material, rate, rate_type, status, notes } = basePayload
-      const { error } = await supabase.from('contractor_tickets').update({ job_name, client_company, date, hours_worked, truck_number, ticket_number, material, rate, rate_type, status, notes }).eq('id', editingTicket.id)
+      const { job_name, client_company, date, hours_worked, truck_number, ticket_number, material, rate, unit_rate, rate_quantity, rate_type, status, notes } = basePayload
+      const { error } = await supabase.from('contractor_tickets').update({ job_name, client_company, date, hours_worked, truck_number, ticket_number, material, rate, unit_rate, rate_quantity, rate_type, status, notes }).eq('id', editingTicket.id)
       if (error) { toast.error(error.message); setSavingTicket(false); return }
       const newSlips = slipRows.filter(r => r.tonnage || r.imageFile)
       if (newSlips.length > 0) {
