@@ -2017,33 +2017,6 @@ export default function InvoicesPage() {
                   <p className="text-xs text-gray-400 mt-1">Deduction from contractor total</p>
                 </div>
               )}
-              {/* Client Invoice — tax rate (Growth plan) */}
-              {invoiceType === 'client' && (
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
-                    Tax Rate
-                    {companyPlan !== 'growth' && companyPlan !== 'enterprise' && (
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#F5B731]/15 text-[#b45309]">
-                        <Lock className="h-2.5 w-2.5" /> Growth
-                      </span>
-                    )}
-                  </label>
-                  {companyPlan === 'growth' || companyPlan === 'enterprise' ? (
-                    <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/20 focus-within:border-[var(--brand-primary)]">
-                      <input
-                        type="number" min="0" max="100" step="0.01"
-                        value={taxRate} onChange={e => setTaxRate(e.target.value)}
-                        className="flex-1 px-3 py-2.5 text-sm focus:outline-none bg-white" placeholder="0"
-                      />
-                      <span className="flex items-center px-3 bg-gray-50 text-sm text-gray-500 border-l border-gray-200">%</span>
-                    </div>
-                  ) : (
-                    <a href="/dashboard/settings?tab=billing" className="flex items-center gap-2 rounded-lg border border-dashed border-[#F5B731]/50 bg-[#F5B731]/5 px-3 py-2 text-xs text-[#b45309] hover:bg-[#F5B731]/10 transition-colors">
-                      <Lock className="h-3 w-3" /> Upgrade to Growth to add tax to invoices
-                    </a>
-                  )}
-                </div>
-              )}
               <div className={invoiceType === 'client' ? 'col-span-2' : ''}>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
                 <textarea
@@ -2074,15 +2047,6 @@ export default function InvoicesPage() {
                   type="date"
                   value={createForm.due_date}
                   onChange={e => setCreateForm(p => ({ ...p, due_date: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Date Paid</label>
-                <input
-                  type="date"
-                  value={createForm.date_paid}
-                  onChange={e => setCreateForm(p => ({ ...p, date_paid: e.target.value }))}
                   className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                 />
               </div>
