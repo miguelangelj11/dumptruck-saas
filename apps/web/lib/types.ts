@@ -121,6 +121,10 @@ export type Invoice = {
   amount_remaining: number | null
   overpaid_amount: number | null
   payment_notes: string | null
+  early_payment_discount_pct: number | null
+  early_payment_days: number | null
+  early_payment_deadline: string | null
+  early_payment_discount_amount: number | null
   created_at: string
 }
 
@@ -262,6 +266,9 @@ export type InvoiceLineItem = {
   amount: number
   deduction_pct: number | null
   sort_order: number
+  description: string | null
+  unit_price: number | null
+  line_type: string | null
   // local-only: populated from load data, stripped before DB insert
   photo_url?: string | null
 }
@@ -275,6 +282,10 @@ export type ClientCompany = {
   phone: string | null
   portal_token: string | null
   created_at: string
+  payment_terms: string | null
+  tax_exempt: boolean | null
+  tax_exempt_cert: string | null
+  default_tax_rate: number | null
 }
 
 export type Contractor = {

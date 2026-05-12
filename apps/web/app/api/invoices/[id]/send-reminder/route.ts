@@ -32,7 +32,7 @@ export async function POST(
   // Fetch invoice — scoped to company
   const { data: inv } = await admin
     .from('invoices')
-    .select('id, company_id, invoice_number, client_name, client_email, total, due_date, status, reminder_count, last_reminder_sent_at')
+    .select('id, company_id, invoice_number, client_name, client_email, total, due_date, status, reminder_count, last_reminder_sent_at, payment_terms, early_payment_deadline')
     .eq('id', invoiceId)
     .eq('company_id', companyId)
     .maybeSingle()
@@ -82,7 +82,9 @@ export async function POST(
     dueDate:       inv.due_date ?? new Date().toISOString().split('T')[0]!,
     daysOverdue,
     paymentLink,
-    companyName:   company?.name ?? 'Your Contractor',
+    companyName:          company?.name ?? 'Your Contractor',
+    paymentTerms:         inv.payment_terms ?? null,
+    earlyPaymentDeadline: inv.early_payment_deadline ?? null,
   })
 
   if (!sent) {

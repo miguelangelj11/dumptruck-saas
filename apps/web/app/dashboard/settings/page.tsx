@@ -160,14 +160,17 @@ export default function SettingsPage() {
 
   // ── Client companies state ──────────────────────────────────────────────
   const [clientCompanies, setClientCompanies] = useState<ClientCompany[]>([])
-  const [newCompanyName,    setNewCompanyName]    = useState('')
-  const [newCompanyAddress, setNewCompanyAddress] = useState('')
-  const [newCompanyEmail,   setNewCompanyEmail]   = useState('')
-  const [newCompanyPhone,   setNewCompanyPhone]   = useState('')
+  const [newCompanyName,         setNewCompanyName]         = useState('')
+  const [newCompanyAddress,      setNewCompanyAddress]      = useState('')
+  const [newCompanyEmail,        setNewCompanyEmail]        = useState('')
+  const [newCompanyPhone,        setNewCompanyPhone]        = useState('')
+  const [newCompanyPaymentTerms, setNewCompanyPaymentTerms] = useState('net_30')
+  const [newCompanyTaxExempt,    setNewCompanyTaxExempt]    = useState(false)
+  const [newCompanyTaxExemptCert,setNewCompanyTaxExemptCert]= useState('')
   const [addingCompany,   setAddingCompany]   = useState(false)
   const [deletingId,      setDeletingId]      = useState<string | null>(null)
   const [editingCompany,  setEditingCompany]  = useState<ClientCompany | null>(null)
-  const [editForm, setEditForm] = useState({ name: '', address: '', email: '', phone: '' })
+  const [editForm, setEditForm] = useState({ name: '', address: '', email: '', phone: '', payment_terms: 'net_30', tax_exempt: false, tax_exempt_cert: '' })
   const [savingEdit, setSavingEdit] = useState(false)
 
   // ── Trucks state ────────────────────────────────────────────────────────
@@ -597,13 +600,16 @@ export default function SettingsPage() {
     setAddingCompany(true)
     const { error } = await supabase
       .from('client_companies')
-      .insert({ name: newCompanyName.trim(), address: newCompanyAddress.trim() || null, email: newCompanyEmail.trim() || null, phone: newCompanyPhone.trim() || null, company_id: companyId })
+      .insert({ name: newCompanyName.trim(), address: newCompanyAddress.trim() || null, email: newCompanyEmail.trim() || null, phone: newCompanyPhone.trim() || null, company_id: companyId, payment_terms: newCompanyPaymentTerms || 'net_30', tax_exempt: newCompanyTaxExempt, tax_exempt_cert: newCompanyTaxExemptCert.trim() || null })
     if (error) { toast.error(error.message); setAddingCompany(false); return }
     toast.success(`"${newCompanyName.trim()}" added`)
     setNewCompanyName('')
     setNewCompanyAddress('')
     setNewCompanyEmail('')
     setNewCompanyPhone('')
+    setNewCompanyPaymentTerms('net_30')
+    setNewCompanyTaxExempt(false)
+    setNewCompanyTaxExemptCert('')
     setAddingCompany(false)
     getCompanyId().then(orgId => { if (orgId) fetchClientCompanies(orgId) })
   }
@@ -626,12 +632,12 @@ export default function SettingsPage() {
     setSavingEdit(true)
     const { error } = await supabase
       .from('client_companies')
-      .update({ name: editForm.name.trim(), address: editForm.address.trim() || null, email: editForm.email.trim() || null, phone: editForm.phone.trim() || null })
+      .update({ name: editForm.name.trim(), address: editForm.address.trim() || null, email: editForm.email.trim() || null, phone: editForm.phone.trim() || null, payment_terms: editForm.payment_terms || 'net_30', tax_exempt: editForm.tax_exempt, tax_exempt_cert: editForm.tax_exempt_cert.trim() || null })
       .eq('id', editingCompany.id)
     if (error) { toast.error(error.message); setSavingEdit(false); return }
     toast.success(`"${editForm.name.trim()}" updated`)
     setClientCompanies(prev => prev.map(c => c.id === editingCompany.id
-      ? { ...c, name: editForm.name.trim(), address: editForm.address.trim() || null, email: editForm.email.trim() || null, phone: editForm.phone.trim() || null }
+      ? { ...c, name: editForm.name.trim(), address: editForm.address.trim() || null, email: editForm.email.trim() || null, phone: editForm.phone.trim() || null, payment_terms: editForm.payment_terms || 'net_30', tax_exempt: editForm.tax_exempt, tax_exempt_cert: editForm.tax_exempt_cert.trim() || null }
       : c
     ))
     setEditingCompany(null)
@@ -1054,6 +1060,23 @@ export default function SettingsPage() {
                 className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
               />
             </div>
+            <div className="grid grid-cols-2 gap-2 items-center">
+              <select value={newCompanyPaymentTerms} onChange={e => setNewCompanyPaymentTerms(e.target.value)} className="rounded-lg border border-gray-200 px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]">
+                <option value="due_on_receipt">Due on Receipt</option>
+                <option value="net_15">Net 15</option>
+                <option value="net_30">Net 30</option>
+                <option value="net_45">Net 45</option>
+                <option value="net_60">Net 60</option>
+                <option value="2_10_net_30">2/10 Net 30</option>
+              </select>
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                <input type="checkbox" checked={newCompanyTaxExempt} onChange={e => setNewCompanyTaxExempt(e.target.checked)} className="w-4 h-4 rounded" />
+                Tax Exempt
+              </label>
+            </div>
+            {newCompanyTaxExempt && (
+              <input type="text" value={newCompanyTaxExemptCert} onChange={e => setNewCompanyTaxExemptCert(e.target.value)} placeholder="Exemption certificate number" className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
+            )}
           </form>
 
           {clientCompanies.length === 0 ? (
@@ -1094,7 +1117,7 @@ export default function SettingsPage() {
                       </button>
                     )}
                     <button
-                      onClick={() => { setEditingCompany(c); setEditForm({ name: c.name, address: c.address ?? '', email: c.email ?? '', phone: c.phone ?? '' }) }}
+                      onClick={() => { setEditingCompany(c); setEditForm({ name: c.name, address: c.address ?? '', email: c.email ?? '', phone: c.phone ?? '', payment_terms: c.payment_terms ?? 'net_30', tax_exempt: c.tax_exempt ?? false, tax_exempt_cert: c.tax_exempt_cert ?? '' }) }}
                       className="p-1.5 text-gray-400 hover:text-[var(--brand-primary)] transition-colors"
                       aria-label={`Edit ${c.name}`}
                     >
@@ -2545,6 +2568,26 @@ export default function SettingsPage() {
                 placeholder="+1 (555) 000-0000"
                 className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
               />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Payment Terms</label>
+              <select value={editForm.payment_terms} onChange={e => setEditForm(p => ({ ...p, payment_terms: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]">
+                <option value="due_on_receipt">Due on Receipt</option>
+                <option value="net_15">Net 15</option>
+                <option value="net_30">Net 30</option>
+                <option value="net_45">Net 45</option>
+                <option value="net_60">Net 60</option>
+                <option value="2_10_net_30">2/10 Net 30 (2% if paid in 10 days)</option>
+              </select>
+            </div>
+            <div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={editForm.tax_exempt} onChange={e => setEditForm(p => ({ ...p, tax_exempt: e.target.checked }))} className="w-4 h-4 rounded" />
+                <span className="text-sm font-medium text-gray-700">Tax Exempt</span>
+              </label>
+              {editForm.tax_exempt && (
+                <input type="text" value={editForm.tax_exempt_cert} onChange={e => setEditForm(p => ({ ...p, tax_exempt_cert: e.target.value }))} placeholder="Exemption certificate number" className="mt-2 w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
+              )}
             </div>
             <div className="flex gap-3 pt-1">
               <button type="button" onClick={() => setEditingCompany(null)} className="flex-1 h-10 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">

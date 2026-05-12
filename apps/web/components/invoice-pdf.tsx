@@ -99,10 +99,12 @@ const fmtRate = (rate: number | null | undefined, rateType: string | null | unde
 }
 
 export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
-  const lineItems = invoice.invoice_line_items ?? []
+  const allLineItems = invoice.invoice_line_items ?? []
+  const lineItems    = allLineItems.filter(i => !i.line_type || i.line_type === 'ticket')
+  const customItems  = allLineItems.filter(i => i.line_type && i.line_type !== 'ticket')
 
   const firstDeduction = lineItems.find(i => (i.deduction_pct ?? 0) > 0)?.deduction_pct ?? 0
-  const netTotal   = lineItems.reduce((s, i) => s + i.amount, 0)
+  const netTotal   = allLineItems.reduce((s, i) => s + i.amount, 0)
   const grossTotal = firstDeduction > 0
     ? lineItems.reduce((s, i) => s + i.amount / (1 - firstDeduction / 100), 0)
     : netTotal
@@ -178,6 +180,23 @@ export default function InvoicePDF({ invoice, company, ticketPhotos }: Props) {
             </View>
           ))}
         </View>
+
+        {/* ADDITIONAL CHARGES */}
+        {customItems.length > 0 && (
+          <View style={{ marginTop: 12 }}>
+            <Text style={[s.bold, { fontSize: 9, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }]}>Additional Charges</Text>
+            <View style={{ borderTopWidth: 1, borderTopColor: '#e5e7eb' }}>
+              {customItems.map((item, i) => (
+                <View key={item.id} style={[s.row, { paddingVertical: 5, borderBottomWidth: 0.5, borderBottomColor: '#f3f4f6', backgroundColor: i % 2 === 1 ? '#f9fafb' : '#fff' }]}>
+                  <Text style={[s.flex1, { fontSize: 9, color: '#374151' }]}>{item.description ?? '—'}</Text>
+                  <Text style={{ fontSize: 9, color: '#6b7280', width: 32, textAlign: 'right' }}>{item.quantity ?? 1}</Text>
+                  <Text style={{ fontSize: 9, color: '#6b7280', width: 56, textAlign: 'right' }}>{fmt(item.unit_price ?? 0)}</Text>
+                  <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#111827', width: 64, textAlign: 'right' }}>{fmt(item.amount)}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* TOTALS */}
         <View style={{ alignItems: 'flex-end' }}>

@@ -9,6 +9,8 @@ export interface SendPaymentReminderParams {
   daysOverdue: number
   paymentLink: string
   companyName: string
+  paymentTerms?: string | null
+  earlyPaymentDeadline?: string | null
 }
 
 function fmtDate(d: string): string {
@@ -24,7 +26,7 @@ function fmtMoney(n: number): string {
 export async function sendPaymentReminder(
   params: SendPaymentReminderParams,
 ): Promise<{ sent: boolean; error?: string }> {
-  const { toEmail, toName, invoiceNumber, amountDue, dueDate, daysOverdue, paymentLink, companyName } = params
+  const { toEmail, toName, invoiceNumber, amountDue, dueDate, daysOverdue, paymentLink, companyName, paymentTerms, earlyPaymentDeadline } = params
 
   const resendKey = process.env.RESEND_API_KEY
   if (!resendKey) {
@@ -81,7 +83,17 @@ export async function sendPaymentReminder(
               <td style="padding:8px 0;font-size:13px;color:#6b7280">Due Date</td>
               <td style="padding:8px 0;font-size:13px;color:${daysOverdue > 0 ? '#dc2626' : '#111827'};font-weight:${daysOverdue > 0 ? '600' : '400'};text-align:right">${formattedDate}</td>
             </tr>
+            ${paymentTerms ? `
+            <tr style="border-top:1px solid #f3f4f6">
+              <td style="padding:8px 0;font-size:13px;color:#6b7280">Payment Terms</td>
+              <td style="padding:8px 0;font-size:13px;color:#111827;text-align:right">${paymentTerms.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).replace('2 10 Net 30', '2/10 Net 30')}</td>
+            </tr>` : ''}
           </table>
+          ${paymentTerms === '2_10_net_30' && earlyPaymentDeadline ? `
+          <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin-bottom:20px">
+            <p style="margin:0;font-size:13px;color:#92400e;font-weight:600">💡 Early Payment Discount Available</p>
+            <p style="margin:4px 0 0;font-size:13px;color:#78350f">Pay before ${fmtDate(earlyPaymentDeadline)} to save 2% — that's $${fmtMoney(amountDue * 0.02)} off your balance.</p>
+          </div>` : ''}
 
           <p style="margin:0 0 20px;font-size:14px;color:#374151;line-height:1.6">
             Please arrange payment at your earliest convenience to avoid any service disruption.

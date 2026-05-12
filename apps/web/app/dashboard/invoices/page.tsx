@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, Loader2, Receipt, ArrowLeft, Printer, Check, CreditCard, X, ChevronDown, FileText, Upload, Trash2, Mail, Lock, Pencil, DollarSign } from 'lucide-react'
@@ -45,6 +45,29 @@ function localDatePlus(days: number): string {
   const d = new Date()
   d.setDate(d.getDate() + days)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function isOverdue(invoice: Invoice): boolean {
+  if (['paid', 'draft', 'cancelled'].includes(invoice.status)) return false
+  if (!invoice.due_date) return false
+  return new Date(invoice.due_date + 'T00:00:00') < new Date()
+}
+
+function daysOverdueFn(invoice: Invoice): number {
+  if (!isOverdue(invoice)) return 0
+  return Math.floor((Date.now() - new Date(invoice.due_date! + 'T00:00:00').getTime()) / 86400000)
+}
+
+function formatPaymentTerms(terms: string): string {
+  const map: Record<string, string> = {
+    due_on_receipt: 'Due on Receipt',
+    net_15: 'Net 15',
+    net_30: 'Net 30',
+    net_45: 'Net 45',
+    net_60: 'Net 60',
+    '2_10_net_30': '2/10 Net 30',
+  }
+  return map[terms] ?? terms
 }
 
 function calcAmount(item: { rate: number | null; rate_type: string | null; quantity: number | null }): number {
@@ -116,6 +139,7 @@ function buildLineItems(loads: LoadWithTickets[], deductionPct: number): Invoice
         deduction_pct: deductionPct > 0 ? deductionPct : null,
         sort_order: order++,
         photo_url: slips[0]?.image_url ?? load.image_url ?? null,
+        description: null, unit_price: null, line_type: null,
       })
     } else if (slips.length === 0) {
       const amount = load.rate
@@ -136,6 +160,7 @@ function buildLineItems(loads: LoadWithTickets[], deductionPct: number): Invoice
         deduction_pct: deductionPct > 0 ? deductionPct : null,
         sort_order: order++,
         photo_url: load.image_url ?? null,
+        description: null, unit_price: null, line_type: null,
       })
     } else {
       for (const slip of slips) {
@@ -158,6 +183,7 @@ function buildLineItems(loads: LoadWithTickets[], deductionPct: number): Invoice
           deduction_pct: deductionPct > 0 ? deductionPct : null,
           sort_order: order++,
           photo_url: slip.image_url ?? load.image_url ?? null,
+          description: null, unit_price: null, line_type: null,
         })
       }
     }
@@ -188,6 +214,7 @@ function buildDriverPayLineItems(
       amount: hourlyRate * totalHours,
       deduction_pct: null,
       sort_order: 0,
+      description: null, unit_price: null, line_type: null,
     }]
   }
   // Percentage pay — one line per load/slip
@@ -210,6 +237,7 @@ function buildDriverPayLineItems(
         amount: gross * (payPct / 100),
         deduction_pct: null, sort_order: order++,
         photo_url: slips[0]?.image_url ?? load.image_url ?? null,
+        description: null, unit_price: null, line_type: null,
       })
     } else {
       for (const slip of slips) {
@@ -225,6 +253,7 @@ function buildDriverPayLineItems(
           amount: gross * (payPct / 100),
           deduction_pct: null, sort_order: order++,
           photo_url: slip.image_url ?? load.image_url ?? null,
+          description: null, unit_price: null, line_type: null,
         })
       }
     }
@@ -248,6 +277,7 @@ function buildContractorLineItems(tickets: CTWithSlips[], deductionPct: number):
         quantity: 1, rate: ticket.rate, rate_type: ticket.rate_type,
         amount, deduction_pct: deductionPct > 0 ? deductionPct : null,
         sort_order: order++,
+        description: null, unit_price: null, line_type: null,
       })
     } else {
       for (const slip of slips) {
@@ -263,6 +293,7 @@ function buildContractorLineItems(tickets: CTWithSlips[], deductionPct: number):
           rate: ticket.rate, rate_type: ticket.rate_type,
           amount, deduction_pct: deductionPct > 0 ? deductionPct : null,
           sort_order: order++,
+          description: null, unit_price: null, line_type: null,
         })
       }
     }
@@ -303,7 +334,13 @@ export default function InvoicesPage() {
     date_paid: '',
     payment_method: 'check',
   })
-  const [clientCompanies, setClientCompanies] = useState<{ id: string; name: string; address: string | null; email: string | null; phone: string | null }[]>([])
+  const [clientCompanies, setClientCompanies] = useState<{ id: string; name: string; address: string | null; email: string | null; phone: string | null; payment_terms: string | null; tax_exempt: boolean | null; default_tax_rate: number | null }[]>([])
+  // Custom line items (additional charges on client invoices)
+  type CustomLineItem = { id: string; description: string; quantity: number; unit_price: number; amount: number; line_type: string }
+  const [customLineItems, setCustomLineItems] = useState<CustomLineItem[]>([])
+  // Tax exempt + early payment state for auto-fill from client
+  const [taxExemptDisplay, setTaxExemptDisplay] = useState(false)
+  const [earlyPaymentDeadline, setEarlyPaymentDeadline] = useState('')
   const [clientNameMode, setClientNameMode] = useState<'dropdown' | 'manual'>('dropdown')
   const [deductionPct, setDeductionPct] = useState('')
   // Driver Pay Invoice state
@@ -477,7 +514,7 @@ export default function InvoicesPage() {
     if (!uid) return
     const { data } = await supabase
       .from('client_companies')
-      .select('id, name, address, email, phone')
+      .select('id, name, address, email, phone, payment_terms, tax_exempt, default_tax_rate')
       .eq('company_id', uid)
       .order('name')
     setClientCompanies(data ?? [])
@@ -572,10 +609,12 @@ export default function InvoicesPage() {
         parseFloat(driverTotalHours) || 0,
       )
     : buildLineItems(selectedLoads, 0)
-  const subtotal        = previewItems.reduce((s, i) => s + i.amount, 0)
-  const taxRateNum      = invoiceType === 'client' ? (parseFloat(taxRate) || 0) : 0
-  const taxAmountCalc   = subtotal * taxRateNum / 100
-  const invoiceTotal    = subtotal + taxAmountCalc
+  const ticketsSubtotal    = previewItems.reduce((s, i) => s + i.amount, 0)
+  const customItemsTotal   = customLineItems.reduce((s, i) => s + i.amount, 0)
+  const subtotal           = ticketsSubtotal + customItemsTotal
+  const taxRateNum         = invoiceType === 'client' ? (parseFloat(taxRate) || 0) : 0
+  const taxAmountCalc      = subtotal * taxRateNum / 100
+  const invoiceTotal       = subtotal + taxAmountCalc
   const activeSelectionSize = invoiceType === 'contractor' ? selectedCTIds.size : selectedLoadIds.size
 
   // Approved loads not yet selected — used for the "you're leaving money behind" warning
@@ -602,6 +641,40 @@ export default function InvoicesPage() {
       return n
     })
   }
+
+  // Step 11: Auto-populate date range from selected contractor tickets
+  useEffect(() => {
+    if (invoiceType !== 'contractor' || selectedCTIds.size === 0) return
+    const dates = contractorTickets.filter(t => selectedCTIds.has(t.id)).map(t => t.date).filter(Boolean).sort()
+    if (dates.length > 0) {
+      setCreateForm(p => ({ ...p, date_from: dates[0]!, date_to: dates[dates.length - 1]! }))
+    }
+  }, [selectedCTIds, contractorTickets, invoiceType])
+
+  // Step 3: AR aging computation
+  const arAging = useMemo(() => {
+    const now = new Date()
+    const buckets = {
+      current:    { amount: 0, count: 0 },
+      days30:     { amount: 0, count: 0 },
+      days60:     { amount: 0, count: 0 },
+      days90:     { amount: 0, count: 0 },
+      days90plus: { amount: 0, count: 0 },
+    }
+    invoices
+      .filter(inv => !['paid', 'draft'].includes(inv.status))
+      .forEach(inv => {
+        const days = Math.floor((now.getTime() - new Date(inv.created_at).getTime()) / 86400000)
+        const remaining = inv.amount_remaining ?? inv.total ?? 0
+        if (days <= 0)       { buckets.current.amount += remaining; buckets.current.count++ }
+        else if (days <= 30) { buckets.days30.amount += remaining; buckets.days30.count++ }
+        else if (days <= 60) { buckets.days60.amount += remaining; buckets.days60.count++ }
+        else if (days <= 90) { buckets.days90.amount += remaining; buckets.days90.count++ }
+        else                 { buckets.days90plus.amount += remaining; buckets.days90plus.count++ }
+      })
+    return buckets
+  }, [invoices])
+  const totalAR = Object.values(arAging).reduce((s, b) => s + b.amount, 0)
 
   async function openDetail(inv: Invoice) {
     setDetailLoading(true)
@@ -766,13 +839,33 @@ export default function InvoicesPage() {
       date_to: createForm.date_to || null,
       payment_method: createForm.payment_method || 'check',
       notes: createForm.notes || null,
+      early_payment_deadline: earlyPaymentDeadline || null,
     })
 
     if (invErr) { toast.error(invErr.message); setSaving(false); return }
 
-    const lineItemsToInsert = previewItems.map(({ photo_url: _p, ...item }) => ({ ...item, invoice_id: invoiceId }))
+    const lineItemsToInsert = previewItems.map(({ photo_url: _p, ...item }) => ({ ...item, invoice_id: invoiceId, company_id: uid }))
     const { error: itemErr } = await supabase.from('invoice_line_items').insert(lineItemsToInsert)
     if (itemErr) { toast.error(itemErr.message); setSaving(false); return }
+
+    // Save custom/additional line items
+    if (customLineItems.length > 0) {
+      const customToInsert = customLineItems
+        .filter(item => item.description.trim())
+        .map((item, i) => ({
+          company_id: uid,
+          invoice_id: invoiceId,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          amount: item.amount,
+          line_type: item.line_type,
+          sort_order: previewItems.length + i,
+        }))
+      if (customToInsert.length > 0) {
+        await supabase.from('invoice_line_items').insert(customToInsert)
+      }
+    }
 
     if (invoiceType === 'contractor') {
       await supabase.from('contractor_tickets').update({ status: 'invoiced', invoice_id: invoiceId }).in('id', [...selectedCTIds])
@@ -841,6 +934,24 @@ export default function InvoicesPage() {
     setSelectedContractorId('')
     setContractorTickets([])
     setDriverFilter('')
+    setCustomLineItems([])
+    setTaxExemptDisplay(false)
+    setEarlyPaymentDeadline('')
+  }
+
+  function addLineItem() {
+    setCustomLineItems(prev => [...prev, { id: crypto.randomUUID(), description: '', quantity: 1, unit_price: 0, amount: 0, line_type: 'custom' }])
+  }
+
+  function updateLineItem(id: string, field: string, value: string | number) {
+    setCustomLineItems(prev => prev.map(item => {
+      if (item.id !== id) return item
+      const updated = { ...item, [field]: value }
+      if (field === 'quantity' || field === 'unit_price') {
+        updated.amount = (Number(updated.quantity) || 0) * (Number(updated.unit_price) || 0)
+      }
+      return updated
+    }))
   }
 
   async function handleSaveReceived(e: React.FormEvent) {
@@ -1368,6 +1479,31 @@ export default function InvoicesPage() {
             </div>
           )}
 
+          {/* AR Aging Summary Band */}
+          {!loading && totalAR > 0 && (
+            <div className="mx-4 mt-4 p-4 bg-gray-50 rounded-2xl border border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-bold text-gray-600 uppercase tracking-wide">AR Aging Summary</p>
+                <p className="text-sm font-bold text-gray-900">${fmt(totalAR)} total outstanding</p>
+              </div>
+              <div className="grid grid-cols-5 gap-2">
+                {([
+                  { label: 'Current',    data: arAging.current,    color: 'text-green-600',  bg: 'bg-green-50' },
+                  { label: '1–30 Days',  data: arAging.days30,     color: 'text-blue-600',   bg: 'bg-blue-50' },
+                  { label: '31–60 Days', data: arAging.days60,     color: 'text-amber-600',  bg: 'bg-amber-50' },
+                  { label: '61–90 Days', data: arAging.days90,     color: 'text-orange-600', bg: 'bg-orange-50' },
+                  { label: '90+ Days',   data: arAging.days90plus, color: 'text-red-600',    bg: 'bg-red-50' },
+                ] as const).map(bucket => (
+                  <div key={bucket.label} className={`p-3 rounded-xl text-center ${bucket.bg}`}>
+                    <p className={`text-base font-black ${bucket.color}`}>${fmt(bucket.data.amount)}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{bucket.label}</p>
+                    {bucket.data.count > 0 && <p className="text-xs text-gray-400">{bucket.data.count} inv</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="h-6 w-6 animate-spin text-[var(--brand-primary)]" />
@@ -1401,13 +1537,12 @@ export default function InvoicesPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {filteredInvoices.map(inv => {
-                    const daysOverdue = inv.status === 'overdue' && inv.due_date
-                      ? Math.max(0, Math.floor((Date.now() - new Date(inv.due_date + 'T00:00:00').getTime()) / 86_400_000))
-                      : 0
+                    const overdueFlag = isOverdue(inv)
+                    const daysOverdue = overdueFlag ? daysOverdueFn(inv) : 0
                     const maxReminders = 3
                     const reminderCount = inv.reminder_count ?? 0
                     return (
-                    <tr key={inv.id} className={`hover:bg-gray-50/50 transition-colors ${inv.status === 'overdue' ? 'bg-red-50/20' : ''}`}>
+                    <tr key={inv.id} className={`hover:bg-gray-50/50 transition-colors ${overdueFlag ? 'border-l-4 border-l-red-400 bg-red-50/30' : ''}`}>
                       <td className="px-4 py-3 font-mono font-medium text-gray-900">{inv.invoice_number}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${inv.invoice_type === 'paystub' ? 'bg-purple-100 text-purple-700' : inv.invoice_type === 'contractor' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
@@ -1420,7 +1555,7 @@ export default function InvoicesPage() {
                       </td>
                       <td className="px-4 py-3 font-semibold text-gray-900">${fmt(inv.total)}</td>
                       <td className="hidden sm:table-cell px-4 py-3 text-xs">
-                        <p className={inv.status === 'overdue' ? 'text-red-600 font-medium' : 'text-gray-500'}>{fmtDate(inv.due_date)}</p>
+                        <p className={overdueFlag ? 'text-red-600 font-medium' : 'text-gray-500'}>{fmtDate(inv.due_date)}</p>
                         {daysOverdue > 0 && (
                           <p className="text-red-500 font-semibold mt-0.5">{daysOverdue}d overdue</p>
                         )}
@@ -1463,7 +1598,7 @@ export default function InvoicesPage() {
                           <button onClick={() => openEditModal(inv)} className="p-1 text-gray-300 hover:text-[var(--brand-primary)] transition-colors" title="Edit invoice">
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
-                          {inv.status === 'overdue' && (
+                          {overdueFlag && (
                             reminderCount >= maxReminders ? (
                               <span className="text-xs text-gray-400">Max reminders</span>
                             ) : reminderSentIds.has(inv.id) ? (
@@ -1707,7 +1842,14 @@ export default function InvoicesPage() {
                             setCreateForm(p => ({ ...p, client_name: '', client_address: '' }))
                           } else {
                             const co = clientCompanies.find(c => c.name === val)
-                            setCreateForm(p => ({ ...p, client_name: val, client_address: co?.address ?? p.client_address, client_email: co?.email ?? p.client_email, client_phone: co?.phone ?? p.client_phone }))
+                            const termDays: Record<string, number> = { due_on_receipt: 0, net_15: 15, net_30: 30, net_45: 45, net_60: 60, '2_10_net_30': 30 }
+                            const daysToAdd = termDays[co?.payment_terms ?? ''] ?? 30
+                            const dueDate = localDatePlus(daysToAdd)
+                            setCreateForm(p => ({ ...p, client_name: val, client_address: co?.address ?? p.client_address, client_email: co?.email ?? p.client_email, client_phone: co?.phone ?? p.client_phone, due_date: dueDate }))
+                            if (co?.tax_exempt) { setTaxRate('0'); setTaxExemptDisplay(true) }
+                            else { setTaxExemptDisplay(false); if (co?.default_tax_rate) setTaxRate(String(co.default_tax_rate)) }
+                            if (co?.payment_terms === '2_10_net_30') setEarlyPaymentDeadline(localDatePlus(10))
+                            else setEarlyPaymentDeadline('')
                           }
                         }}
                         className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white"
@@ -2100,6 +2242,91 @@ export default function InvoicesPage() {
             </div>
           )}
 
+          {/* Tax exempt badge */}
+          {taxExemptDisplay && invoiceType === 'client' && (
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-700 mb-3">
+              <span>🏛️</span>
+              <span className="font-medium">Tax Exempt — Certificate on file for this client</span>
+            </div>
+          )}
+
+          {/* Early payment discount hint */}
+          {earlyPaymentDeadline && invoiceTotal > 0 && invoiceType === 'client' && (
+            <div className="px-4 py-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-800 mb-3">
+              <p className="font-semibold">💡 Early Payment Discount Available</p>
+              <p className="text-xs mt-0.5">Pay by {fmtDate(earlyPaymentDeadline)} to save <strong>${fmt(invoiceTotal * 0.02)}</strong> (2% discount)</p>
+            </div>
+          )}
+
+          {/* Additional line items (custom charges) */}
+          {invoiceType === 'client' && (
+            <div className="border border-gray-200 rounded-xl overflow-hidden mb-3">
+              <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-700">Additional Line Items</h3>
+                <button type="button" onClick={addLineItem}
+                  className="text-xs px-3 py-1.5 border border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-gray-400 hover:text-gray-700">
+                  + Add Line Item
+                </button>
+              </div>
+              {customLineItems.length > 0 && (
+                <div className="p-3 space-y-2">
+                  {/* Quick type presets */}
+                  <div className="flex gap-2 flex-wrap pb-2 border-b border-gray-100">
+                    {([
+                      { type: 'equipment',     label: '🚜 Equipment Rental' },
+                      { type: 'fuel_surcharge',label: '⛽ Fuel Surcharge' },
+                      { type: 'demurrage',     label: '⏱️ Demurrage' },
+                      { type: 'standby',       label: '🅿️ Standby Time' },
+                      { type: 'material',      label: '🪨 Materials' },
+                    ]).map(preset => (
+                      <button key={preset.type} type="button"
+                        onClick={() => setCustomLineItems(prev => [...prev, { id: crypto.randomUUID(), description: preset.label.split(' ').slice(1).join(' '), quantity: 1, unit_price: 0, amount: 0, line_type: preset.type }])}
+                        className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600">
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Line item rows */}
+                  <div className="space-y-2">
+                    {customLineItems.map(item => (
+                      <div key={item.id} className="grid grid-cols-12 gap-2 items-center p-2 bg-gray-50 rounded-xl">
+                        <div className="col-span-5">
+                          <input value={item.description} onChange={e => updateLineItem(item.id, 'description', e.target.value)}
+                            placeholder="Description…"
+                            className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-[var(--brand-primary)]" />
+                        </div>
+                        <div className="col-span-2">
+                          <input type="number" value={item.quantity} onChange={e => updateLineItem(item.id, 'quantity', parseFloat(e.target.value) || 0)}
+                            placeholder="Qty"
+                            className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm bg-white text-center focus:outline-none focus:border-[var(--brand-primary)]" />
+                        </div>
+                        <div className="col-span-2 relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
+                          <input type="number" value={item.unit_price} onChange={e => updateLineItem(item.id, 'unit_price', parseFloat(e.target.value) || 0)}
+                            placeholder="0.00"
+                            className="w-full pl-5 pr-2 py-1.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-[var(--brand-primary)]" />
+                        </div>
+                        <div className="col-span-2 text-right">
+                          <span className="text-sm font-semibold text-gray-900">${fmt(item.amount)}</span>
+                        </div>
+                        <div className="col-span-1 flex justify-center">
+                          <button type="button" onClick={() => setCustomLineItems(prev => prev.filter(i => i.id !== item.id))}
+                            className="text-gray-300 hover:text-red-500 text-lg leading-none">×</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-end pt-2 border-t border-gray-100">
+                    <p className="text-sm font-bold text-gray-700">Line Items Total: ${fmt(customItemsTotal)}</p>
+                  </div>
+                </div>
+              )}
+              {customLineItems.length === 0 && (
+                <div className="px-4 py-3 text-xs text-gray-400 text-center">Equipment rental, fuel surcharges, materials, etc.</div>
+              )}
+            </div>
+          )}
+
           <div className="flex gap-3">
             <button type="button" onClick={() => setView('list')} className="flex-1 rounded-lg border border-gray-200 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
               Cancel
@@ -2126,6 +2353,8 @@ export default function InvoicesPage() {
 
     const inv = detailInvoice
     const lineItems = inv.invoice_line_items ?? []
+    const ticketLineItems = lineItems.filter(i => !i.line_type || i.line_type === 'ticket')
+    const customDetailItems = lineItems.filter(i => i.line_type && i.line_type !== 'ticket')
     const total = lineItems.reduce((s, i) => s + i.amount, 0)
     const isPaystub = inv.invoice_type === 'paystub' || inv.invoice_type === 'contractor'
     const firstDeduction = lineItems.find(i => (i.deduction_pct ?? 0) > 0)?.deduction_pct ?? 0
@@ -2320,6 +2549,7 @@ export default function InvoicesPage() {
                       ['Invoice No',      inv.invoice_number],
                       ['Invoice Date',    invoiceDate],
                       ['Due Date',        fmtDate(inv.due_date)],
+                      ...(inv.payment_terms ? [['Terms', formatPaymentTerms(inv.payment_terms)] as [string, string]] : []),
                       ...(inv.date_paid ? [['Paid On', fmtDate(inv.date_paid)] as [string, string]] : []),
                       ...(inv.payment_method ? [[
                         'Payment Method',
@@ -2353,7 +2583,7 @@ export default function InvoicesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {lineItems.map((item, idx) => (
+                  {ticketLineItems.map((item, idx) => (
                     <tr key={item.id} className={`border-b border-gray-100 ${idx % 2 === 1 ? 'bg-gray-50/60' : 'bg-white'}`}>
                       <td style={{paddingLeft:16,paddingRight:8,paddingTop:12,paddingBottom:12}} className="text-gray-600 whitespace-nowrap text-xs">{fmtDate(item.line_date)}</td>
                       <td style={{paddingLeft:8,paddingRight:8,paddingTop:12,paddingBottom:12}} className="font-semibold text-gray-800">{item.truck_number || <span className="text-gray-300 font-normal">—</span>}</td>
@@ -2397,6 +2627,33 @@ export default function InvoicesPage() {
                 </div>
               </div>
             </div>
+
+            {/* ── ADDITIONAL CHARGES (custom line items) ── */}
+            {customDetailItems.length > 0 && (
+              <div className="px-6 md:px-8 py-5 border-t border-gray-100">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-[0.15em] mb-3">Additional Charges</p>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="text-left text-xs font-semibold text-gray-500 pb-2">Description</th>
+                      <th className="text-right text-xs font-semibold text-gray-500 pb-2 w-16">Qty</th>
+                      <th className="text-right text-xs font-semibold text-gray-500 pb-2 w-24">Unit Price</th>
+                      <th className="text-right text-xs font-semibold text-gray-500 pb-2 w-24">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customDetailItems.map(item => (
+                      <tr key={item.id} className="border-b border-gray-50">
+                        <td className="py-2 pr-4 text-gray-700">{item.description || '—'}</td>
+                        <td className="py-2 pr-4 text-gray-600 text-right">{item.quantity ?? 1}</td>
+                        <td className="py-2 pr-4 text-gray-600 text-right">${fmt(item.unit_price ?? 0)}</td>
+                        <td className="py-2 font-semibold text-gray-900 text-right">${fmt(item.amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
             {/* ── NOTES ── */}
             {inv.notes && (
