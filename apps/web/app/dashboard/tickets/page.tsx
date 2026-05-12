@@ -217,7 +217,7 @@ export default function TicketsPage() {
   const [userId, setUserId]       = useState('')
   const [contractors, setContractors] = useState<Contractor[]>([])
   const [clientCompanies, setClientCompanies] = useState<{ id: string; name: string }[]>([])
-  const [driversList, setDriversList] = useState<{ id: string; name: string }[]>([])
+  const [driversList, setDriversList] = useState<{ id: string; name: string; primary_truck: string | null }[]>([])
   const [driverMode, setDriverMode] = useState<'dropdown' | 'manual'>('dropdown')
   const [activeJobs, setActiveJobs] = useState<{ id: string; job_name: string; rate: number | null; rate_type: string | null; material: string | null }[]>([])
   const [jobMode, setJobMode] = useState<'dropdown' | 'manual'>('dropdown')
@@ -310,7 +310,7 @@ export default function TicketsPage() {
       supabase.from('contractors').select('*').eq('company_id', orgId).eq('status', 'active').order('name'),
       supabase.from('client_companies').select('id, name').eq('company_id', orgId).order('name'),
       supabase.from('loads').select('id', { count: 'exact', head: true }).eq('company_id', orgId),
-      supabase.from('drivers').select('id, name').eq('company_id', orgId).eq('status', 'active').order('name'),
+      supabase.from('drivers').select('id, name, primary_truck').eq('company_id', orgId).eq('status', 'active').order('name'),
       supabase.from('companies').select('plan, is_internal').eq('id', orgId).maybeSingle(),
     ])
     if (loadsRes.error) toast.error('Failed to load tickets: ' + loadsRes.error.message)
@@ -1301,11 +1301,12 @@ export default function TicketsPage() {
                           setDriverMode('manual')
                           setForm(p => ({ ...p, driver_name: '', truck_number: '' }))
                         } else {
-                          // Auto-fill truck from most recent load for this driver
+                          // Auto-fill truck: most recent load first, then primary_truck fallback
                           const recentTruck = [...loads]
                             .filter(l => l.driver_name === name && l.truck_number)
-                            .sort((a, b) => b.date.localeCompare(a.date))[0]?.truck_number ?? ''
-                          setForm(p => ({ ...p, driver_name: name, truck_number: recentTruck }))
+                            .sort((a, b) => b.date.localeCompare(a.date))[0]?.truck_number
+                          const primaryTruck = driversList.find(d => d.name === name)?.primary_truck ?? ''
+                          setForm(p => ({ ...p, driver_name: name, truck_number: recentTruck ?? primaryTruck }))
                         }
                       }}
                       className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white"

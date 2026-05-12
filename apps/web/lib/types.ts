@@ -64,6 +64,25 @@ export type Driver = {
   status: "active" | "inactive"
   auth_user_id?: string | null
   created_at: string
+  pay_type: string | null
+  pay_rate_value: number | null
+  pay_percent: number | null
+  worker_type: string | null
+  cdl_number: string | null
+  cdl_class: string | null
+  cdl_state: string | null
+  cdl_expiry: string | null
+  medical_card_expiry: string | null
+  mvr_last_reviewed: string | null
+  drug_test_date: string | null
+  drug_test_result: string | null
+  emergency_contact_name: string | null
+  emergency_contact_phone: string | null
+  emergency_contact_relation: string | null
+  primary_truck: string | null
+  last_active_at: string | null
+  ytd_paid: number | null
+  lifetime_paid: number | null
 }
 
 export type DriverNotification = {
@@ -381,6 +400,9 @@ export type DriverPayment = {
   period_end: string | null
   notes: string | null
   created_at: string
+  ticket_count: number | null
+  ticket_ids: string[] | null
+  payment_reference: string | null
 }
 
 export interface DriverScore {

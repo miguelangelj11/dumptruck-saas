@@ -152,7 +152,7 @@ export default async function DashboardPage() {
   // ── Batch 2 (needs companyId) ─────────────────────────────────────────────
   const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString()
 
-  const [dispTodayRes, dispDetailRes, missingRes, noResponseRes, missingRevenueRes, workingRes, pendingRDRes, coiRes] = companyId
+  const [dispTodayRes, dispDetailRes, missingRes, noResponseRes, missingRevenueRes, workingRes, pendingRDRes, coiRes, driverComplianceRes] = companyId
     ? await Promise.all([
         supabase.from('dispatches').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('dispatch_date', todayStr).neq('status', 'completed').neq('status', 'cancelled'),
         supabase.from('dispatches').select('id, driver_name, status, start_time, jobs(job_name)').eq('company_id', companyId).eq('dispatch_date', todayStr).neq('status', 'cancelled').order('created_at', { ascending: false }).limit(6),
@@ -166,6 +166,8 @@ export default async function DashboardPage() {
         supabase.from('received_dispatches').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('status', 'pending'),
         // Expiring/expired COIs
         supabase.from('contractors').select('name, coi_expiry').eq('company_id', companyId).eq('status', 'active').not('coi_expiry', 'is', null),
+        // Driver compliance (CDL + medical)
+        supabase.from('drivers').select('name, cdl_expiry, medical_card_expiry').eq('company_id', companyId).eq('status', 'active'),
       ])
     : [
         { count: 0, error: null },
@@ -175,6 +177,7 @@ export default async function DashboardPage() {
         { data: [],  error: null },
         { count: 0, error: null },
         { count: 0, error: null },
+        { data: [],  error: null },
         { data: [],  error: null },
       ] as const
 
@@ -186,6 +189,12 @@ export default async function DashboardPage() {
   const expiringCOIs = ((coiRes as { data: CoiRow[] | null }).data ?? []).filter((c: CoiRow) =>
     Math.floor((new Date(c.coi_expiry).getTime() - Date.now()) / 86400000) <= 30
   )
+  type DriverComplianceRow = { name: string; cdl_expiry: string | null; medical_card_expiry: string | null }
+  const complianceAlerts = ((driverComplianceRes as { data: DriverComplianceRow[] | null }).data ?? []).filter((d: DriverComplianceRow) => {
+    const cdlDays = d.cdl_expiry ? Math.floor((new Date(d.cdl_expiry).getTime() - Date.now()) / 86400000) : null
+    const medDays = d.medical_card_expiry ? Math.floor((new Date(d.medical_card_expiry).getTime() - Date.now()) / 86400000) : null
+    return (cdlDays !== null && cdlDays <= 30) || (medDays !== null && medDays <= 30)
+  })
   const workingDrivers       = workingRes.count    ?? 0
   const pendingReceivedCount = (pendingRDRes as { count?: number | null }).count ?? 0
 
@@ -449,6 +458,12 @@ export default async function DashboardPage() {
               <Link href="/dashboard/contractors" className="flex items-center justify-between gap-2 group border-t pt-2.5">
                 <span className="text-sm text-red-700 font-medium group-hover:underline">🛡️ {expiringCOIs.length} subcontractor COI{expiringCOIs.length > 1 ? 's' : ''} expiring soon</span>
                 <span className="text-xs font-bold text-red-600 shrink-0">Review →</span>
+              </Link>
+            )}
+            {complianceAlerts.length > 0 && (
+              <Link href="/dashboard/drivers" className="flex items-center justify-between gap-2 group border-t pt-2.5">
+                <span className="text-sm text-amber-700 font-medium group-hover:underline">⚠️ {complianceAlerts.length} driver{complianceAlerts.length > 1 ? 's' : ''} with expiring CDL or medical</span>
+                <span className="text-xs font-bold text-amber-600 shrink-0">Review →</span>
               </Link>
             )}
           </div>

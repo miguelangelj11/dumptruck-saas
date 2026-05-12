@@ -2,16 +2,41 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Loader2, Users, Phone, Mail, X, Pencil, Trash2, DollarSign, CreditCard, Calendar, AlertCircle, Lock, FileText, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Loader2, Users, Phone, Mail, X, Pencil, Trash2, DollarSign, CreditCard, Calendar, AlertCircle, Lock, FileText, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Driver, Load, DriverPayment } from '@/lib/types'
 import { getCompanyId } from '@/lib/get-company-id'
+import { calculateDriverOwed } from '@/lib/drivers/calculate-owed'
 
 function fmtDate(s: string | null | undefined): string {
   if (!s) return '—'
   const ymd = s.slice(0, 10)
   const [y, m, d] = ymd.split('-')
   return `${parseInt(m!)}/${parseInt(d!)}/${y}`
+}
+
+function ExpiryBadge({ date }: { date: string }) {
+  const days = Math.floor((new Date(date).getTime() - Date.now()) / 86400000)
+  if (days < 0) return <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-bold whitespace-nowrap">❌ Expired</span>
+  if (days <= 30) return <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-bold whitespace-nowrap">⚠️ {days}d left</span>
+  return <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-bold whitespace-nowrap">✅ Valid</span>
+}
+
+function getDriverComplianceStatus(driver: Driver): { status: 'compliant'|'expiring'|'expired'|'unknown'; issues: string[]; warnings: string[] } {
+  const cdlDays = driver.cdl_expiry ? Math.floor((new Date(driver.cdl_expiry).getTime() - Date.now()) / 86400000) : null
+  const medDays = driver.medical_card_expiry ? Math.floor((new Date(driver.medical_card_expiry).getTime() - Date.now()) / 86400000) : null
+  const issues: string[] = []
+  const warnings: string[] = []
+  if (cdlDays !== null && cdlDays < 0) issues.push('CDL expired')
+  if (medDays !== null && medDays < 0) issues.push('Medical card expired')
+  if (driver.drug_test_result === 'failed') issues.push('Failed drug test')
+  if (cdlDays !== null && cdlDays >= 0 && cdlDays <= 30) warnings.push('CDL expiring')
+  if (medDays !== null && medDays >= 0 && medDays <= 30) warnings.push('Medical expiring')
+  if (!driver.cdl_number) warnings.push('No CDL on file')
+  if (issues.length > 0) return { status: 'expired', issues, warnings }
+  if (warnings.length > 0) return { status: 'expiring', issues, warnings }
+  if (driver.cdl_number && driver.medical_card_expiry) return { status: 'compliant', issues: [], warnings: [] }
+  return { status: 'unknown', issues: [], warnings: [] }
 }
 
 type LoadWithTickets = Load & { load_tickets?: { ticket_number: string | null }[] }
@@ -51,6 +76,26 @@ export default function DriversPage() {
   const [nearLimitDismissed, setNearLimitDismissed] = useState(false)
   const [atLimitCardDismissed, setAtLimitCardDismissed] = useState(false)
   const [upgradeLoading, setUpgradeLoading]     = useState(false)
+
+  // Pay rate form state
+  const [payType, setPayType]           = useState('per_load')
+  const [payRateValue, setPayRateValue] = useState('')
+  const [workerType, setWorkerType]     = useState('employee')
+
+  // Unpaid tab
+  const [selectedUnpaid, setSelectedUnpaid] = useState<string[]>([])
+  const [unpaidSortBy, setUnpaidSortBy]     = useState('oldest')
+  const [payDriverModal, setPayDriverModal] = useState(false)
+  const [payModalDriver, setPayModalDriver] = useState<Driver | null>(null)
+  const [payModalMethod, setPayModalMethod] = useState('check')
+  const [payModalRef, setPayModalRef]       = useState('')
+  const [payModalDate, setPayModalDate]     = useState(new Date().toISOString().slice(0, 10))
+  const [payModalNotes, setPayModalNotes]   = useState('')
+  const [savingDriverPay, setSavingDriverPay] = useState(false)
+
+  // Driver detail panel tab
+  const [detailTab, setDetailTab] = useState<'overview' | 'compliance'>('overview')
+
   const supabase = createClient()
 
   async function startUpgradeCheckout(plan: string) {
@@ -105,21 +150,53 @@ export default function DriversPage() {
   const atLimit           = driverLimit !== Infinity && activeDriverCount >= driverLimit
 
   // ── Derived: unpaid work per driver ─────────────────────────────────────
-  const unpaidLoads = loads.filter(l => l.status === 'approved' && !l.driver_paid)
+  const unpaidLoads = loads.filter(l => !l.driver_paid && ['pending', 'approved', 'invoiced'].includes(l.status ?? ''))
 
   const driverUnpaidSummary = drivers.map(d => {
     const dLoads = unpaidLoads.filter(l => l.driver_name === d.name)
-    const total  = dLoads.reduce((s, l) => s + (l.rate ?? 0), 0)
+    const total  = calculateDriverOwed(dLoads, d)
     const sorted = [...dLoads].sort((a, b) => a.date < b.date ? -1 : 1)
     return { driver: d, loads: dLoads, total, oldestDate: sorted[0]?.date ?? null }
   }).filter(x => x.total > 0).sort((a, b) => b.total - a.total)
 
+  // ── Unpaid tab: per-ticket list across all drivers ────────────────────────
+  const sortedUnpaidLoads = [...unpaidLoads].sort((a, b) => {
+    if (unpaidSortBy === 'newest') return b.date.localeCompare(a.date)
+    if (unpaidSortBy === 'amount') {
+      const dA = drivers.find(d => d.name === a.driver_name)
+      const dB = drivers.find(d => d.name === b.driver_name)
+      return calculateDriverOwed([b], dB ?? {}) - calculateDriverOwed([a], dA ?? {})
+    }
+    if (unpaidSortBy === 'driver') return (a.driver_name ?? '').localeCompare(b.driver_name ?? '')
+    return a.date.localeCompare(b.date) // oldest first
+  })
+  const selectedUnpaidTotal = loads
+    .filter(l => selectedUnpaid.includes(l.id))
+    .reduce((s, l) => {
+      const d = drivers.find(dr => dr.name === l.driver_name)
+      return s + calculateDriverOwed([l], d ?? {})
+    }, 0)
+
+  // ── Pay liability summary ─────────────────────────────────────────────────
+  const totalOwed = driverUnpaidSummary.reduce((s, u) => s + u.total, 0)
+  const driversWithOwedCount = driverUnpaidSummary.length
+
   // ── Driver form ──────────────────────────────────────────────────────────
-  function openAdd() { setEditingDriver(null); setForm(EMPTY_DRIVER); setShowForm(true) }
+  function openAdd() {
+    setEditingDriver(null)
+    setForm(EMPTY_DRIVER)
+    setPayType('per_load')
+    setPayRateValue('')
+    setWorkerType('employee')
+    setShowForm(true)
+  }
   function openEdit(d: Driver, e: React.MouseEvent) {
     e.stopPropagation()
     setEditingDriver(d)
     setForm({ name: d.name, email: d.email ?? '', phone: d.phone ?? '', status: d.status })
+    setPayType(d.pay_type ?? 'per_load')
+    setPayRateValue(d.pay_rate_value ? String(d.pay_rate_value) : '')
+    setWorkerType(d.worker_type ?? 'employee')
     setShowForm(true)
   }
 
@@ -128,11 +205,17 @@ export default function DriversPage() {
     setSaving(true)
     const companyId = await getCompanyId()
     if (!companyId) { toast.error('Company not found'); setSaving(false); return }
+    const payFields = {
+      pay_type: payType,
+      pay_rate_value: parseFloat(payRateValue) || null,
+      worker_type: workerType,
+    }
     if (editingDriver) {
-      const { error } = await supabase.from('drivers').update({ name: form.name, email: form.email || null, phone: form.phone || null, status: form.status }).eq('id', editingDriver.id)
+      const { error } = await supabase.from('drivers').update({ name: form.name, email: form.email || null, phone: form.phone || null, status: form.status, ...payFields }).eq('id', editingDriver.id)
       if (error) { toast.error(error.message); setSaving(false); return }
       toast.success('Driver updated')
-      if (selectedDriver?.id === editingDriver.id) setSelectedDriver(p => p ? { ...p, name: form.name, email: form.email || null, phone: form.phone || null, status: form.status as Driver['status'] } : null)
+      if (selectedDriver?.id === editingDriver.id) setSelectedDriver(p => p ? { ...p, name: form.name, email: form.email || null, phone: form.phone || null, status: form.status as Driver['status'], ...payFields } : null)
+      setDrivers(prev => prev.map(x => x.id === editingDriver.id ? { ...x, name: form.name, email: form.email || null, phone: form.phone || null, status: form.status as Driver['status'], ...payFields } : x))
     } else {
       const res  = await fetch('/api/drivers', {
         method:  'POST',
@@ -227,20 +310,75 @@ export default function DriversPage() {
     fetchData()
   }
 
+  async function updateDriver(updates: Partial<Driver>) {
+    if (!selectedDriver) return
+    const { error } = await supabase.from('drivers').update(updates).eq('id', selectedDriver.id)
+    if (error) { toast.error(error.message); return }
+    setSelectedDriver(p => p ? { ...p, ...updates } : p)
+    setDrivers(prev => prev.map(d => d.id === selectedDriver.id ? { ...d, ...updates } : d))
+  }
+
+  async function handleBatchPay() {
+    if (!payModalDriver || selectedUnpaid.length === 0) return
+    setSavingDriverPay(true)
+    const companyId = await getCompanyId()
+    if (!companyId) { setSavingDriverPay(false); return }
+
+    const selectedTickets = loads.filter(l => selectedUnpaid.includes(l.id))
+    const total = selectedTickets.reduce((s, t) => s + calculateDriverOwed([t], payModalDriver), 0)
+
+    const { data: payment, error } = await supabase.from('driver_payments').insert({
+      company_id: companyId,
+      driver_id: payModalDriver.id,
+      driver_name: payModalDriver.name,
+      amount: total,
+      ticket_count: selectedTickets.length,
+      ticket_ids: selectedUnpaid,
+      payment_method: payModalMethod,
+      payment_reference: payModalRef || null,
+      check_number: payModalMethod === 'Check' ? payModalRef || null : null,
+      payment_date: payModalDate,
+      notes: payModalNotes || null,
+    }).select('id').maybeSingle()
+
+    if (error) { toast.error(error.message); setSavingDriverPay(false); return }
+
+    await supabase.from('loads').update({
+      driver_paid: true,
+      driver_paid_at: new Date(payModalDate).toISOString(),
+      driver_pay_amount: total / selectedTickets.length,
+      driver_payment_id: (payment as Record<string, unknown>)?.id as string | null ?? null,
+    }).in('id', selectedUnpaid)
+
+    await supabase.from('drivers').update({
+      ytd_paid: (payModalDriver.ytd_paid ?? 0) + total,
+      lifetime_paid: (payModalDriver.lifetime_paid ?? 0) + total,
+      last_active_at: payModalDate,
+    }).eq('id', payModalDriver.id)
+
+    toast.success(`✅ $${total.toFixed(2)} payment recorded for ${payModalDriver.name}`)
+    setPayDriverModal(false)
+    setSelectedUnpaid([])
+    setPayModalRef('')
+    setPayModalNotes('')
+    setSavingDriverPay(false)
+    fetchData()
+  }
+
   // ── Stats helpers ─────────────────────────────────────────────────────────
-  function getDriverStats(name: string) {
-    const dl = loads.filter(l => l.driver_name === name)
+  function getDriverStats(driver: Driver) {
+    const dl = loads.filter(l => l.driver_name === driver.name)
     const revenue = dl
       .filter(l => ['approved', 'invoiced', 'paid'].includes(l.status))
       .reduce((s, l) => s + ((l as { total_pay?: number | null }).total_pay ?? l.rate ?? 0), 0)
-    const owed = dl.filter(l => l.status === 'approved' && !l.driver_paid).reduce((s, l) => s + (l.rate ?? 0), 0)
+    const owed = calculateDriverOwed(dl, driver)
     return { loads: dl.length, revenue, owed }
   }
 
   // Detail panel data
   const driverLoads          = selectedDriver ? loads.filter(l => l.driver_name === selectedDriver.name) : []
-  const driverUnpaidLoads    = driverLoads.filter(l => l.status === 'approved' && !l.driver_paid)
-  const driverAmountOwed     = driverUnpaidLoads.reduce((s, l) => s + (l.rate ?? 0), 0)
+  const driverUnpaidLoads    = driverLoads.filter(l => !l.driver_paid && ['pending', 'approved', 'invoiced'].includes(l.status ?? ''))
+  const driverAmountOwed     = selectedDriver ? calculateDriverOwed(driverUnpaidLoads, selectedDriver) : 0
   const driverPaymentHistory = selectedDriver ? driverPayments.filter(p => p.driver_name === selectedDriver.name) : []
 
   const shownDrivers = activeTab === 'unpaid'
@@ -292,6 +430,17 @@ export default function DriversPage() {
         </div>
       )}
 
+      {/* Pay liability banner */}
+      {totalOwed > 0 && (
+        <div className="mb-5 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center justify-between gap-3">
+          <div>
+            <p className="font-bold text-red-800">💰 Driver Pay Outstanding</p>
+            <p className="text-sm text-red-600 mt-0.5">${totalOwed.toLocaleString(undefined, { minimumFractionDigits: 2 })} owed across {driversWithOwedCount} driver{driversWithOwedCount !== 1 ? 's' : ''}</p>
+          </div>
+          <button onClick={() => setActiveTab('unpaid')} className="shrink-0 px-4 py-2 bg-red-600 text-white font-bold rounded-xl text-sm hover:bg-red-700">Review Unpaid →</button>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex gap-1 mb-5 bg-gray-100 rounded-lg p-1 w-fit">
         {(['all', 'unpaid'] as const).map(tab => (
@@ -310,48 +459,66 @@ export default function DriversPage() {
         <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-[var(--brand-primary)]" /></div>
       ) : activeTab === 'unpaid' ? (
         // ── Unpaid Tab ──────────────────────────────────────────────────────
-        driverUnpaidSummary.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-xl border border-gray-100">
-            <DollarSign className="h-12 w-12 text-gray-200 mx-auto mb-4" />
-            <p className="text-sm font-medium text-gray-400">No unpaid driver work</p>
-            <p className="text-xs text-gray-400 mt-1">All approved tickets are settled</p>
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-gray-500">{unpaidLoads.length} unpaid ticket{unpaidLoads.length !== 1 ? 's' : ''} across all drivers</p>
+            <select value={unpaidSortBy} onChange={e => setUnpaidSortBy(e.target.value)} className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none">
+              <option value="oldest">Oldest First</option>
+              <option value="newest">Newest First</option>
+              <option value="amount">Highest Amount</option>
+              <option value="driver">By Driver</option>
+            </select>
           </div>
-        ) : (
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <div>
-                <h2 className="font-semibold text-sm text-gray-900">Drivers with Unpaid Work</h2>
-                <p className="text-xs text-gray-400 mt-0.5">Approved tickets awaiting payment</p>
+          {sortedUnpaidLoads.length === 0 ? (
+            <div className="text-center py-16 bg-white rounded-xl border border-gray-100">
+              <span className="text-5xl block mb-3">✅</span>
+              <p className="text-sm font-medium text-gray-400">All drivers are paid up</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {sortedUnpaidLoads.map(ticket => {
+                const driver = drivers.find(d => d.name === ticket.driver_name)
+                const payOwed = driver ? calculateDriverOwed([ticket], driver) : 0
+                return (
+                  <div key={ticket.id} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl hover:shadow-sm transition-shadow">
+                    <div className="flex items-center gap-4">
+                      <input type="checkbox" checked={selectedUnpaid.includes(ticket.id)} onChange={e => setSelectedUnpaid(prev => e.target.checked ? [...prev, ticket.id] : prev.filter(id => id !== ticket.id))} className="w-4 h-4 rounded" />
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">{ticket.driver_name}</p>
+                        <p className="text-xs text-gray-500">{ticket.job_name} · {fmtDate(ticket.date)}</p>
+                        <p className="text-xs text-gray-400">Ticket revenue: ${((ticket as {total_pay?: number|null}).total_pay ?? ticket.rate ?? 0).toLocaleString()}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      {payOwed > 0 ? (
+                        <>
+                          <p className="font-black text-red-600">${payOwed.toFixed(2)} owed</p>
+                          <p className="text-xs text-gray-400 mt-0.5">{driver?.pay_type?.replace(/_/g, ' ')} rate</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="font-medium text-gray-400">—</p>
+                          <p className="text-xs text-gray-300 italic">No rate set</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          {/* Floating bulk pay toolbar */}
+          {selectedUnpaid.length > 0 && (() => {
+            const firstTicketDriver = drivers.find(d => d.name === loads.find(l => l.id === selectedUnpaid[0])?.driver_name)
+            return (
+              <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 px-6 py-4 bg-gray-900 text-white rounded-2xl shadow-2xl">
+                <p className="font-semibold text-sm">{selectedUnpaid.length} ticket{selectedUnpaid.length !== 1 ? 's' : ''} · ${selectedUnpaidTotal.toFixed(2)}</p>
+                <button onClick={() => { setPayModalDriver(firstTicketDriver ?? null); setPayDriverModal(true) }} className="px-4 py-2 bg-green-500 hover:bg-green-400 text-white font-bold rounded-xl text-sm">💵 Pay Selected</button>
+                <button onClick={() => setSelectedUnpaid([])} className="text-gray-400 hover:text-white">✕</button>
               </div>
-              <span className="text-sm font-bold text-orange-600">
-                ${driverUnpaidSummary.reduce((s, u) => s + u.total, 0).toLocaleString()} total owed
-              </span>
-            </div>
-            <div className="divide-y divide-gray-50">
-              {driverUnpaidSummary.map(({ driver: d, loads: dLoads, total, oldestDate }) => (
-                <div key={d.id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50/50 transition-colors">
-                  <div className="h-10 w-10 rounded-full bg-[var(--brand-dark)] flex items-center justify-center text-white font-bold text-sm shrink-0">
-                    {d.name.slice(0, 2).toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900">{d.name}</p>
-                    <p className="text-xs text-gray-400">{dLoads.length} ticket{dLoads.length !== 1 ? 's' : ''}{oldestDate ? ` · since ${new Date(oldestDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''}</p>
-                  </div>
-                  <div className="text-right mr-4">
-                    <p className="text-lg font-bold text-orange-600">${total.toLocaleString()}</p>
-                    <p className="text-xs text-gray-400">owed</p>
-                  </div>
-                  <button
-                    onClick={() => openPayModal(d, total)}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors shrink-0"
-                  >
-                    <CreditCard className="h-3.5 w-3.5" /> Record Payment
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )
+            )
+          })()}
+        </div>
       ) : (
         // ── All Drivers Tab ─────────────────────────────────────────────────
         drivers.length === 0 ? (
@@ -363,13 +530,19 @@ export default function DriversPage() {
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {drivers.map(d => {
-              const stats = getDriverStats(d.name)
+              const stats = getDriverStats(d)
+              const { status: compStatus, issues, warnings } = getDriverComplianceStatus(d)
+              const compDotColor = compStatus === 'compliant' ? 'bg-green-500' : compStatus === 'expiring' ? 'bg-amber-500' : compStatus === 'expired' ? 'bg-red-500' : 'bg-gray-300'
+              const dLoadsForCard = loads.filter(l => l.driver_name === d.name)
+              const lastWorked = dLoadsForCard.sort((a, b) => b.date.localeCompare(a.date))[0]?.date ?? null
+              const daysSinceWork = lastWorked ? Math.floor((Date.now() - new Date(lastWorked + 'T00:00:00').getTime()) / 86400000) : null
               return (
-                <div key={d.id} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md transition-all cursor-pointer group" onClick={() => setSelectedDriver(d)}>
+                <div key={d.id} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md transition-all cursor-pointer group" onClick={() => { setSelectedDriver(d); setDetailTab('overview') }}>
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-[var(--brand-dark)] flex items-center justify-center text-white font-bold text-sm shrink-0">
+                      <div className="relative h-10 w-10 rounded-full bg-[var(--brand-dark)] flex items-center justify-center text-white font-bold text-sm shrink-0">
                         {d.name.slice(0, 2).toUpperCase()}
+                        <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${compDotColor}`} title={compStatus} />
                       </div>
                       <div>
                         <p className="font-semibold text-gray-900">{d.name}</p>
@@ -392,18 +565,34 @@ export default function DriversPage() {
                     </div>
                     <div className={`rounded-lg p-2.5 ${stats.owed > 0 ? 'bg-orange-50' : 'bg-gray-50'}`}>
                       <p className="text-gray-400 text-xs mb-0.5">Owed</p>
-                      <p className={`font-bold text-xs ${stats.owed > 0 ? 'text-orange-600' : 'text-gray-400'}`}>{stats.owed > 0 ? `$${stats.owed.toLocaleString()}` : '—'}</p>
+                      <p className={`font-bold text-xs ${stats.owed > 0 ? 'text-orange-600' : 'text-gray-400'}`}>{stats.owed > 0 ? `$${stats.owed.toFixed(2)}` : d.pay_rate_value ? '—' : <span className="text-gray-300 text-[10px]">Set rate</span>}</p>
                     </div>
                   </div>
                   {d.phone && <div className="flex items-center gap-2 mt-3 text-xs text-gray-400"><Phone className="h-3 w-3" /> {d.phone}</div>}
                   {d.email && <div className="flex items-center gap-2 mt-1 text-xs text-gray-400"><Mail className="h-3 w-3" /> {d.email}</div>}
+                  {/* Last active */}
+                  <div className="mt-2 text-xs">
+                    {lastWorked ? (
+                      <span className={daysSinceWork! > 60 ? 'text-gray-300' : daysSinceWork! > 30 ? 'text-gray-400' : 'text-green-600'}>
+                        Last worked: {fmtDate(lastWorked)}{daysSinceWork! > 60 ? ' — consider marking inactive' : ''}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300 italic">No tickets yet</span>
+                    )}
+                  </div>
+                  {/* Compliance issues tooltip */}
+                  {(issues.length > 0 || warnings.length > 0) && (
+                    <div className={`mt-2 px-2 py-1 rounded-lg text-xs font-medium ${issues.length > 0 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {issues.length > 0 ? `❌ ${issues[0]}` : `⚠️ ${warnings[0]}`}
+                    </div>
+                  )}
                   <div className="flex gap-2 mt-4">
                     <button onClick={e => { e.stopPropagation(); toggleStatus(d) }} className="flex-1 text-xs py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)] transition-colors">
                       {d.status === 'active' ? 'Mark Inactive' : 'Mark Active'}
                     </button>
                     {stats.owed > 0 && (
                       <button onClick={e => { e.stopPropagation(); openPayModal(d, stats.owed) }} className="flex-1 text-xs py-1.5 rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-50 transition-colors font-medium">
-                        Pay ${stats.owed.toLocaleString()}
+                        Pay ${stats.owed.toFixed(2)}
                       </button>
                     )}
                   </div>
@@ -525,6 +714,46 @@ export default function DriversPage() {
                     </select>
                   </div>
                 )}
+                {/* Pay Rate */}
+                <div className="border-t border-gray-100 pt-4 mt-2">
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Pay Rate</h3>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Pay Type</label>
+                      <select value={payType} onChange={e => setPayType(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]">
+                        <option value="per_load">Per Load</option>
+                        <option value="per_hour">Per Hour</option>
+                        <option value="per_ton">Per Ton</option>
+                        <option value="percent_revenue">% of Revenue</option>
+                        <option value="day_rate">Day Rate</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        {payType === 'percent_revenue' ? 'Percent (%)' : 'Rate ($)'}
+                      </label>
+                      <input
+                        type="number" min="0" step="0.01"
+                        value={payRateValue}
+                        onChange={e => setPayRateValue(e.target.value)}
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
+                        placeholder={payType === 'percent_revenue' ? '30' : '0.00'}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Worker Type</label>
+                    <div className="flex gap-2">
+                      {(['employee', 'contractor'] as const).map(t => (
+                        <button key={t} type="button" onClick={() => setWorkerType(t)}
+                          className={`flex-1 py-2 rounded-lg text-xs font-semibold border transition-colors ${workerType === t ? 'bg-[var(--brand-primary)] text-white border-[var(--brand-primary)]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}>
+                          {t === 'employee' ? 'W-4 Employee' : 'W-9 Contractor'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex gap-3 pt-2">
                   <button type="button" onClick={() => { setShowForm(false); setEditingDriver(null); setForm(EMPTY_DRIVER) }} className="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
                   <button type="submit" disabled={saving} className="flex-1 rounded-lg bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] disabled:opacity-50 flex items-center justify-center gap-2">
@@ -605,6 +834,55 @@ export default function DriversPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Batch Pay Modal */}
+      {payDriverModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="px-5 pt-5 pb-4 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold text-gray-900">Pay Selected Tickets</h2>
+                <p className="text-sm text-gray-500 mt-0.5">{selectedUnpaid.length} ticket{selectedUnpaid.length !== 1 ? 's' : ''} · ${selectedUnpaidTotal.toFixed(2)}</p>
+              </div>
+              <button onClick={() => setPayDriverModal(false)} className="h-7 w-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              {payModalDriver && (
+                <div className="rounded-xl bg-blue-50 border border-blue-100 px-4 py-3 text-sm text-blue-800">
+                  Paying <strong>{payModalDriver.name}</strong> for {selectedUnpaid.length} ticket{selectedUnpaid.length !== 1 ? 's' : ''}
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Payment Method</label>
+                  <select value={payModalMethod} onChange={e => setPayModalMethod(e.target.value)} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]">
+                    {['check', 'cash', 'zelle', 'ach', 'direct_deposit'].map(m => <option key={m} value={m}>{m.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Payment Date</label>
+                  <input type="date" value={payModalDate} onChange={e => setPayModalDate(e.target.value)} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">{payModalMethod === 'check' ? 'Check Number' : 'Reference / Memo'}</label>
+                <input value={payModalRef} onChange={e => setPayModalRef(e.target.value)} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder={payModalMethod === 'check' ? '1234' : 'Optional reference'} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
+                <input value={payModalNotes} onChange={e => setPayModalNotes(e.target.value)} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="Optional note" />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button onClick={() => setPayDriverModal(false)} className="flex-1 h-10 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                <button onClick={handleBatchPay} disabled={savingDriverPay} className="flex-1 h-10 rounded-xl bg-green-600 text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-green-700 disabled:opacity-60">
+                  {savingDriverPay && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {savingDriverPay ? 'Saving…' : `Pay $${selectedUnpaidTotal.toFixed(2)}`}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -740,7 +1018,143 @@ export default function DriversPage() {
                 <button onClick={() => setSelectedDriver(null)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
               </div>
             </div>
+            {/* Panel tabs */}
+            <div className="px-6 pt-4 pb-0 border-b border-gray-100 flex gap-1">
+              {(['overview', 'compliance'] as const).map(tab => (
+                <button key={tab} onClick={() => setDetailTab(tab)}
+                  className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors capitalize ${detailTab === tab ? 'border-[var(--brand-primary)] text-[var(--brand-primary)]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                  {tab === 'compliance' ? (
+                    <span className="flex items-center gap-1.5">
+                      <ShieldCheck className="h-3.5 w-3.5" /> Compliance
+                      {(() => { const s = getDriverComplianceStatus(selectedDriver); return s.status === 'expired' ? <span className="h-2 w-2 rounded-full bg-red-500" /> : s.status === 'expiring' ? <span className="h-2 w-2 rounded-full bg-amber-500" /> : null })()}
+                    </span>
+                  ) : 'Overview'}
+                </button>
+              ))}
+            </div>
+
             <div className="p-6">
+              {detailTab === 'compliance' ? (
+                <div className="space-y-5">
+                  {/* CDL */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">CDL</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">CDL Number</label>
+                        <input defaultValue={selectedDriver.cdl_number ?? ''} onBlur={e => updateDriver({ cdl_number: e.target.value || null })} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="—" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Class</label>
+                        <select defaultValue={selectedDriver.cdl_class ?? ''} onBlur={e => updateDriver({ cdl_class: e.target.value || null })} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]">
+                          <option value="">—</option>
+                          <option value="A">Class A</option>
+                          <option value="B">Class B</option>
+                          <option value="C">Class C</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">State</label>
+                        <input defaultValue={selectedDriver.cdl_state ?? ''} onBlur={e => updateDriver({ cdl_state: e.target.value || null })} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="TX" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Expiry</label>
+                        <input type="date" defaultValue={selectedDriver.cdl_expiry ?? ''} onBlur={e => updateDriver({ cdl_expiry: e.target.value || null })} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
+                      </div>
+                    </div>
+                    {selectedDriver.cdl_expiry && <div className="mt-2"><ExpiryBadge date={selectedDriver.cdl_expiry} /></div>}
+                  </div>
+
+                  {/* Medical Card */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Medical Card</h4>
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">Expiry Date</label>
+                      <input type="date" defaultValue={selectedDriver.medical_card_expiry ?? ''} onBlur={e => updateDriver({ medical_card_expiry: e.target.value || null })} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
+                    </div>
+                    {selectedDriver.medical_card_expiry && <div className="mt-2"><ExpiryBadge date={selectedDriver.medical_card_expiry} /></div>}
+                  </div>
+
+                  {/* Drug Test */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Drug Test</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Date</label>
+                        <input type="date" defaultValue={selectedDriver.drug_test_date ?? ''} onBlur={e => updateDriver({ drug_test_date: e.target.value || null })} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Result</label>
+                        <select defaultValue={selectedDriver.drug_test_result ?? ''} onBlur={e => updateDriver({ drug_test_result: e.target.value || null })} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]">
+                          <option value="">—</option>
+                          <option value="passed">Passed</option>
+                          <option value="failed">Failed</option>
+                          <option value="pending">Pending</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* MVR */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">MVR Review</h4>
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">Last Reviewed</label>
+                      <input type="date" defaultValue={selectedDriver.mvr_last_reviewed ?? ''} onBlur={e => updateDriver({ mvr_last_reviewed: e.target.value || null })} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
+                    </div>
+                  </div>
+
+                  {/* Emergency Contact */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Emergency Contact</h4>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Name</label>
+                        <input defaultValue={selectedDriver.emergency_contact_name ?? ''} onBlur={e => updateDriver({ emergency_contact_name: e.target.value || null })} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="—" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs text-gray-400 mb-1">Phone</label>
+                          <input defaultValue={selectedDriver.emergency_contact_phone ?? ''} onBlur={e => updateDriver({ emergency_contact_phone: e.target.value || null })} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="(555) 000-0000" />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-400 mb-1">Relation</label>
+                          <input defaultValue={selectedDriver.emergency_contact_relation ?? ''} onBlur={e => updateDriver({ emergency_contact_relation: e.target.value || null })} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="Spouse" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Primary Truck & Pay Summary */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Assignment & Pay</h4>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Primary Truck #</label>
+                        <input defaultValue={selectedDriver.primary_truck ?? ''} onBlur={e => updateDriver({ primary_truck: e.target.value || null })} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="Truck 01" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-gray-50 rounded-xl p-3">
+                          <p className="text-xs text-gray-400 mb-1">YTD Paid</p>
+                          <p className="font-bold text-gray-900">${(selectedDriver.ytd_paid ?? 0).toLocaleString()}</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-xl p-3">
+                          <p className="text-xs text-gray-400 mb-1">Lifetime Paid</p>
+                          <p className="font-bold text-gray-900">${(selectedDriver.lifetime_paid ?? 0).toLocaleString()}</p>
+                        </div>
+                      </div>
+                      {selectedDriver.pay_type && (
+                        <div className="bg-blue-50 rounded-xl p-3 text-sm">
+                          <span className="text-blue-600 font-medium capitalize">{selectedDriver.pay_type.replace(/_/g, ' ')}</span>
+                          {selectedDriver.pay_rate_value != null && <span className="text-blue-400 ml-2">@ ${selectedDriver.pay_rate_value}{selectedDriver.pay_type === 'percent_revenue' ? '%' : ''}</span>}
+                          {selectedDriver.worker_type && <span className="ml-2 text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">{selectedDriver.worker_type === 'employee' ? 'W-4' : 'W-9'}</span>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+              <>
               {(selectedDriver.phone || selectedDriver.email) && (
                 <div className="mb-5 space-y-1.5">
                   {selectedDriver.phone && <div className="flex items-center gap-2 text-sm text-gray-600"><Phone className="h-4 w-4 text-gray-400" /> {selectedDriver.phone}</div>}
@@ -838,6 +1252,8 @@ export default function DriversPage() {
                     </div>
                   ))}
                 </div>
+              )}
+              </>
               )}
             </div>
           </div>
