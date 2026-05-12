@@ -1034,7 +1034,6 @@ export default function TicketsPage() {
                   {(['Photo', 'Date', 'Job / Company'] as const).map(h => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
-                  <th className="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Quality</th>
                   <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Load Type</th>
                   <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Driver</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Truck</th>
@@ -1084,24 +1083,6 @@ export default function TicketsPage() {
                         {!!lr.is_duplicate && <span className="inline-flex text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full font-medium">⚠️ Duplicate</span>}
                         {!!lr.anomaly_flag && <span className="inline-flex text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-medium cursor-help" title={String(lr.anomaly_reason ?? '')}>🚨 Anomaly</span>}
                       </td>
-                      {/* Step 4 — Quality badge */}
-                      {(() => {
-                        const { status, missing } = computeCompletenessScore(lr)
-                        const badge = COMPLETENESS_BADGE[status]
-                        return (
-                          <td className="px-3 py-3">
-                            <div className="relative group">
-                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium cursor-help ${badge.color}`}>{badge.icon}</span>
-                              {missing.length > 0 && (
-                                <div className="absolute left-0 top-6 z-20 hidden group-hover:block bg-gray-900 text-white text-xs rounded-lg p-2 w-48 shadow-xl">
-                                  <p className="font-semibold mb-1">Missing:</p>
-                                  {missing.map(f => <p key={f} className="text-gray-300">• {f}</p>)}
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                        )
-                      })()}
                       <td className="hidden sm:table-cell px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{l.load_type || '—'}</td>
                       <td className="hidden sm:table-cell px-4 py-3 text-gray-600 whitespace-nowrap">{l.driver_name}</td>
                       <td className="px-4 py-3 text-gray-500 font-mono text-xs">{l.truck_number || '—'}</td>
