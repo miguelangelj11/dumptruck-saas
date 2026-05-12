@@ -533,10 +533,10 @@ export default function DocumentsPage() {
         </div>
       </div>
 
-      <div className="flex gap-6">
+      <div className="flex flex-col md:flex-row gap-4 md:gap-6">
 
         {/* ── Folders Sidebar ───────────────────────────────────────────── */}
-        <aside className="w-52 shrink-0">
+        <aside className="w-full md:w-52 md:shrink-0">
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
               <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Folders</span>

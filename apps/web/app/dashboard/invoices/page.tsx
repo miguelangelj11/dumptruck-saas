@@ -1538,7 +1538,8 @@ export default function InvoicesPage() {
                 <p className="text-xs font-bold text-gray-600 uppercase tracking-wide">AR Aging Summary</p>
                 <p className="text-sm font-bold text-gray-900">${fmt(totalAR)} total outstanding</p>
               </div>
-              <div className="grid grid-cols-5 gap-2">
+              <div className="overflow-x-auto -mx-1">
+                <div className="grid grid-cols-5 gap-2 min-w-[340px] px-1">
                 {([
                   { label: 'Current',    data: arAging.current,    color: 'text-green-600',  bg: 'bg-green-50' },
                   { label: '1–30 Days',  data: arAging.days30,     color: 'text-blue-600',   bg: 'bg-blue-50' },
@@ -1546,12 +1547,13 @@ export default function InvoicesPage() {
                   { label: '61–90 Days', data: arAging.days90,     color: 'text-orange-600', bg: 'bg-orange-50' },
                   { label: '90+ Days',   data: arAging.days90plus, color: 'text-red-600',    bg: 'bg-red-50' },
                 ] as const).map(bucket => (
-                  <div key={bucket.label} className={`p-3 rounded-xl text-center ${bucket.bg}`}>
-                    <p className={`text-base font-black ${bucket.color}`}>${fmt(bucket.data.amount)}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{bucket.label}</p>
+                  <div key={bucket.label} className={`p-2.5 rounded-xl text-center ${bucket.bg}`}>
+                    <p className={`text-sm font-black ${bucket.color}`}>${fmt(bucket.data.amount)}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 leading-tight">{bucket.label}</p>
                     {bucket.data.count > 0 && <p className="text-xs text-gray-400">{bucket.data.count} inv</p>}
                   </div>
                 ))}
+                </div>
               </div>
             </div>
           )}

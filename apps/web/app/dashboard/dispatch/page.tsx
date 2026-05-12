@@ -1413,7 +1413,7 @@ export default function DispatchPage() {
                     return (
                       <div key={job.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
                         <div className="p-4">
-                          <div className="flex items-start gap-3">
+                          <div className="flex items-start gap-2">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <h3 className="font-semibold text-gray-900 text-base leading-tight">{job.job_name}</h3>
@@ -1428,19 +1428,6 @@ export default function DispatchPage() {
                               </div>
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                onClick={e => openDispatchFromJob(job, e)}
-                                className="flex items-center gap-1.5 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-                              >
-                                <Send className="h-3 w-3" /> Dispatch
-                              </button>
-                              <button
-                                onClick={e => openBulkDispatch(job, e)}
-                                title="Dispatch multiple drivers to this job"
-                                className="flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors"
-                              >
-                                <Users className="h-3 w-3" /> Multi
-                              </button>
                               <button
                                 onClick={() => shareJob(job)}
                                 disabled={sharingJobId === job.id}
@@ -1467,6 +1454,22 @@ export default function DispatchPage() {
                                 {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                               </button>
                             </div>
+                          </div>
+                          {/* Dispatch + Multi — own row so they don't squeeze job info */}
+                          <div className="flex gap-2 mt-2.5">
+                            <button
+                              onClick={e => openDispatchFromJob(job, e)}
+                              className="flex items-center gap-1.5 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                            >
+                              <Send className="h-3 w-3" /> Dispatch
+                            </button>
+                            <button
+                              onClick={e => openBulkDispatch(job, e)}
+                              title="Dispatch multiple drivers to this job"
+                              className="flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors"
+                            >
+                              <Users className="h-3 w-3" /> Multi
+                            </button>
                           </div>
 
                           {/* Stats */}
