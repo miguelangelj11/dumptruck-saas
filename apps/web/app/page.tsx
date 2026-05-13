@@ -397,9 +397,30 @@ function FinalCTA() {
 
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 
+// ─── Founding Member banner ───────────────────────────────────────────────────
+function FoundingMemberBanner() {
+  return (
+    <div style={{
+      background: '#F5B731',
+      color: '#1a1a1a',
+      textAlign: 'center',
+      padding: '10px 16px',
+      fontSize: '14px',
+      fontWeight: 700,
+      lineHeight: 1.4,
+    }}>
+      🚛 Founding Member offer: First 25 fleets get $99/mo locked in for life.{' '}
+      <Link href="/pricing#founding-member" style={{ color: '#1a1a1a', textDecoration: 'underline', fontWeight: 900 }}>
+        Claim your spot →
+      </Link>
+    </div>
+  )
+}
+
 export default function HomePage() {
   return (
     <div className="bg-[#1a1a1a]">
+      <FoundingMemberBanner />
       <Nav />
       <Hero />
       <PainPoints />

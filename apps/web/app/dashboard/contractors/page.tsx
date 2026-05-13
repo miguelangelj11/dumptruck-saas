@@ -1306,7 +1306,7 @@ export default function ContractorsPage() {
           Manage subcontractors, track their tickets, and pay them with one click.
         </p>
         <p className="text-sm text-gray-500 mb-6">
-          This feature requires the Fleet plan ($150/mo)
+          This feature requires the Fleet plan ($200/mo)
         </p>
         <a
           href="/dashboard/settings?tab=billing"

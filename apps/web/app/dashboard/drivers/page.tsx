@@ -624,7 +624,7 @@ export default function DriversPage() {
                 <>
                   <p className="text-xs font-semibold text-[#4ade80] uppercase tracking-wide mb-1">Growing your fleet?</p>
                   <p className="text-base font-bold text-white mb-1">Upgrade to Fleet Plan — up to 15 drivers</p>
-                  <p className="text-sm text-white/60">Unlimited tickets · Full dispatch board · 3 team logins · Email invoices · <strong className="text-white">$150/mo</strong></p>
+                  <p className="text-sm text-white/60">Unlimited tickets · Full dispatch board · 3 team logins · Email invoices · <strong className="text-white">$200/mo</strong></p>
                 </>
               ) : (
                 <>

@@ -6,6 +6,10 @@ import { useRouter } from 'next/navigation'
 import Nav from '@/components/landing/nav'
 import Footer from '@/components/landing/footer'
 
+// ─── Founding Member config — update this number as spots fill ───────────────
+const FOUNDING_MEMBER_SPOTS_REMAINING = 23
+const FOUNDING_MEMBER_TOTAL = 25
+
 // ─── Plan data ───────────────────────────────────────────────────────────────
 
 const plans = [
@@ -63,7 +67,7 @@ const plans = [
     key: 'fleet',
     name: 'Fleet',
     tagline: 'Run your entire operation from one dashboard.',
-    monthlyPrice: '$150',
+    monthlyPrice: '$200',
     popular: true,
     isEnterprise: false,
     ctaLabel: 'Start Free 7-Day Trial',
@@ -210,6 +214,10 @@ export default function PricingPage() {
   const router = useRouter()
 
   async function handleStartTrial(planKey: string) {
+    if (planKey === 'founding_member') {
+      router.push('/founding-member')
+      return
+    }
     setCheckoutLoading(planKey)
     try {
       const res = await fetch('/api/stripe/checkout', {
@@ -266,6 +274,163 @@ export default function PricingPage() {
         <p style={{ fontSize: '17px', color: 'rgba(255,255,255,0.45)', marginBottom: '56px', lineHeight: 1.6 }}>
           Solo, Pro, and Fleet plans include a free 7-day trial. No credit card required.
         </p>
+      </div>
+
+      {/* ── Founding Member offer ─────────────────────────────────────────────── */}
+      <div id="founding-member" style={{ maxWidth: '900px', margin: '0 auto 64px', padding: '0 20px' }}>
+        <div style={{
+          position: 'relative',
+          background: 'linear-gradient(135deg, #1a0a00 0%, #0f1923 60%, #1a1000 100%)',
+          border: '2px solid #F5B731',
+          borderRadius: '24px',
+          padding: '48px 40px',
+          boxShadow: '0 0 80px rgba(245,183,49,0.18), inset 0 1px 0 rgba(255,255,255,0.05)',
+          overflow: 'hidden',
+        }}>
+          {/* Glow effect */}
+          <div style={{ position: 'absolute', top: '-60px', right: '-60px', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(245,183,49,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+          {/* Top badges row */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '28px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{
+                background: '#F5B731',
+                color: '#1a1a1a',
+                fontSize: '11px',
+                fontWeight: 900,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                padding: '5px 14px',
+                borderRadius: '100px',
+              }}>
+                🔥 LIMITED — {FOUNDING_MEMBER_TOTAL} SPOTS
+              </span>
+            </div>
+            {/* Spots remaining counter */}
+            <div style={{
+              background: 'rgba(245,183,49,0.12)',
+              border: '1px solid rgba(245,183,49,0.35)',
+              borderRadius: '100px',
+              padding: '6px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4ade80', display: 'inline-block', boxShadow: '0 0 6px #4ade80' }} />
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>
+                {FOUNDING_MEMBER_SPOTS_REMAINING} of {FOUNDING_MEMBER_TOTAL} spots remaining
+              </span>
+            </div>
+          </div>
+
+          {/* Heading */}
+          <h2 style={{ fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 900, color: '#fff', marginBottom: '8px', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+            Founding Member
+          </h2>
+
+          {/* Price row */}
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '14px', marginBottom: '10px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '60px', fontWeight: 900, color: '#F5B731', lineHeight: 1 }}>$99</span>
+            <span style={{ fontSize: '18px', color: 'rgba(255,255,255,0.4)' }}>/month</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '20px', color: 'rgba(255,255,255,0.3)', textDecoration: 'line-through' }}>$200</span>
+              <span style={{ fontSize: '12px', fontWeight: 700, background: 'rgba(74,222,128,0.15)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.3)', borderRadius: '6px', padding: '2px 8px' }}>
+                SAVE $101/MO
+              </span>
+            </div>
+          </div>
+
+          <p style={{ fontSize: '16px', color: 'rgba(255,255,255,0.6)', marginBottom: '36px', lineHeight: 1.5 }}>
+            <strong style={{ color: '#F5B731' }}>Locked in for life.</strong> Fleet price returns to $200/mo after {FOUNDING_MEMBER_TOTAL} spots fill.
+          </p>
+
+          {/* Two-column content */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '32px', marginBottom: '36px' }}>
+            {/* Features column */}
+            <div>
+              <p style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '14px' }}>
+                Everything in Fleet — nothing held back
+              </p>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {[
+                  'Unlimited trucks & drivers',
+                  'Full dispatch board',
+                  'Subcontractor management',
+                  'Missing ticket detection',
+                  'Follow-up automation engine',
+                  'Auto invoice intelligence',
+                  'AI dispatch recommendations',
+                  'Driver portal',
+                  'Client portal',
+                  'Team access (unlimited users)',
+                  'Profit tracking',
+                  'AI document reader (50/mo)',
+                  'Overdue invoice automation',
+                  'Weekly performance reports',
+                  '7-day free trial',
+                ].map((f) => (
+                  <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: '9px' }}>
+                    <span style={{ color: '#F5B731', fontWeight: 700, flexShrink: 0, marginTop: '1px' }}>✓</span>
+                    <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)' }}>{f}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* What we ask column */}
+            <div>
+              <p style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '14px' }}>
+                What we ask in return
+              </p>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+                {[
+                  { icon: '📅', text: 'Use the software for 30 days' },
+                  { icon: '✍️', text: 'Send a short written review (2–4 sentences)' },
+                  { icon: '📸', text: 'Send a photo we can post next to your quote' },
+                  { icon: '🏢', text: 'Let us use your company name and logo on our site' },
+                ].map((item) => (
+                  <li key={item.text} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                    <span style={{ fontSize: '16px', flexShrink: 0 }}>{item.icon}</span>
+                    <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>{item.text}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '16px' }}>
+                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.6, margin: 0 }}>
+                  This is our way of building social proof with real operators. You get the software at cost, we get proof it works.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* CTA */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+            <button
+              onClick={() => handleStartTrial('founding_member')}
+              disabled={checkoutLoading === 'founding_member'}
+              style={{
+                background: '#F5B731',
+                color: '#1a1a1a',
+                fontSize: '17px',
+                fontWeight: 900,
+                padding: '16px 48px',
+                borderRadius: '12px',
+                border: 'none',
+                cursor: checkoutLoading === 'founding_member' ? 'default' : 'pointer',
+                opacity: checkoutLoading === 'founding_member' ? 0.7 : 1,
+                transition: 'all 0.15s',
+                letterSpacing: '-0.01em',
+                boxShadow: '0 4px 24px rgba(245,183,49,0.35)',
+              }}
+            >
+              {checkoutLoading === 'founding_member' ? 'Loading…' : 'Claim Your Founding Member Spot →'}
+            </button>
+            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.35)', margin: 0 }}>
+              30-day money-back guarantee &nbsp;·&nbsp; Cancel anytime
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* ── Pricing cards ─────────────────────────────────────────────────────── */}

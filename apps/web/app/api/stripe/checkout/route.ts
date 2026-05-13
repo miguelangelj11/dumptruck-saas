@@ -3,16 +3,17 @@ import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
 
-type PlanKey = 'solo' | 'pro' | 'owner_operator' | 'owner' | 'fleet' | 'growth' | 'enterprise'
+type PlanKey = 'solo' | 'pro' | 'owner_operator' | 'owner' | 'fleet' | 'growth' | 'enterprise' | 'founding_member'
 
 const PRICE_IDS: Record<PlanKey, string | undefined | null> = {
-  solo:           process.env.STRIPE_SOLO_PRICE_ID,
-  pro:            process.env.STRIPE_OWNER_PRICE_ID,   // Owner Operator Pro reuses STRIPE_OWNER_PRICE_ID
-  owner_operator: process.env.STRIPE_OWNER_PRICE_ID,   // backward compat
-  owner:          process.env.STRIPE_OWNER_PRICE_ID,   // backward compat
-  fleet:          process.env.STRIPE_FLEET_PRICE_ID,
-  growth:         null,   // enterprise — no Stripe checkout
-  enterprise:     null,   // enterprise — no Stripe checkout
+  solo:            process.env.STRIPE_SOLO_PRICE_ID,
+  pro:             process.env.STRIPE_OWNER_PRICE_ID,   // Owner Operator Pro reuses STRIPE_OWNER_PRICE_ID
+  owner_operator:  process.env.STRIPE_OWNER_PRICE_ID,   // backward compat
+  owner:           process.env.STRIPE_OWNER_PRICE_ID,   // backward compat
+  fleet:           process.env.STRIPE_FLEET_PRICE_ID,
+  founding_member: process.env.STRIPE_FOUNDING_MEMBER_PRICE_ID, // $99/mo locked-in rate
+  growth:          null,   // enterprise — no Stripe checkout
+  enterprise:      null,   // enterprise — no Stripe checkout
 }
 
 function getAdmin() {
@@ -34,10 +35,17 @@ export async function POST(request: Request) {
   const skipTrial: boolean = body.skip_trial === true
   const guestEmail: string | undefined = body.guest_email || undefined
   const guestCompanyName: string | undefined = body.guest_company_name || undefined
+  const foundingMemberAgreed: boolean = body.founding_member_agreed === true
 
   if (plan === 'enterprise' || plan === 'growth') {
     return NextResponse.json({ error: 'Enterprise requires custom setup', redirect: '/enterprise' }, { status: 400 })
   }
+
+  // Founding members get fleet-level access; store agreement timestamp in metadata
+  const planForAccess = plan === 'founding_member' ? 'fleet' : plan
+  const foundingMemberMeta = plan === 'founding_member' && foundingMemberAgreed
+    ? { founding_member: 'true', founding_member_agreed_at: new Date().toISOString() }
+    : {}
 
   const priceId = PRICE_IDS[plan]
   if (!priceId) {
@@ -59,7 +67,7 @@ export async function POST(request: Request) {
   // ── Guest "pay first, create account after" flow ──────────────────────────
   if (!user) {
     try {
-      const metadata: Record<string, string> = { plan }
+      const metadata: Record<string, string> = { plan: planForAccess, ...foundingMemberMeta }
       if (guestEmail)       metadata.email        = guestEmail
       if (guestCompanyName) metadata.company_name = guestCompanyName
 
@@ -107,8 +115,8 @@ export async function POST(request: Request) {
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${siteUrl}/dashboard?checkout=success`,
     cancel_url:  `${siteUrl}/pricing`,
-    metadata:    { company_id: companyId, plan },
-    subscription_data: { metadata: { company_id: companyId, plan }, ...trialParams },
+    metadata:    { company_id: companyId, plan: planForAccess, ...foundingMemberMeta },
+    subscription_data: { metadata: { company_id: companyId, plan: planForAccess, ...foundingMemberMeta }, ...trialParams },
     payment_method_collection: paymentCollection,
     allow_promotion_codes: true,
   }

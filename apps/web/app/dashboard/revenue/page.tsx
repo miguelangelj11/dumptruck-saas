@@ -209,7 +209,7 @@ export default function RevenuePage() {
       if (data?.is_super_admin || data?.subscription_override) return
       const p = (data?.plan as string | null) ?? 'owner_operator'
       if (p === 'solo' || p === 'owner_operator') {
-        setPlanLocked({ plan: 'Fleet', price: 150 })
+        setPlanLocked({ plan: 'Fleet', price: 200 })
       }
     })
   }, [])

@@ -34,7 +34,7 @@ const tiers = [
     name: 'Fleet',
     badge: 'Most Popular',
     badgeStyle: 'green' as const,
-    price: '$150',
+    price: '$200',
     period: '/mo',
     description: 'For growing companies that need full control',
     trialBanner: { icon: '🎉', line1: '7-Day Free Trial', line2: 'No credit card required' },

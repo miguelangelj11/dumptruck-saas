@@ -22,7 +22,7 @@ const HEARD_FROM_OPTIONS = [
 const PLANS: { id: Plan; name: string; price: string; desc: string; color: string; badge?: string }[] = [
   { id: 'solo',  name: 'Owner Operator Solo', price: '$25/mo',  desc: '1 truck & 1 driver, basic tickets',   color: '#1a1a1a' },
   { id: 'pro',   name: 'Owner Operator Pro',  price: '$80/mo',  desc: 'Up to 5 trucks, dispatch & jobs',     color: '#1a1a1a' },
-  { id: 'fleet', name: 'Fleet',               price: '$150/mo', desc: 'Unlimited trucks & drivers',          color: '#F5B731', badge: 'Most Popular' },
+  { id: 'fleet', name: 'Fleet',               price: '$200/mo', desc: 'Unlimited trucks & drivers',          color: '#F5B731', badge: 'Most Popular' },
 ]
 
 export default function SignupPage() {
