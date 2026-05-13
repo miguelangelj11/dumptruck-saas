@@ -1042,6 +1042,19 @@ export default function InvoicesPage() {
   async function handleDeleteInvoice(inv: Invoice) {
     if (!confirm(`Are you sure you want to delete invoice ${inv.invoice_number}? This cannot be undone.`)) return
     await supabase.from('invoice_line_items').delete().eq('invoice_id', inv.id)
+
+    // Unlink tickets so they reappear in pickers after deletion
+    if (inv.invoice_type === 'paystub') {
+      await supabase.from('loads').update({ invoice_id: null, status: 'approved' }).eq('invoice_id', inv.id)
+      setAllLoads(prev => prev.map(l => l.invoice_id === inv.id ? { ...l, invoice_id: null, status: 'approved' } : l))
+    } else if (inv.invoice_type === 'contractor') {
+      await supabase.from('contractor_tickets').update({ invoice_id: null, status: 'pending', payment_status: null }).eq('invoice_id', inv.id)
+    } else if (inv.invoice_type === 'client') {
+      await supabase.from('loads').update({ client_invoice_id: null }).eq('client_invoice_id', inv.id)
+      await supabase.from('contractor_tickets').update({ client_invoice_id: null }).eq('client_invoice_id', inv.id)
+      setAllLoads(prev => prev.map(l => l.client_invoice_id === inv.id ? { ...l, client_invoice_id: null } : l))
+    }
+
     const { error } = await supabase.from('invoices').delete().eq('id', inv.id)
     if (error) { toast.error('Delete failed: ' + error.message); return }
     setInvoices(prev => prev.filter(i => i.id !== inv.id))
