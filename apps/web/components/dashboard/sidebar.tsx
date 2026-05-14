@@ -375,7 +375,8 @@ export default function Sidebar({ user, logoUrl, companyName: companyNameProp, p
     <>
       {/* Mobile hamburger */}
       <button
-        className="md:hidden fixed top-4 left-4 z-50 h-9 w-9 rounded-lg bg-[var(--hf-sidebar-bg)] flex items-center justify-center text-white shadow-lg"
+        className="md:hidden fixed left-4 z-50 h-9 w-9 rounded-lg bg-[var(--hf-sidebar-bg)] flex items-center justify-center text-white shadow-lg"
+        style={{ top: 'calc(env(safe-area-inset-top, 0px) + 10px)' }}
         onClick={() => setMobileOpen(!mobileOpen)}
         aria-label="Toggle sidebar"
       >

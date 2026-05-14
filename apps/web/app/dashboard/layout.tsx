@@ -218,7 +218,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
           navOrder={(co?.nav_order as string[] | null | undefined) ?? null}
           pendingReceivedCount={pendingReceivedCount}
         />
-        <main className="flex-1 overflow-y-auto pt-14 md:pt-0 flex flex-col">
+        <main className="flex-1 overflow-y-auto pt-0 flex flex-col">
+          {/* Mobile spacer — pushes content below the hamburger button, accounting for notch/Dynamic Island */}
+          <div className="md:hidden shrink-0" style={{ height: 'calc(env(safe-area-inset-top, 0px) + 56px)' }} />
           <Suspense fallback={null}>
             <CheckoutSuccessBanner />
           </Suspense>
