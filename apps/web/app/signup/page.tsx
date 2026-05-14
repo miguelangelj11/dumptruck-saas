@@ -40,6 +40,7 @@ export default function SignupPage() {
   const [paymentComplete, setPaymentComplete]   = useState(false)
   const [heardFrom, setHeardFrom]               = useState('')
   const [heardFromDetail, setHeardFromDetail]   = useState('')
+  const [isFoundingMember, setIsFoundingMember] = useState(false)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -50,6 +51,14 @@ export default function SignupPage() {
     else if (p === 'growth' || p === 'enterprise') { /* enterprise → redirect handled by link */ }
     if (params.get('subscribe') === 'true') setSubscribeMode(true)
     if (params.get('paid') === 'true') setPaymentComplete(true)
+    if (params.get('founding_member') === 'true') {
+      setIsFoundingMember(true)
+      setSelectedPlan('fleet')
+      const emailParam = params.get('email')
+      const companyParam = params.get('company')
+      if (emailParam) setEmail(emailParam)
+      if (companyParam) setCompanyName(companyParam)
+    }
     track('signup_started', { plan: p ?? undefined, source: params.get('utm_source') ?? undefined })
   }, [])
 
@@ -95,18 +104,20 @@ export default function SignupPage() {
       }
 
       const now = new Date().toISOString()
-      const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      const trialDays = isFoundingMember ? 30 : 7
+      const trialEndsAt = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000).toISOString()
       await supabase.from('companies').insert({
         id:                       user.id,
         name:                     companyName,
         owner_id:                 user.id,
-        plan:                     selectedPlan,
+        plan:                     isFoundingMember ? 'fleet' : selectedPlan,
         trial_started_at:         now,
         trial_ends_at:            trialEndsAt,
         subscription_status:      'trial',
         terms_accepted_at:        now,
         terms_version:            '2026-05-07',
         privacy_accepted_at:      now,
+        ...(isFoundingMember ? { founding_member: true, founding_member_agreement_at: now } : {}),
         ...(heardFrom ? { referral_source: heardFrom } : {}),
         ...(heardFromDetail ? { referral_source_detail: heardFromDetail } : {}),
       })
@@ -235,16 +246,21 @@ export default function SignupPage() {
           <Link href="/" style={{ display: 'inline-flex', textDecoration: 'none', marginBottom: '20px' }}>
             <Image src="/dtb-logo.png" alt="DumpTruckBoss" width={160} height={54} className="object-contain" />
           </Link>
+          {isFoundingMember && (
+            <div style={{ display: 'inline-block', background: '#F5B731', color: '#1a1a1a', fontSize: '11px', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '4px 12px', borderRadius: '100px', marginBottom: '12px' }}>
+              🔥 Founding Member
+            </div>
+          )}
           <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#fff', marginBottom: '6px' }}>
-            {subscribeMode ? 'Subscribe to DumpTruckBoss' : 'Start your free 7-day trial'}
+            {isFoundingMember ? 'Claim Your Founding Member Account' : subscribeMode ? 'Subscribe to DumpTruckBoss' : 'Start your free 7-day trial'}
           </h1>
           <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.45)' }}>
-            {subscribeMode ? 'Enter your info below and you\'ll be taken to checkout.' : 'No credit card required. Full access from day one.'}
+            {isFoundingMember ? 'First 30 days free. Then just $99/mo locked in for life.' : subscribeMode ? 'Enter your info below and you\'ll be taken to checkout.' : 'No credit card required. Full access from day one.'}
           </p>
         </div>
 
         {/* Plan selector */}
-        <div style={{ marginBottom: '24px' }}>
+        <div style={{ marginBottom: '24px', display: isFoundingMember ? 'none' : 'block' }}>
           <p style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: '16px' }}>Which plan are you signing up for?</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 items-stretch">
             {PLANS.map((plan) => {
@@ -378,39 +394,43 @@ export default function SignupPage() {
                 cursor: !selectedPlan ? 'not-allowed' : 'pointer', transition: 'all 0.15s',
                 opacity: (loading || buyLoading) ? 0.7 : 1,
               }}>
-                {loading ? 'Creating account…' : 'Start My Free 7-Day Trial'}
+                {loading ? 'Creating account…' : isFoundingMember ? 'Create My Founding Member Account →' : 'Start My Free 7-Day Trial'}
               </button>
 
-              <button
-                type="button"
-                onClick={handleBuyNow}
-                disabled={loading || buyLoading || !selectedPlan}
-                style={{
-                  width: '100%', padding: '14px', borderRadius: '10px',
-                  background: !selectedPlan ? '#f3f4f6' : '#1e3a2a',
-                  color: !selectedPlan ? '#9ca3af' : '#fff',
-                  fontSize: '15px', fontWeight: 700, border: 'none',
-                  cursor: (!selectedPlan || loading || buyLoading) ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.15s', opacity: (loading || buyLoading) ? 0.7 : 1,
-                }}
-              >
-                {buyLoading
-                  ? 'Redirecting to checkout…'
-                  : selectedPlan
-                  ? `Subscribe Now — ${PLANS.find(p => p.id === selectedPlan)?.price} →`
-                  : 'Subscribe Now →'}
-              </button>
+              {!isFoundingMember && (
+                <button
+                  type="button"
+                  onClick={handleBuyNow}
+                  disabled={loading || buyLoading || !selectedPlan}
+                  style={{
+                    width: '100%', padding: '14px', borderRadius: '10px',
+                    background: !selectedPlan ? '#f3f4f6' : '#1e3a2a',
+                    color: !selectedPlan ? '#9ca3af' : '#fff',
+                    fontSize: '15px', fontWeight: 700, border: 'none',
+                    cursor: (!selectedPlan || loading || buyLoading) ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.15s', opacity: (loading || buyLoading) ? 0.7 : 1,
+                  }}
+                >
+                  {buyLoading
+                    ? 'Redirecting to checkout…'
+                    : selectedPlan
+                    ? `Subscribe Now — ${PLANS.find(p => p.id === selectedPlan)?.price} →`
+                    : 'Subscribe Now →'}
+                </button>
+              )}
             </div>
           </form>
 
           {!subscribeMode && (
-            <div style={{ marginTop: '20px', padding: '14px 16px', background: '#f9fafb', borderRadius: '10px', border: '1px solid #e5e7eb' }}>
+            <div style={{ marginTop: '20px', padding: '14px 16px', background: isFoundingMember ? 'rgba(245,183,49,0.08)' : '#f9fafb', borderRadius: '10px', border: isFoundingMember ? '1px solid rgba(245,183,49,0.3)' : '1px solid #e5e7eb' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                <span>🔒</span>
+                <span>{isFoundingMember ? '🔥' : '🔒'}</span>
                 <span style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>No credit card required</span>
               </div>
               <p style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.5 }}>
-                Your 7-day free trial starts immediately. After 7 days you'll be asked to subscribe to continue using DumpTruckBoss.
+                {isFoundingMember
+                  ? 'Your 30-day free trial starts immediately. After 30 days you\'ll be billed $99/mo — your Founding Member rate locked in for life.'
+                  : 'Your 7-day free trial starts immediately. After 7 days you\'ll be asked to subscribe to continue using DumpTruckBoss.'}
               </p>
             </div>
           )}

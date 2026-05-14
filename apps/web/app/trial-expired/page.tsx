@@ -2,11 +2,38 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { FoundingMemberButton } from './FoundingMemberButton'
+
+function getAdmin() {
+  return createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  )
+}
 
 export default async function TrialExpiredPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  const admin = getAdmin()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('organization_id')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  let isFoundingMember = false
+  if (profile?.organization_id) {
+    const { data: company } = await admin
+      .from('companies')
+      .select('founding_member')
+      .eq('id', profile.organization_id)
+      .maybeSingle()
+    isFoundingMember = (company as { founding_member?: boolean } | null)?.founding_member === true
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#0f1923', backgroundImage: 'radial-gradient(#ffffff06 1px, transparent 1px)', backgroundSize: '24px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
@@ -15,17 +42,21 @@ export default async function TrialExpiredPage() {
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-            <Image src="/logo.png" alt="DumpTruckBoss" width={96} height={48}   />
+            <Image src="/logo.png" alt="DumpTruckBoss" width={96} height={48} />
             <span style={{ fontSize: '20px', fontWeight: 700, color: '#fff' }}>DumpTruckBoss</span>
           </Link>
         </div>
 
         {/* Card */}
         <div style={{ background: '#141f2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', padding: '40px', textAlign: 'center' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚛</div>
-          <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>Your 7-Day Free Trial Has Ended</h1>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>{isFoundingMember ? '🔥' : '🚛'}</div>
+          <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>
+            {isFoundingMember ? 'Your 30-Day Founding Member Trial Has Ended' : 'Your 7-Day Free Trial Has Ended'}
+          </h1>
           <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.6, marginBottom: '32px' }}>
-            Subscribe now to keep your data and continue running your business.
+            {isFoundingMember
+              ? 'Subscribe now at your locked-in Founding Member rate of $99/mo — fleet-level access for life.'
+              : 'Subscribe now to keep your data and continue running your business.'}
           </p>
 
           {/* What they had */}
@@ -47,60 +78,66 @@ export default async function TrialExpiredPage() {
             </div>
           </div>
 
-          {/* Subscribe buttons */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '24px' }}>
-            <Link
-              href="/signup?plan=owner_operator"
-              style={{
-                display: 'block',
-                padding: '14px',
-                borderRadius: '10px',
-                background: '#f59e0b',
-                color: '#0f1923',
-                fontSize: '13px',
-                fontWeight: 700,
-                textDecoration: 'none',
-                textAlign: 'center',
-              }}
-            >
-              Subscribe — $80/mo
-              <div style={{ fontSize: '11px', fontWeight: 400, marginTop: '2px', opacity: 0.7 }}>Owner Operator</div>
-            </Link>
-            <Link
-              href="/signup?plan=fleet"
-              style={{
-                display: 'block',
-                padding: '14px',
-                borderRadius: '10px',
-                background: '#2d7a4f',
-                color: '#fff',
-                fontSize: '13px',
-                fontWeight: 700,
-                textDecoration: 'none',
-                textAlign: 'center',
-              }}
-            >
-              Subscribe — $200/mo
-              <div style={{ fontSize: '11px', fontWeight: 400, marginTop: '2px', opacity: 0.7 }}>Fleet Plan</div>
-            </Link>
-            <Link
-              href="/signup?plan=growth"
-              style={{
-                display: 'block',
-                padding: '14px',
-                borderRadius: '10px',
-                background: '#6d28d9',
-                color: '#fff',
-                fontSize: '13px',
-                fontWeight: 700,
-                textDecoration: 'none',
-                textAlign: 'center',
-              }}
-            >
-              Subscribe — $350/mo
-              <div style={{ fontSize: '11px', fontWeight: 400, marginTop: '2px', opacity: 0.7 }}>Growth Plan</div>
-            </Link>
-          </div>
+          {/* Subscribe CTAs */}
+          {isFoundingMember ? (
+            <div style={{ marginBottom: '24px' }}>
+              <FoundingMemberButton />
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '24px' }}>
+              <Link
+                href="/signup?plan=owner_operator"
+                style={{
+                  display: 'block',
+                  padding: '14px',
+                  borderRadius: '10px',
+                  background: '#f59e0b',
+                  color: '#0f1923',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                  textAlign: 'center',
+                }}
+              >
+                Subscribe — $80/mo
+                <div style={{ fontSize: '11px', fontWeight: 400, marginTop: '2px', opacity: 0.7 }}>Owner Operator</div>
+              </Link>
+              <Link
+                href="/signup?plan=fleet"
+                style={{
+                  display: 'block',
+                  padding: '14px',
+                  borderRadius: '10px',
+                  background: '#2d7a4f',
+                  color: '#fff',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                  textAlign: 'center',
+                }}
+              >
+                Subscribe — $200/mo
+                <div style={{ fontSize: '11px', fontWeight: 400, marginTop: '2px', opacity: 0.7 }}>Fleet Plan</div>
+              </Link>
+              <Link
+                href="/signup?plan=growth"
+                style={{
+                  display: 'block',
+                  padding: '14px',
+                  borderRadius: '10px',
+                  background: '#6d28d9',
+                  color: '#fff',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                  textAlign: 'center',
+                }}
+              >
+                Subscribe — $350/mo
+                <div style={{ fontSize: '11px', fontWeight: 400, marginTop: '2px', opacity: 0.7 }}>Growth Plan</div>
+              </Link>
+            </div>
+          )}
 
           <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.35)' }}>
             Questions?{' '}

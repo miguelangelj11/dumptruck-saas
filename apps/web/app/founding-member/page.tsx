@@ -23,7 +23,7 @@ const FLEET_FEATURES = [
   'AI document reader (50/mo)',
   'Overdue invoice automation',
   'Weekly performance reports',
-  '7-day free trial',
+  '30-day free trial',
 ]
 
 export default function FoundingMemberPage() {
@@ -33,34 +33,14 @@ export default function FoundingMemberPage() {
   const [company, setCompany]     = useState('')
   const [error, setError]         = useState('')
 
-  async function handleClaim() {
+  function handleClaim() {
     if (!agreed) { setError('You must check the agreement box to continue.'); return }
     if (!email.trim()) { setError('Please enter your email address.'); return }
     setError('')
     setLoading(true)
-
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          plan: 'founding_member',
-          skip_trial: false,
-          guest_email: email.trim(),
-          guest_company_name: company.trim() || undefined,
-          founding_member_agreed: true,
-        }),
-      })
-      const data = await res.json() as { url?: string; error?: string; redirect?: string }
-      if (data.url) {
-        window.location.href = data.url
-        return
-      }
-      setError(data.error ?? 'Something went wrong. Please try again.')
-    } catch {
-      setError('Network error. Please try again.')
-    }
-    setLoading(false)
+    const params = new URLSearchParams({ founding_member: 'true', email: email.trim() })
+    if (company.trim()) params.set('company', company.trim())
+    window.location.href = `/signup?${params.toString()}`
   }
 
   const BG = '#0f1923'
@@ -189,7 +169,7 @@ export default function FoundingMemberPage() {
               boxShadow: agreed ? '0 4px 20px rgba(245,183,49,0.3)' : 'none',
             }}
           >
-            {loading ? 'Redirecting to checkout…' : 'Claim Your Founding Member Spot →'}
+            {loading ? 'Taking you to signup…' : 'Claim Your Founding Member Spot →'}
           </button>
           <p style={{ textAlign: 'center', fontSize: '12px', color: 'rgba(255,255,255,0.3)', marginTop: '10px' }}>
             30-day money-back guarantee &nbsp;·&nbsp; Cancel anytime
