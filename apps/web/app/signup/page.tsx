@@ -137,6 +137,7 @@ export default function SignupPage() {
         trial_started_at:         now,
         trial_ends_at:            trialEndsAt,
         subscription_status:      'trial',
+        onboarding_completed:     true,
         terms_accepted_at:        now,
         terms_version:            '2026-05-07',
         privacy_accepted_at:      now,
