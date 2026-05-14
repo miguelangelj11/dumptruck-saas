@@ -81,21 +81,44 @@ export default function SignupPage() {
     try {
       const supabase = createClient()
 
+      let user: import('@supabase/supabase-js').User | null = null
+
       const { data, error } = await supabase.auth.signUp({ email, password })
-      if (error) {
-        clearTimeout(timer)
-        if (/already registered|already exists/i.test(error.message)) {
+
+      if (error && /already registered|already exists/i.test(error.message)) {
+        // Auth user exists — check if it's a ghost account (no company yet)
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+        if (signInError || !signInData.user) {
+          // Wrong password or other sign-in issue — genuine duplicate
+          clearTimeout(timer)
           setAlreadyExists(true)
           setPassword('')
           setConfirmPassword('')
-        } else {
-          toast.error(error.message)
+          setLoading(false)
+          return
         }
+        const { data: existingCompany } = await supabase
+          .from('companies').select('id').eq('id', signInData.user.id).maybeSingle()
+        if (existingCompany) {
+          // Fully registered already — send them to login
+          clearTimeout(timer)
+          setAlreadyExists(true)
+          setPassword('')
+          setConfirmPassword('')
+          setLoading(false)
+          return
+        }
+        // Ghost account — auth exists but no company. Continue with onboarding.
+        user = signInData.user
+      } else if (error) {
+        clearTimeout(timer)
+        toast.error(error.message)
         setLoading(false)
         return
+      } else {
+        user = data.user
       }
 
-      const user = data.user
       if (!user) {
         clearTimeout(timer)
         toast.error('Failed to create account. Please try again.')
