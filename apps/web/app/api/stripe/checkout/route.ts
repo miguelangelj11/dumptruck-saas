@@ -43,7 +43,7 @@ export async function POST(request: Request) {
 
   // Founding members get fleet-level access; store agreement timestamp in metadata
   const planForAccess = plan === 'founding_member' ? 'fleet' : plan
-  const foundingMemberMeta = plan === 'founding_member' && foundingMemberAgreed
+  const foundingMemberMeta: Record<string, string> = plan === 'founding_member' && foundingMemberAgreed
     ? { founding_member: 'true', founding_member_agreed_at: new Date().toISOString() }
     : {}
 
