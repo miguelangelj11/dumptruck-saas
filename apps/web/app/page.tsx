@@ -9,6 +9,18 @@ import Footer from '@/components/landing/footer'
 function Hero() {
   return (
     <section className="relative bg-[#1a1a1a] sm:min-h-screen flex items-center overflow-hidden px-6 py-16 sm:py-24" style={{ paddingTop: 'calc(7rem + env(safe-area-inset-top, 0px))' }}>
+      {/* Hero background illustration */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: 'url(/hero-bg.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center right',
+          opacity: 0.18,
+        }}
+      />
+      {/* Gradient vignette so text stays readable */}
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 60% 80% at 20% 50%, #1a1a1a 30%, transparent 100%)' }} />
       <div
         className="absolute inset-0 opacity-[0.04]"
         style={{
