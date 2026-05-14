@@ -230,11 +230,6 @@ export default function OnboardingChecklist() {
     let channel: ReturnType<typeof supabase.channel> | null = null
 
     async function init() {
-      if (typeof window !== 'undefined' && localStorage.getItem(DISMISS_KEY)) {
-        setDismissed(true)
-        return
-      }
-
       const cid = await getCompanyId()
       if (!cid) return
       companyIdRef.current = cid
@@ -248,12 +243,16 @@ export default function OnboardingChecklist() {
 
       const coData = co as Record<string, unknown> | null
 
-      // Only the explicit dismiss flag (or localStorage) hides the checklist.
-      // onboarding_completed is for the initial signup wizard — separate concern.
-      if (coData?.onboarding_dismissed_at) {
+      // Determine dismissed state but always finish loading so the sidebar
+      // "Setup guide" button can re-open the checklist at any time.
+      const wasDismissed =
+        !!coData?.onboarding_dismissed_at ||
+        (typeof window !== 'undefined' && !!localStorage.getItem(DISMISS_KEY))
+
+      if (wasDismissed) {
         if (typeof window !== 'undefined') localStorage.setItem(DISMISS_KEY, '1')
+        dismissedRef.current = true
         setDismissed(true)
-        return
       }
 
       const companyPlan = (coData?.plan as string | null) ?? null
@@ -301,9 +300,10 @@ export default function OnboardingChecklist() {
     return () => { if (channel) supabase.removeChannel(channel) }
   }, [supabase, refreshValidations])
 
-  // ── Re-summon via window event (triggered by sidebar ? button) ─────────────
+  // ── Re-summon via window event (triggered by sidebar Setup guide button) ──────
   useEffect(() => {
     const handler = () => {
+      if (typeof window !== 'undefined') localStorage.removeItem(DISMISS_KEY)
       dismissedRef.current = false
       setDismissed(false)
       setMinimized(false)
