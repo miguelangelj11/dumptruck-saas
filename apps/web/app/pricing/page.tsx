@@ -213,34 +213,13 @@ export default function PricingPage() {
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
   const router = useRouter()
 
-  async function handleStartTrial(planKey: string) {
+  function handleStartTrial(planKey: string) {
     if (planKey === 'founding_member') {
       router.push('/founding-member')
       return
     }
+    // Always go to signup for the free trial — Stripe only enters AFTER the trial ends
     setCheckoutLoading(planKey)
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: planKey }),
-      })
-      const data = await res.json() as { url?: string; redirect?: string; error?: string }
-      if (data.redirect) {
-        router.push(data.redirect)
-        return
-      }
-      if (res.status === 401) {
-        router.push(`/signup?plan=${planKey}`)
-        return
-      }
-      if (data.url) {
-        window.location.href = data.url
-        return
-      }
-    } catch {
-      // fall through to signup
-    }
     router.push(`/signup?plan=${planKey}`)
   }
 

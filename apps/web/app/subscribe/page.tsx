@@ -64,7 +64,7 @@ export default function SubscribePage() {
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: planKey }),
+        body: JSON.stringify({ plan: planKey, skip_trial: true }),
       })
       const data = await res.json() as { url?: string }
       if (data.url) {
