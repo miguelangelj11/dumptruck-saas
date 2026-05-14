@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getCompanyId } from '@/lib/get-company-id'
 import {
@@ -68,6 +68,7 @@ function Confetti() {
 // ── Main component ──────────────────────────────────────────────────────────────
 export default function OnboardingChecklist() {
   const supabase = useRef(createClient()).current
+  const router = useRouter()
 
   const [ready,         setReady]         = useState(false)
   const [dismissed,     setDismissed]     = useState(false)
@@ -509,14 +510,17 @@ export default function OnboardingChecklist() {
             </div>
           )}
 
-          {/* CTA button */}
-          <Link
-            href={currentStep.href}
+          {/* CTA button — minimizes panel on mobile so the page is visible */}
+          <button
+            onClick={() => {
+              setMinimized(true)
+              router.push(currentStep.href)
+            }}
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-black transition-colors hover:opacity-90 mb-2"
             style={{ background: '#F5B731' }}
           >
             {currentStep.cta} <ArrowRight className="h-4 w-4" />
-          </Link>
+          </button>
 
           {/* Pro Tip toggle */}
           {currentStep.proTip && (
