@@ -66,7 +66,7 @@ export default function SignupPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!selectedPlan)               { toast.error('Please select a plan'); return }
+    if (!selectedPlan && !isFoundingMember) { toast.error('Please select a plan'); return }
     if (password !== confirmPassword) { toast.error('Passwords do not match'); return }
     if (!agreedToTerms)              { toast.error('You must agree to the Terms of Service'); return }
 
@@ -157,13 +157,14 @@ export default function SignupPage() {
         { user_id: user.id, company_id: user.id, document_type: 'privacy_policy',   document_version: '2026-05-07', accepted_at: now },
       ])
 
-      localStorage.setItem('dtb_selected_plan', selectedPlan)
+      const effectivePlan = isFoundingMember ? 'fleet' : selectedPlan
+      localStorage.setItem('dtb_selected_plan', effectivePlan ?? '')
       track('signup_completed', {
-        plan: selectedPlan,
+        plan: effectivePlan,
         heard_from: heardFrom || undefined,
         heard_from_detail: heardFromDetail || undefined,
       })
-      track('trial_started', { plan: selectedPlan })
+      track('trial_started', { plan: effectivePlan })
       clearTimeout(timer)
       router.push('/dashboard')
     } catch (err) {
@@ -409,13 +410,13 @@ export default function SignupPage() {
             </label>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <button type="submit" disabled={loading || buyLoading || !selectedPlan} style={{
+              <button type="submit" disabled={loading || buyLoading || (!selectedPlan && !isFoundingMember)} style={{
                 width: '100%', padding: '14px', borderRadius: '10px',
-                background: !selectedPlan ? '#d1d5db' : subscribeMode ? 'rgba(45,122,79,0.08)' : '#2d7a4f',
-                color: !selectedPlan ? '#9ca3af' : subscribeMode ? '#374151' : '#fff',
+                background: (!selectedPlan && !isFoundingMember) ? '#d1d5db' : subscribeMode ? 'rgba(45,122,79,0.08)' : '#2d7a4f',
+                color: (!selectedPlan && !isFoundingMember) ? '#9ca3af' : subscribeMode ? '#374151' : '#fff',
                 fontSize: '15px', fontWeight: 700,
                 border: subscribeMode ? '1px solid #e5e7eb' : 'none',
-                cursor: !selectedPlan ? 'not-allowed' : 'pointer', transition: 'all 0.15s',
+                cursor: (!selectedPlan && !isFoundingMember) ? 'not-allowed' : 'pointer', transition: 'all 0.15s',
                 opacity: (loading || buyLoading) ? 0.7 : 1,
               }}>
                 {loading ? 'Creating account…' : isFoundingMember ? 'Create My Founding Member Account →' : 'Start My Free 7-Day Trial'}
