@@ -224,22 +224,21 @@ function DemoVideo() {
           See It In Action
         </span>
         <h2 className="text-4xl md:text-5xl font-black text-gray-900 mb-4">
-          See how it works in <span className="text-[#F5B731]">3 minutes</span>
+          See how it works in <span className="text-[#F5B731]">one minute</span>
         </h2>
         <p className="text-xl text-gray-500 mb-12 max-w-2xl mx-auto">
           Watch a real walkthrough of a dispatch getting created, a ticket submitted,
           and an invoice sent — start to finish.
         </p>
 
-        <div className="relative bg-[#1a1a1a] rounded-2xl overflow-hidden shadow-2xl aspect-video max-w-3xl mx-auto border-2 border-[#F5B731]/30">
-          {/* Replace this div with <iframe src="YOUR_YOUTUBE_OR_LOOM_URL" className="w-full h-full" allowFullScreen /> when ready */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <div className="w-20 h-20 bg-[#F5B731] rounded-full flex items-center justify-center mb-4 cursor-pointer hover:scale-110 transition-transform shadow-2xl shadow-amber-900/50">
-              <span className="text-black text-3xl ml-1">▶</span>
-            </div>
-            <p className="text-white font-bold text-lg">Watch Demo</p>
-            <p className="text-gray-400 text-sm mt-1">3 minute walkthrough</p>
-          </div>
+        <div className="relative bg-[#1a1a1a] rounded-2xl overflow-hidden shadow-2xl max-w-3xl mx-auto border-2 border-[#F5B731]/30">
+          <video
+            src="/demo.mov"
+            controls
+            playsInline
+            className="w-full h-full block"
+            style={{ maxHeight: '520px' }}
+          />
         </div>
 
         <div className="grid grid-cols-3 gap-6 mt-12 max-w-2xl mx-auto">
