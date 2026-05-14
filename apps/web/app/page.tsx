@@ -8,7 +8,7 @@ import Footer from '@/components/landing/footer'
 
 function Hero() {
   return (
-    <section className="relative bg-[#1a1a1a] sm:min-h-screen flex items-center overflow-hidden px-6 py-16 pt-28 sm:py-24 sm:pt-32">
+    <section className="relative bg-[#1a1a1a] sm:min-h-screen flex items-center overflow-hidden px-6 py-16 sm:py-24" style={{ paddingTop: 'calc(7rem + env(safe-area-inset-top, 0px))' }}>
       <div
         className="absolute inset-0 opacity-[0.04]"
         style={{

@@ -2,7 +2,7 @@
   "name": "DumpTruckBoss",
   "short_name": "DTBoss",
   "description": "Run your dump truck business like a boss. Dispatch, tickets, invoices and more.",
-  "start_url": "/dashboard",
+  "start_url": "/login",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",

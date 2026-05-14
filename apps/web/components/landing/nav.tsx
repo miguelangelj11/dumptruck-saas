@@ -30,7 +30,11 @@ export default function Nav() {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 h-14 bg-[rgba(15,25,35,0.95)] backdrop-blur-[10px] border-b border-white/10">
+      <nav
+        className="fixed top-0 left-0 right-0 z-50 bg-[rgba(15,25,35,0.95)] backdrop-blur-[10px] border-b border-white/10"
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+      >
+      <div className="flex items-center justify-between px-4 sm:px-6 h-14">
 
         {/* Logo + wordmark */}
         <Link href="/" className="flex items-center gap-2.5 shrink-0 no-underline">
@@ -80,6 +84,7 @@ export default function Nav() {
         >
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
+      </div>
       </nav>
 
       {/* Mobile dropdown */}
@@ -92,7 +97,7 @@ export default function Nav() {
           />
 
           {/* Menu panel */}
-          <div className="fixed top-14 left-0 right-0 z-50 md:hidden bg-[#0f1923] border-b border-white/10 shadow-xl">
+          <div className="fixed left-0 right-0 z-50 md:hidden bg-[#0f1923] border-b border-white/10 shadow-xl" style={{ top: 'calc(3.5rem + env(safe-area-inset-top, 0px))' }}>
             <div className="flex flex-col px-4 py-4 gap-1">
               {NAV_LINKS.map(l => (
                 <a
