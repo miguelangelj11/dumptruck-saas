@@ -21,8 +21,10 @@ import {
   GripVertical,
   LucideIcon,
   HelpCircle,
+  BookOpen,
 } from 'lucide-react'
 import { OPEN_CHECKLIST_EVENT, CHECKLIST_PROGRESS_EVENT } from '@/components/onboarding-checklist'
+import { OPEN_HOWTO_EVENT } from '@/components/how-to-guide'
 import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
@@ -358,6 +360,13 @@ export default function Sidebar({ user, logoUrl, companyName: companyNameProp, p
           {checklistProgress?.complete && (
             <span className="ml-auto text-[10px] font-bold bg-green-500/20 text-green-300 px-1.5 py-0.5 rounded-full shrink-0">✓</span>
           )}
+        </button>
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent(OPEN_HOWTO_EVENT))}
+          className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-white/50 hover:text-white hover:bg-white/8 transition-all mb-0.5"
+        >
+          <BookOpen className="h-4 w-4 shrink-0" />
+          <span>How-to guide</span>
         </button>
         <button
           onClick={handleLogout}

@@ -320,11 +320,14 @@ export default function OnboardingChecklist() {
     }))
   }, [doneCount, totalSteps, ready])
 
-  // ── Auto-dismiss when all done ──────────────────────────────────────────────
+  // ── Auto-dismiss when all done, then open how-to guide ────────────────────
   useEffect(() => {
     if (!celebrating) return
-    const t = setTimeout(() => dismiss(), 4000)
-    return () => clearTimeout(t)
+    const t1 = setTimeout(() => dismiss(), 4000)
+    const t2 = setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('open-how-to-guide'))
+    }, 4500)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
   }, [celebrating, dismiss])
 
   // ── Guards ──────────────────────────────────────────────────────────────────

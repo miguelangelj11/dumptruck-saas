@@ -8,6 +8,7 @@ import Sidebar from '@/components/dashboard/sidebar'
 import ThemeInjector from '@/components/theme-injector'
 import ChatWidget from '@/components/chat-widget'
 import OnboardingChecklist from '@/components/onboarding-checklist'
+import HowToGuide from '@/components/how-to-guide'
 import CheckoutSuccessBanner from '@/components/checkout-success-banner'
 import { InstallPrompt } from '@/components/pwa/InstallPrompt'
 
@@ -233,6 +234,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </div>
       <ChatWidget plan={plan} />
       <OnboardingChecklist />
+      <HowToGuide />
       <InstallPrompt />
     </>
   )
