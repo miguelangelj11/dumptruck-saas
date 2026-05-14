@@ -36,10 +36,9 @@ export default function HowToGuide() {
 
   const currentStep: HowToStep | undefined = HOW_TO_STEPS[activeIdx]
 
-  // ── Load persisted state ───────────────────────────────────────────────────
+  // ── Load persisted state — always, regardless of dismiss flag ────────────
   useEffect(() => {
     if (typeof window === 'undefined') return
-    if (localStorage.getItem(DISMISS_KEY)) return
     setDone(loadProgress())
   }, [])
 
@@ -55,7 +54,10 @@ export default function HowToGuide() {
   // ── Open via sidebar event or after setup guide completes ──────────────────
   useEffect(() => {
     const handler = () => {
-      if (typeof window !== 'undefined') localStorage.removeItem(DISMISS_KEY)
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(DISMISS_KEY)
+        setDone(loadProgress())  // re-sync progress in case it was stale
+      }
       setShow(true)
       setMinimized(false)
     }
