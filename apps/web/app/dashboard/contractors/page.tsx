@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { getCompanyId } from '@/lib/get-company-id'
 import { Plus, Pencil, Trash2, Loader2, Truck, ChevronLeft, Camera, X, ImageIcon, ChevronRight, Phone, Mail, FileText, Shield, CheckCircle } from 'lucide-react'
+import { canUse } from '@/lib/plan-gate'
 import { toast } from 'sonner'
 import type { Contractor, ContractorTicket, ContractorTicketSlip, ClientCompany } from '@/lib/types'
 import Image from 'next/image'
@@ -1296,8 +1297,8 @@ export default function ContractorsPage() {
     )
   }
 
-  // Fleet plan gate — owner_operator cannot access subcontractors (super admin bypasses)
-  if (!loading && companyPlan === 'owner_operator' && !companyIsSuperAdmin && !companySubOverride) {
+  // Fleet plan gate — solo and owner_operator ($25/$80) cannot access subcontractors (super admin bypasses)
+  if (!loading && !canUse(companyPlan, 'subcontractors') && !companyIsSuperAdmin && !companySubOverride) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-8">
         <span className="text-6xl mb-4">🔒</span>
