@@ -375,7 +375,7 @@ export default function OnboardingChecklist() {
 
   // ── Main checklist panel ─────────────────────────────────────────────────────
   return (
-    <div className="fixed bottom-0 left-0 right-0 sm:bottom-6 sm:left-auto sm:right-6 z-50 w-full sm:w-80 bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+    <div className="fixed bottom-0 left-0 right-0 sm:bottom-6 sm:left-auto sm:right-6 z-50 w-full sm:w-80 bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col" style={{ maxHeight: '85dvh' }}>
 
       {/* Header */}
       <div className="bg-[#1a1a1a] px-4 py-3">
@@ -415,7 +415,7 @@ export default function OnboardingChecklist() {
 
       {/* Collapsed step list — grouped by section */}
       {minimized ? (
-        <div className="max-h-64 overflow-y-auto">
+        <div className="overflow-y-auto flex-1">
           {sections.map(section => {
             const sectionSteps = steps.filter(s => s.section === section)
             const sectionDone  = sectionSteps.filter(s => doneIds.has(s.id)).length
@@ -476,7 +476,7 @@ export default function OnboardingChecklist() {
         </div>
       ) : currentStep ? (
         /* ── Expanded active step ─────────────────────────────────────────── */
-        <div className="p-4">
+        <div className="p-4 overflow-y-auto flex-1">
           {/* Step counter */}
           <div className="flex items-center justify-between mb-3">
             <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
