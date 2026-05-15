@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
-import { getCompanyId } from '@/lib/get-company-id'
 
 function admin() {
   return createAdmin(
@@ -11,12 +10,21 @@ function admin() {
   )
 }
 
+async function resolveCompanyId(userId: string): Promise<string | null> {
+  const { data } = await admin()
+    .from('profiles')
+    .select('organization_id')
+    .eq('id', userId)
+    .maybeSingle()
+  return data?.organization_id ?? null
+}
+
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const companyId = await getCompanyId()
+  const companyId = await resolveCompanyId(user.id)
   if (!companyId) return NextResponse.json({ error: 'Company not found' }, { status: 403 })
 
   const { id: contractorId } = await params
@@ -37,7 +45,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const companyId = await getCompanyId()
+  const companyId = await resolveCompanyId(user.id)
   if (!companyId) return NextResponse.json({ error: 'Company not found' }, { status: 403 })
 
   const { id: contractorId } = await params
