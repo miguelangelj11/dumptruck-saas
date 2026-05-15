@@ -3,20 +3,31 @@ import type { Driver } from '@/lib/types'
 type TicketLike = {
   driver_paid?: boolean | null
   status?: string | null
-  loads_count?: number | null
+  original_loads?: number | null
+  rate_quantity?: number | null
   hours_worked?: string | null
-  tons?: number | null
   total_pay?: number | null
   rate?: number | null
+  rate_type?: string | null
 }
 
-// The form stores the percentage in pay_rate_value for percent_revenue drivers.
-// pay_percent may be populated from older code paths, so we accept either.
+// pay_percent is stored as 0 (not null) when the percentage is saved in pay_rate_value.
+// Use || so that 0 falls through to pay_rate_value.
 function resolvePercent(driver: Partial<Driver>): number {
-  return driver.pay_percent ?? driver.pay_rate_value ?? 0
+  return driver.pay_percent || driver.pay_rate_value || 0
 }
 
-/** Earnings from tickets where the client has already paid (status = 'paid') */
+// Hours can be in hours_worked (text) or rate_quantity (numeric) depending on how the
+// ticket was created. rate_quantity is the authoritative source for quantity-based tickets.
+function resolveQuantity(ticket: TicketLike): number {
+  return ticket.rate_quantity ?? (parseFloat(ticket.hours_worked ?? '') || 0)
+}
+
+function resolveLoads(ticket: TicketLike): number {
+  return ticket.original_loads ?? ticket.rate_quantity ?? 1
+}
+
+/** Driver's cut from tickets where the client invoice has been paid (status = 'paid') */
 export function calculateDriverEarned(tickets: TicketLike[], driver: Partial<Driver>): number {
   if (!driver.pay_type) return 0
   const pct = resolvePercent(driver)
@@ -26,11 +37,11 @@ export function calculateDriverEarned(tickets: TicketLike[], driver: Partial<Dri
   return tickets.reduce((total, ticket) => {
     switch (driver.pay_type) {
       case 'per_load':
-        return total + driver.pay_rate_value! * (ticket.loads_count ?? 1)
+        return total + driver.pay_rate_value! * resolveLoads(ticket)
       case 'per_hour':
-        return total + driver.pay_rate_value! * (parseFloat(ticket.hours_worked ?? '') || 0)
+        return total + driver.pay_rate_value! * resolveQuantity(ticket)
       case 'per_ton':
-        return total + driver.pay_rate_value! * (ticket.tons ?? 0)
+        return total + driver.pay_rate_value! * resolveQuantity(ticket)
       case 'percent_revenue':
         return total + (ticket.total_pay ?? ticket.rate ?? 0) * (pct / 100)
       case 'day_rate':
@@ -41,6 +52,7 @@ export function calculateDriverEarned(tickets: TicketLike[], driver: Partial<Dri
   }, 0)
 }
 
+/** Driver's cut from tickets that haven't been paid to the driver yet */
 export function calculateDriverOwed(tickets: TicketLike[], driver: Partial<Driver>): number {
   if (!driver.pay_type) return 0
   const pct = resolvePercent(driver)
@@ -54,22 +66,14 @@ export function calculateDriverOwed(tickets: TicketLike[], driver: Partial<Drive
 
   return unpaid.reduce((total, ticket) => {
     switch (driver.pay_type) {
-      case 'per_load': {
-        const loads = ticket.loads_count ?? 1
-        return total + driver.pay_rate_value! * loads
-      }
-      case 'per_hour': {
-        const hours = parseFloat(ticket.hours_worked ?? '') || 0
-        return total + driver.pay_rate_value! * hours
-      }
-      case 'per_ton': {
-        const tons = ticket.tons ?? 0
-        return total + driver.pay_rate_value! * tons
-      }
-      case 'percent_revenue': {
-        const revenue = ticket.total_pay ?? ticket.rate ?? 0
-        return total + revenue * (pct / 100)
-      }
+      case 'per_load':
+        return total + driver.pay_rate_value! * resolveLoads(ticket)
+      case 'per_hour':
+        return total + driver.pay_rate_value! * resolveQuantity(ticket)
+      case 'per_ton':
+        return total + driver.pay_rate_value! * resolveQuantity(ticket)
+      case 'percent_revenue':
+        return total + (ticket.total_pay ?? ticket.rate ?? 0) * (pct / 100)
       case 'day_rate':
         return total + driver.pay_rate_value!
       default:
