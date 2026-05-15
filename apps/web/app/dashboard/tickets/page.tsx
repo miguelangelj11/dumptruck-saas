@@ -219,7 +219,7 @@ export default function TicketsPage() {
   const [clientCompanies, setClientCompanies] = useState<{ id: string; name: string }[]>([])
   const [driversList, setDriversList] = useState<{ id: string; name: string; primary_truck: string | null }[]>([])
   const [driverMode, setDriverMode] = useState<'dropdown' | 'manual'>('dropdown')
-  const [activeJobs, setActiveJobs] = useState<{ id: string; job_name: string; rate: number | null; rate_type: string | null; material: string | null }[]>([])
+  const [activeJobs, setActiveJobs] = useState<{ id: string; job_name: string; rate: number | null; rate_type: string | null; material: string | null; contractor: string | null; pick_up_location: string | null; drop_location: string | null }[]>([])
   const [jobMode, setJobMode] = useState<'dropdown' | 'manual'>('dropdown')
   const [autoFilledFromJob, setAutoFilledFromJob] = useState(false)
   const [companyPlan,          setCompanyPlan]          = useState<string | null>(null)
@@ -445,7 +445,7 @@ export default function TicketsPage() {
     if (!orgId) return
     const { data } = await supabase
       .from('jobs')
-      .select('id, job_name, rate, rate_type, material')
+      .select('id, job_name, rate, rate_type, material, contractor, pick_up_location, drop_location')
       .eq('company_id', orgId)
       .eq('status', 'active')
       .order('created_at', { ascending: false })
@@ -1222,6 +1222,9 @@ export default function TicketsPage() {
                         if (job.rate != null) { updates.rate = String(job.rate); setAutoFilledFromJob(true) } else { setAutoFilledFromJob(false) }
                         if (job.rate_type) updates.rate_type = job.rate_type
                         if (job.material) updates.load_type = job.material
+                        if (job.contractor) updates.client_company = job.contractor
+                        if (job.pick_up_location) updates.origin = job.pick_up_location
+                        if (job.drop_location) updates.destination = job.drop_location
                         setForm(p => ({ ...p, ...updates }))
                       }}
                       className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white"
