@@ -331,31 +331,40 @@ export default function RevenuePage() {
   const totalExpenses = filteredExpenses.reduce((s, e) => s + (e.amount ?? 0), 0)
   const lastExpensesTotal = lastExpenses.reduce((s, e) => s + (e.amount ?? 0), 0)
 
-  // Driver costs = paystub invoices
+  // Driver costs (money OUT) = paystub invoices
   const driverCostInvoices = filteredInvoices.filter(i => i.invoice_type === 'paystub')
   const driverCosts = driverCostInvoices.reduce((s, i) => s + (i.total ?? 0), 0)
   const lastDriverCosts = lastInvoices.filter(i => i.invoice_type === 'paystub').reduce((s, i) => s + (i.total ?? 0), 0)
 
-  // Net profit
-  const profit = cashCollected - totalExpenses
-  const lastProfit = lastCashCollected - lastExpensesTotal
+  // Subcontractor costs (money OUT) = contractor invoices received
+  const contractorCostInvoices = filteredInvoices.filter(i => i.invoice_type === 'contractor')
+  const contractorCosts = contractorCostInvoices.reduce((s, i) => s + (i.total ?? 0), 0)
+  const lastContractorCosts = lastInvoices.filter(i => i.invoice_type === 'contractor').reduce((s, i) => s + (i.total ?? 0), 0)
 
-  // Profit margin: null when no expenses (avoids misleading 100%)
-  const profitMargin = (totalExpenses > 0 || driverCosts > 0) && cashCollected > 0
-    ? ((cashCollected - totalExpenses) / cashCollected) * 100
+  // Total money out = operating expenses + driver pay + subcontractor pay
+  const totalMoneyOut = totalExpenses + driverCosts + contractorCosts
+  const lastTotalMoneyOut = lastExpensesTotal + lastDriverCosts + lastContractorCosts
+
+  // Net profit = money in minus all money out
+  const profit = cashCollected - totalMoneyOut
+  const lastProfit = lastCashCollected - lastTotalMoneyOut
+
+  // Profit margin: null when no costs tracked (avoids misleading 100%)
+  const profitMargin = totalMoneyOut > 0 && cashCollected > 0
+    ? (profit / cashCollected) * 100
     : null
 
   // Trend percentages vs last period
-  const trendCash       = trendPct(cashCollected, lastCashCollected)
-  const trendExpenses   = trendPct(totalExpenses, lastExpensesTotal)
-  const trendProfit     = trendPct(profit, lastProfit)
-  const trendDriverCosts = trendPct(driverCosts, lastDriverCosts)
-  const trendOutstanding = trendPct(outstandingTotal, lastOutstandingTotal)
+  const trendCash          = trendPct(cashCollected, lastCashCollected)
+  const trendExpenses      = trendPct(totalExpenses, lastExpensesTotal)
+  const trendProfit        = trendPct(profit, lastProfit)
+  const trendDriverCosts   = trendPct(driverCosts, lastDriverCosts)
+  const trendOutstanding   = trendPct(outstandingTotal, lastOutstandingTotal)
 
   // Cost per load / revenue per load metrics
   const totalLoads      = filteredLoads.length
   const revenuePerLoad  = totalLoads > 0 && cashCollected > 0 ? cashCollected / totalLoads : null
-  const costPerLoad     = totalLoads > 0 && totalExpenses > 0 ? totalExpenses / totalLoads : null
+  const costPerLoad     = totalLoads > 0 && totalMoneyOut > 0 ? totalMoneyOut / totalLoads : null
 
   // Revenue by driver — use total_pay (actual billing amount) not rate
   const billableLoads = filteredLoads.filter(l => (BILLABLE_STATUSES as readonly string[]).includes(l.status))
@@ -618,8 +627,8 @@ export default function RevenuePage() {
         </button>
       </div>
 
-      {/* Data quality banner — only when no expenses but revenue exists */}
-      {totalExpenses === 0 && cashCollected > 0 && (
+      {/* Data quality banner — only when no costs tracked but revenue exists */}
+      {totalMoneyOut === 0 && cashCollected > 0 && (
         <div className="mb-5 flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
           <span className="text-amber-500 text-xl flex-shrink-0 mt-0.5">⚠️</span>
           <div className="flex-1">
@@ -675,7 +684,7 @@ export default function RevenuePage() {
           </div>
           <p className={`text-xl font-bold ${profit >= 0 ? 'text-gray-900' : 'text-red-600'}`}>${profit.toLocaleString()}</p>
           <p className="text-xs text-gray-400 mt-0.5">Net Profit</p>
-          <p className="text-xs text-gray-300 mt-0.5">Revenue − Expenses</p>
+          <p className="text-xs text-gray-300 mt-0.5">Revenue − All Costs</p>
           {trendProfit !== null && (
             <span className={`text-xs font-bold mt-1 block ${trendProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
               {trendProfit >= 0 ? '↑' : '↓'} {Math.abs(trendProfit).toFixed(0)}%
@@ -700,7 +709,7 @@ export default function RevenuePage() {
                 {profitMargin.toFixed(1)}%
               </p>
               <p className="text-xs text-gray-400 mt-0.5">Profit Margin</p>
-              <p className="text-xs text-gray-300 mt-0.5">After expenses</p>
+              <p className="text-xs text-gray-300 mt-0.5">After all costs</p>
             </>
           )}
         </div>
@@ -721,12 +730,17 @@ export default function RevenuePage() {
         </div>
 
         <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <div className="inline-flex rounded-lg p-2 mb-3 text-[var(--brand-primary)] bg-[var(--brand-primary)]/10">
+          <div className="inline-flex rounded-lg p-2 mb-3 text-red-400 bg-red-50">
             <DollarSign className="h-4 w-4" />
           </div>
-          <p className="text-xl font-bold text-gray-900">${driverCosts.toLocaleString()}</p>
-          <p className="text-xs text-gray-400 mt-0.5">Driver Costs</p>
-          <p className="text-xs text-gray-300 mt-0.5">{driverCostInvoices.length} pay stubs</p>
+          <p className="text-xl font-bold text-gray-900">${(driverCosts + contractorCosts).toLocaleString()}</p>
+          <p className="text-xs text-gray-400 mt-0.5">Labor Pay Out</p>
+          <p className="text-xs text-gray-300 mt-0.5">
+            {driverCosts > 0 && `$${driverCosts.toLocaleString()} drivers`}
+            {driverCosts > 0 && contractorCosts > 0 && ' · '}
+            {contractorCosts > 0 && `$${contractorCosts.toLocaleString()} subs`}
+            {driverCosts === 0 && contractorCosts === 0 && 'No payouts this period'}
+          </p>
           {trendDriverCosts !== null && (
             <span className={`text-xs font-bold mt-1 block ${trendDriverCosts <= 0 ? 'text-green-600' : 'text-red-500'}`}>
               {trendDriverCosts >= 0 ? '↑' : '↓'} {Math.abs(trendDriverCosts).toFixed(0)}%
