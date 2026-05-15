@@ -10,10 +10,19 @@ type TicketLike = {
   rate?: number | null
 }
 
+// The form stores the percentage in pay_rate_value for percent_revenue drivers.
+// pay_percent may be populated from older code paths, so we accept either.
+function resolvePercent(driver: Partial<Driver>): number {
+  return driver.pay_percent ?? driver.pay_rate_value ?? 0
+}
+
 /** Earnings from tickets where the client has already paid (status = 'paid') */
 export function calculateDriverEarned(tickets: TicketLike[], driver: Partial<Driver>): number {
-  if (!driver.pay_rate_value || driver.pay_rate_value <= 0) return 0
   if (!driver.pay_type) return 0
+  const pct = resolvePercent(driver)
+  if (driver.pay_type === 'percent_revenue' && pct <= 0) return 0
+  if (driver.pay_type !== 'percent_revenue' && (!driver.pay_rate_value || driver.pay_rate_value <= 0)) return 0
+
   return tickets.reduce((total, ticket) => {
     switch (driver.pay_type) {
       case 'per_load':
@@ -23,7 +32,7 @@ export function calculateDriverEarned(tickets: TicketLike[], driver: Partial<Dri
       case 'per_ton':
         return total + driver.pay_rate_value! * (ticket.tons ?? 0)
       case 'percent_revenue':
-        return total + (ticket.total_pay ?? ticket.rate ?? 0) * ((driver.pay_percent ?? 0) / 100)
+        return total + (ticket.total_pay ?? ticket.rate ?? 0) * (pct / 100)
       case 'day_rate':
         return total + driver.pay_rate_value!
       default:
@@ -33,8 +42,10 @@ export function calculateDriverEarned(tickets: TicketLike[], driver: Partial<Dri
 }
 
 export function calculateDriverOwed(tickets: TicketLike[], driver: Partial<Driver>): number {
-  if (!driver.pay_rate_value || driver.pay_rate_value <= 0) return 0
   if (!driver.pay_type) return 0
+  const pct = resolvePercent(driver)
+  if (driver.pay_type === 'percent_revenue' && pct <= 0) return 0
+  if (driver.pay_type !== 'percent_revenue' && (!driver.pay_rate_value || driver.pay_rate_value <= 0)) return 0
 
   const unpaid = tickets.filter(t =>
     !t.driver_paid &&
@@ -48,8 +59,7 @@ export function calculateDriverOwed(tickets: TicketLike[], driver: Partial<Drive
         return total + driver.pay_rate_value! * loads
       }
       case 'per_hour': {
-        const hoursStr = ticket.hours_worked ?? ''
-        const hours = parseFloat(hoursStr) || 0
+        const hours = parseFloat(ticket.hours_worked ?? '') || 0
         return total + driver.pay_rate_value! * hours
       }
       case 'per_ton': {
@@ -58,7 +68,7 @@ export function calculateDriverOwed(tickets: TicketLike[], driver: Partial<Drive
       }
       case 'percent_revenue': {
         const revenue = ticket.total_pay ?? ticket.rate ?? 0
-        return total + revenue * ((driver.pay_percent ?? 0) / 100)
+        return total + revenue * (pct / 100)
       }
       case 'day_rate':
         return total + driver.pay_rate_value!
