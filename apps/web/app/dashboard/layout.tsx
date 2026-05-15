@@ -78,10 +78,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const isInternal         = !!(co?.is_internal          as boolean | null | undefined)
   const isSuperAdmin       = !!(co?.is_super_admin       as boolean | null | undefined)
   const subscriptionOverride = (co?.subscription_override as string | null | undefined) ?? null
+  const companyPlan        = (co?.plan                   as string | null | undefined) ?? null
+
+  const subscribeUrl = companyPlan === 'founding_member' ? '/subscribe?founding_member=true' : '/subscribe'
 
   if (!isInternal && !isSuperAdmin && !subscriptionOverride) {
     if (subscriptionStatus === 'expired' && !isSettingsPath) {
-      redirect('/subscribe')
+      redirect(subscribeUrl)
     }
 
     if (subscriptionStatus === 'trial' && trialEndsAt && new Date(trialEndsAt) < new Date()) {
@@ -89,7 +92,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         .from('companies')
         .update({ trial_expired: true, subscription_status: 'expired' })
         .eq('id', organizationId)
-      if (!isSettingsPath) redirect('/subscribe')
+      if (!isSettingsPath) redirect(subscribeUrl)
     }
   }
 
