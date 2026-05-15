@@ -121,13 +121,9 @@ export default function DriversPage() {
     const companyId = await getCompanyId()
     if (!companyId) { setLoading(false); return }
 
-    const sixMonthsAgo = new Date()
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
-    const cutoff = sixMonthsAgo.toISOString().split('T')[0]!
-
     const [dRes, lRes, dpRes, coRes] = await Promise.all([
       supabase.from('drivers').select('*').eq('company_id', companyId).order('name'),
-      supabase.from('loads').select('*').eq('company_id', companyId).gte('date', cutoff),
+      supabase.from('loads').select('*').eq('company_id', companyId).order('date', { ascending: false }),
       supabase.from('driver_payments').select('*').eq('company_id', companyId).order('payment_date', { ascending: false }),
       supabase.from('companies').select('plan, is_internal').eq('id', companyId).maybeSingle(),
     ])
