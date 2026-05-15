@@ -4,7 +4,11 @@ import { createClient } from '@supabase/supabase-js'
 // One-time migration: adds address column to client_companies table.
 // Call once: POST /api/migrations/add-client-address
 // Requires SUPABASE_SERVICE_KEY in env.
-export async function POST() {
+export async function POST(request: Request) {
+  const secret = process.env.CRON_SECRET
+  if (!secret || request.headers.get('Authorization') !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
   const serviceKey = process.env.SUPABASE_SERVICE_KEY
   if (!serviceKey) {
     return NextResponse.json({ error: 'SUPABASE_SERVICE_KEY not set' }, { status: 500 })

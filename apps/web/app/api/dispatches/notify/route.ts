@@ -1,7 +1,16 @@
 import { NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { generateDispatchToken } from '@/lib/dispatch-token'
+
+function getAdmin() {
+  return createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  )
+}
 
 export async function POST(request: Request) {
   const supabase = await createServerClient()
@@ -15,7 +24,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => ({}))
-  const { driverEmail, driverName, jobName, location, startTime, truckNumber, instructions, dispatchId, companyId } =
+  const { driverEmail, driverName, jobName, location, startTime, truckNumber, instructions, dispatchId } =
     body as {
       driverEmail?:  string
       driverName?:   string
@@ -25,10 +34,35 @@ export async function POST(request: Request) {
       truckNumber?:  string
       instructions?: string
       dispatchId?:   string
-      companyId?:    string
     }
 
   if (!driverEmail) return NextResponse.json({ sent: false, reason: 'no_email' })
+
+  // Resolve caller's company server-side — never trust companyId from the client
+  const admin = getAdmin()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('organization_id')
+    .eq('id', user.id)
+    .maybeSingle()
+  const callerCompanyId = profile?.organization_id ?? user.id
+
+  // If a dispatchId is provided, verify the dispatch belongs to the caller's company
+  // before generating a signed HMAC token for it
+  if (dispatchId) {
+    const { data: dispatch } = await admin
+      .from('dispatches')
+      .select('company_id')
+      .eq('id', dispatchId)
+      .maybeSingle()
+
+    if (!dispatch) return NextResponse.json({ error: 'Dispatch not found' }, { status: 404 })
+    if ((dispatch as Record<string, unknown>).company_id !== callerCompanyId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+  }
+
+  const companyId = callerCompanyId
 
   const resend = new Resend(resendKey)
 

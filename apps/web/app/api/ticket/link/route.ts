@@ -19,6 +19,14 @@ export async function GET(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const admin = getAdmin()
+  // Resolve caller's company
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('organization_id')
+    .eq('id', user.id)
+    .maybeSingle()
+  const callerCompanyId = profile?.organization_id ?? user.id
+
   const { data: dispatch } = await admin
     .from('dispatches')
     .select('id, company_id')
@@ -28,6 +36,12 @@ export async function GET(request: NextRequest) {
   if (!dispatch) return NextResponse.json({ error: 'Dispatch not found' }, { status: 404 })
 
   const d = dispatch as Record<string, unknown>
+
+  // Verify caller owns this dispatch
+  if (d.company_id !== callerCompanyId) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   const { data: company } = await admin
     .from('companies')
     .select('plan')

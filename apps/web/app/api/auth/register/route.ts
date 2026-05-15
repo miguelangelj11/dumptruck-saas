@@ -18,6 +18,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    // Allowlist registerable plans — prevent self-assigning enterprise/internal tiers
+    const REGISTERABLE_PLANS = ['solo', 'owner_operator', 'fleet', 'founding_member']
+    if (!REGISTERABLE_PLANS.includes(plan)) {
+      return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
+    }
+
     const admin = getAdmin()
 
     // Create user with email pre-confirmed (bypasses confirmation email)
@@ -125,6 +131,12 @@ export async function POST(request: Request) {
           const { default: Stripe } = await import('stripe')
           const stripe  = new Stripe(process.env.STRIPE_SECRET_KEY!)
           const session = await stripe.checkout.sessions.retrieve(stripe_session_id, { expand: ['subscription'] })
+          // Verify the session's email matches the registering user to prevent session hijacking
+          const sessionEmail = session.customer_email ?? session.customer_details?.email ?? ''
+          if (sessionEmail && sessionEmail.toLowerCase() !== email.toLowerCase()) {
+            console.warn('[register] stripe session email mismatch — skipping link')
+            return
+          }
           if (session.status === 'complete' && session.customer) {
             const sub = session.subscription as import('stripe').Stripe.Subscription | null
             await admin.from('companies').update({

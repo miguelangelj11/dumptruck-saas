@@ -1,10 +1,17 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 
-export async function POST() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export async function POST(request: Request) {
+  const secret = process.env.CRON_SECRET
+  if (!secret || request.headers.get('Authorization') !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  )
 
   const steps: string[] = []
 
@@ -17,7 +24,7 @@ export async function POST() {
   ]
 
   for (const sql of migrations) {
-    const { error } = await supabase.rpc('exec_sql', { sql })
+    const { error } = await admin.rpc('exec_sql', { sql })
     if (error) {
       return NextResponse.json({ error: error.message, steps }, { status: 500 })
     }

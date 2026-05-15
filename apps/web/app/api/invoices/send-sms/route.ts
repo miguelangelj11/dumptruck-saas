@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 
 function getAdmin() {
-  return createClient(
+  return createAdminClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_KEY!,
     { auth: { autoRefreshToken: false, persistSession: false } },
@@ -14,6 +15,10 @@ function fmt(n: number) {
 }
 
 export async function POST(request: Request) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const accountSid = process.env.TWILIO_ACCOUNT_SID
   const authToken  = process.env.TWILIO_AUTH_TOKEN
   const fromPhone  = process.env.TWILIO_PHONE_NUMBER
@@ -38,9 +43,18 @@ export async function POST(request: Request) {
 
   const admin = getAdmin()
 
+  // Resolve caller's company
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('organization_id')
+    .eq('id', user.id)
+    .maybeSingle()
+  const callerCompanyId = profile?.organization_id ?? user.id
+
+  // Fetch invoice and verify ownership in one query
   const { data: inv, error: invErr } = await admin
     .from('invoices')
-    .select('invoice_number, total, client_name')
+    .select('invoice_number, total, client_name, company_id')
     .eq('id', invoiceId)
     .single()
 
@@ -48,10 +62,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invoice not found' }, { status: 404 })
   }
 
+  if ((inv as Record<string, unknown>).company_id !== callerCompanyId) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   const { data: co } = await admin
     .from('companies')
     .select('name')
-    .eq('id', (inv as { company_id?: string }).company_id ?? '')
+    .eq('id', callerCompanyId)
     .maybeSingle()
 
   const smsBody = message?.trim() || [
@@ -62,7 +80,6 @@ export async function POST(request: Request) {
     `Please contact us to arrange payment. Thank you!`,
   ].join('\n')
 
-  // Twilio REST API — no SDK needed
   const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`
   const params = new URLSearchParams({
     From: fromPhone,
