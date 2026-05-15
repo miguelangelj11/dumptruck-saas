@@ -261,13 +261,20 @@ export default async function DashboardPage() {
     .filter(l => l.date >= thisWeekStartStr && l.date <= todayStr)
     .reduce((s, l) => s + ((l.total_pay ?? l.rate) ?? 0), 0)
 
-  // Week profit (costs attributed to jobs active this week)
+  // Week costs = job-level estimates + actual driver paystubs + contractor invoices created this week
   const weekJobNames = new Set(loads.filter(l => l.date >= thisWeekStartStr && l.date <= todayStr).map(l => l.job_name))
-  const weekCosts    = jobsForCost
+  const weekJobCostEstimates = jobsForCost
     .filter(j => weekJobNames.has(j.job_name))
     .reduce((s, j) => s + (j.driver_cost ?? 0) + (j.fuel_cost ?? 0) + (j.other_costs ?? 0), 0)
-  const weekProfit = weekRevProjected - weekCosts
-  const weekMargin = weekRevProjected > 0 ? Math.round((weekProfit / weekRevProjected) * 100) : null
+  const weekPayoutInvoices = (invoices as InvoiceRow[]).filter(i => {
+    const d = (i as Record<string, unknown>).created_at as string | null
+    return (i.invoice_type === 'paystub' || i.invoice_type === 'contractor') &&
+      d && d.slice(0, 10) >= thisWeekStartStr && d.slice(0, 10) <= todayStr
+  })
+  const weekPayouts = weekPayoutInvoices.reduce((s, i) => s + (i.total ?? 0), 0)
+  const weekCosts   = weekJobCostEstimates + weekPayouts
+  const weekProfit  = weekRevProjected - weekCosts
+  const weekMargin  = weekRevProjected > 0 ? Math.round((weekProfit / weekRevProjected) * 100) : null
 
   // Recent tickets
   const recentLoads = loads.slice(0, 6)
