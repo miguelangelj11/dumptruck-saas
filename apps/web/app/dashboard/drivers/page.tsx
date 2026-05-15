@@ -6,7 +6,7 @@ import { Plus, Loader2, Users, Phone, Mail, X, Pencil, Trash2, DollarSign, Credi
 import { toast } from 'sonner'
 import type { Driver, Load, DriverPayment } from '@/lib/types'
 import { getCompanyId } from '@/lib/get-company-id'
-import { calculateDriverOwed } from '@/lib/drivers/calculate-owed'
+import { calculateDriverOwed, calculateDriverEarned } from '@/lib/drivers/calculate-owed'
 
 function fmtDate(s: string | null | undefined): string {
   if (!s) return '—'
@@ -372,7 +372,10 @@ export default function DriversPage() {
       .filter(l => ['approved', 'invoiced', 'paid'].includes(l.status))
       .reduce((s, l) => s + ((l as { total_pay?: number | null }).total_pay ?? l.rate ?? 0), 0)
     const owed = calculateDriverOwed(dl, driver)
-    return { loads: dl.length, revenue, owed }
+    // Earned = driver's cut from tickets where the client invoice has been paid
+    const paidTickets = dl.filter(l => l.status === 'paid')
+    const earned = calculateDriverEarned(paidTickets, driver)
+    return { loads: dl.length, revenue, owed, earned }
   }
 
   // Detail panel data
@@ -556,8 +559,13 @@ export default function DriversPage() {
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-sm">
                     <div className="bg-gray-50 rounded-lg p-2.5">
-                      <p className="text-gray-400 text-xs mb-0.5">Jobs</p>
-                      <p className="font-bold text-gray-900">{stats.loads}</p>
+                      <p className="text-gray-400 text-xs mb-0.5">Earned</p>
+                      <p className="font-bold text-gray-900 text-xs">
+                        {d.pay_rate_value
+                          ? `$${stats.earned.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : <span className="text-gray-300 text-[10px]">Set rate</span>
+                        }
+                      </p>
                     </div>
                     <div className="bg-gray-50 rounded-lg p-2.5">
                       <p className="text-gray-400 text-xs mb-0.5">Revenue</p>
