@@ -276,6 +276,8 @@ export async function POST(request: Request) {
 
   const formData = await request.formData()
   const file        = formData.get('file') as File | null
+  const preUploadedUrl = (formData.get('url') as string | null)?.trim() || null
+  const preUploadedMime = (formData.get('mime') as string | null)?.trim() || null
   const name        = (formData.get('name') as string | null)?.trim() || null
   const notes       = (formData.get('notes') as string | null)?.trim() || null
   const doc_type    = (formData.get('doc_type') as string | null)?.trim() || null
@@ -284,7 +286,7 @@ export async function POST(request: Request) {
   const entity_id   = (formData.get('entity_id') as string | null)?.trim() || null
   const entity_name = (formData.get('entity_name') as string | null)?.trim() || null
 
-  if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
+  if (!file && !preUploadedUrl) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
 
   // Version detection: find existing doc with same type+entity
   let existingVersionId: string | null = null
@@ -305,19 +307,32 @@ export async function POST(request: Request) {
     }
   }
 
-  const ext      = file.name.split('.').pop() ?? 'bin'
-  const safeName = name || file.name
-  const path     = `${companyId}/${crypto.randomUUID()}.${ext}`
+  let publicUrl: string
+  let safeName: string
+  let mime: string
 
-  const { error: storageErr } = await supabase.storage
-    .from('company-documents')
-    .upload(path, file, { contentType: file.type, upsert: false })
+  if (preUploadedUrl) {
+    // File was already uploaded directly to storage — just record metadata
+    publicUrl = preUploadedUrl
+    safeName  = name || 'Document'
+    mime      = preUploadedMime || 'application/octet-stream'
+  } else {
+    const ext = file!.name.split('.').pop() ?? 'bin'
+    safeName  = name || file!.name
+    mime      = file!.type || 'application/octet-stream'
+    const path = `${companyId}/${crypto.randomUUID()}.${ext}`
 
-  if (storageErr) return NextResponse.json({ error: storageErr.message }, { status: 500 })
+    const { error: storageErr } = await supabase.storage
+      .from('company-documents')
+      .upload(path, file!, { contentType: file!.type, upsert: false })
 
-  const { data: { publicUrl } } = supabase.storage
-    .from('company-documents')
-    .getPublicUrl(path)
+    if (storageErr) return NextResponse.json({ error: storageErr.message }, { status: 500 })
+
+    const { data: { publicUrl: url } } = supabase.storage
+      .from('company-documents')
+      .getPublicUrl(path)
+    publicUrl = url
+  }
 
   // If superseding an existing version, mark it as not latest
   if (existingVersionId) {
@@ -333,7 +348,7 @@ export async function POST(request: Request) {
       company_id:        companyId,
       name:              safeName,
       url:               publicUrl,
-      mime:              file.type || 'application/octet-stream',
+      mime:              mime,
       notes,
       doc_type,
       expiry_date:       expiry_date || null,

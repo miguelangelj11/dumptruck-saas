@@ -325,8 +325,24 @@ export default function DocumentsPage() {
     if (!uploadFile) return
     setUploading(true)
     try {
+      // Get a signed upload URL so the file goes directly to Supabase (bypasses Vercel body size limit)
+      const ext = uploadFile.name.split('.').pop() ?? 'bin'
+      const tokenRes = await fetch('/api/documents/upload-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ext }),
+      })
+      if (!tokenRes.ok) throw new Error('Could not get upload token')
+      const { path, token, publicUrl: uploadedUrl } = await tokenRes.json()
+
+      const { error: storageErr } = await supabase.storage
+        .from('company-documents')
+        .uploadToSignedUrl(path, token, uploadFile, { contentType: uploadFile.type })
+      if (storageErr) throw new Error(storageErr.message)
+
       const fd = new FormData()
-      fd.append('file', uploadFile)
+      fd.append('url',  uploadedUrl)
+      fd.append('mime', uploadFile.type || 'application/octet-stream')
       fd.append('name', uploadName || uploadFile.name)
       if (uploadNotes)      fd.append('notes', uploadNotes)
       if (uploadDocType)    fd.append('doc_type', uploadDocType)
