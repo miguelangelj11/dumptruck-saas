@@ -87,7 +87,7 @@ const EMPTY_JOB = {
   start_date: new Date().toISOString().split('T')[0]!, end_date: '', notes: '',
 }
 
-const EMPTY_DISPATCH = { job_id: '', driver_id: '', truck_number: '', start_time: '07:00', end_time: '', estimated_loads: '', instructions: '' }
+const EMPTY_DISPATCH = { job_id: '', driver_id: '', truck_number: '', start_time: '7:00 AM', end_time: '', estimated_loads: '', instructions: '' }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -187,13 +187,60 @@ function JobProfitPanel({ job, revenue, supabase }: {
 const TIMELINE_HOURS = Array.from({ length: 14 }, (_, i) => i + 5) // 5am–7pm
 
 function parseTimeToHour(t: string): number {
-  const [h, m] = t.split(':').map(Number)
-  return (h ?? 8) + (m ?? 0) / 60
+  const isPM = /PM/i.test(t)
+  const timeStr = t.replace(/\s*(AM|PM)\s*/i, '').trim()
+  const [h, m] = timeStr.split(':').map(Number)
+  let hour = h ?? 8
+  if (isPM && hour !== 12) hour += 12
+  if (!isPM && hour === 12) hour = 0
+  return hour + (m ?? 0) / 60
 }
 
 function parseTimeToMin(t: string): number {
+  const isPM = /PM/i.test(t)
+  const timeStr = t.replace(/\s*(AM|PM)\s*/i, '').trim()
+  const [h, m] = timeStr.split(':').map(Number)
+  let hour = h ?? 0
+  if (isPM && hour !== 12) hour += 12
+  if (!isPM && hour === 12) hour = 0
+  return hour * 60 + (m ?? 0)
+}
+
+function normalizeTimeToAmPm(t: string): string {
+  if (!t) return ''
+  if (/AM|PM/i.test(t)) return t
   const [h, m] = t.split(':').map(Number)
-  return (h ?? 0) * 60 + (m ?? 0)
+  if (isNaN(h)) return t
+  const period = h < 12 ? 'AM' : 'PM'
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h
+  return `${h12}:${String(m ?? 0).padStart(2, '0')} ${period}`
+}
+
+function DispatchTimeInput({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+  const isPM    = /PM/i.test(value)
+  const period  = isPM ? 'PM' : 'AM'
+  const timeStr = value.replace(/\s*(AM|PM)\s*/i, '').trim()
+  const active  = timeStr.length > 0
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <div className="flex rounded-xl border border-gray-200 overflow-hidden h-10 focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/30 focus-within:border-[var(--brand-primary)]">
+        <input
+          type="text"
+          value={timeStr}
+          onChange={e => onChange(e.target.value ? `${e.target.value} ${period}` : '')}
+          placeholder={placeholder ?? '8:00'}
+          className="flex-1 px-3 text-sm focus:outline-none bg-white min-w-0"
+        />
+        <button type="button" onClick={() => onChange(timeStr ? `${timeStr} AM` : '')}
+          className={`px-2.5 text-xs font-semibold border-l border-gray-200 transition-colors ${active && period === 'AM' ? 'bg-[var(--brand-primary)] text-white' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
+        >AM</button>
+        <button type="button" onClick={() => onChange(timeStr ? `${timeStr} PM` : '')}
+          className={`px-2.5 text-xs font-semibold border-l border-gray-200 transition-colors ${active && period === 'PM' ? 'bg-[var(--brand-primary)] text-white' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
+        >PM</button>
+      </div>
+    </div>
+  )
 }
 
 type JobTemplate = {
@@ -399,7 +446,7 @@ export default function DispatchPage() {
   // Bulk dispatch
   const [showBulkForm,   setShowBulkForm]   = useState(false)
   const [bulkJobId,      setBulkJobId]      = useState('')
-  const [bulkStartTime,  setBulkStartTime]  = useState('07:00')
+  const [bulkStartTime,  setBulkStartTime]  = useState('7:00 AM')
   const [bulkNotifyVia,  setBulkNotifyVia]  = useState<'email' | 'sms' | 'both' | 'none'>('email')
   const [bulkSelections, setBulkSelections] = useState<Record<string, { selected: boolean; truckNumber: string }>>({})
   const [savingBulk,     setSavingBulk]     = useState(false)
@@ -800,7 +847,7 @@ export default function DispatchPage() {
   function openBulkDispatch(job: Job, e: React.MouseEvent) {
     e.stopPropagation()
     setBulkJobId(job.id)
-    setBulkStartTime('07:00')
+    setBulkStartTime('7:00 AM')
     setBulkNotifyVia('email')
     const init: Record<string, { selected: boolean; truckNumber: string }> = {}
     drivers.forEach(d => { init[d.id] = { selected: false, truckNumber: '' } })
@@ -911,8 +958,8 @@ export default function DispatchPage() {
       job_id:          d.job_id          ?? '',
       driver_id:       d.driver_id       ?? '',
       truck_number:    d.truck_number    ?? '',
-      start_time:      d.start_time      ?? '07:00',
-      end_time:        (d as Record<string, unknown>).end_time        as string ?? '',
+      start_time:      normalizeTimeToAmPm(d.start_time ?? '7:00 AM'),
+      end_time:        normalizeTimeToAmPm((d as Record<string, unknown>).end_time as string ?? ''),
       estimated_loads: String((d as Record<string, unknown>).estimated_loads ?? ''),
       instructions:    d.instructions    ?? '',
     })
@@ -2222,28 +2269,20 @@ export default function DispatchPage() {
                     className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('startTime')}</label>
-                  <input
-                    type="time"
-                    value={dispForm.start_time}
-                    onChange={e => setDispForm(f => ({ ...f, start_time: e.target.value }))}
-                    className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
-                  />
-                </div>
+                <DispatchTimeInput
+                  label={t('startTime')}
+                  value={dispForm.start_time}
+                  onChange={v => setDispForm(f => ({ ...f, start_time: v }))}
+                />
               </div>
 
               {/* End Time + Estimated Loads */}
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
-                  <input
-                    type="time"
-                    value={dispForm.end_time}
-                    onChange={e => setDispForm(f => ({ ...f, end_time: e.target.value }))}
-                    className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
-                  />
-                </div>
+                <DispatchTimeInput
+                  label="End Time"
+                  value={dispForm.end_time}
+                  onChange={v => setDispForm(f => ({ ...f, end_time: v }))}
+                />
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Est. Loads</label>
                   <input
@@ -2377,15 +2416,11 @@ export default function DispatchPage() {
               </div>
 
               {/* Shared start time */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Start Time (all drivers)</label>
-                <input
-                  type="time"
-                  value={bulkStartTime}
-                  onChange={e => setBulkStartTime(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
-                />
-              </div>
+              <DispatchTimeInput
+                label="Start Time (all drivers)"
+                value={bulkStartTime}
+                onChange={v => setBulkStartTime(v)}
+              />
 
               {/* Driver checklist */}
               <div>
