@@ -682,7 +682,7 @@ export default function ExpensesPage() {
               {/* Category */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-2">Category</label>
-                <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+                <div className="flex flex-wrap gap-1.5">
                   {EXPENSE_CATEGORIES.map(cat => (
                     <button
                       key={cat.id} type="button"
