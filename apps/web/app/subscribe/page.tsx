@@ -59,6 +59,7 @@ const plans = [
 function SubscribePageInner() {
   const searchParams = useSearchParams()
   const isFoundingMember = searchParams.get('founding_member') === 'true'
+  const reason = searchParams.get('reason') // 'canceled' | 'paused' | null (trial ended)
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null)
 
   async function handleCheckout(planKey: string) {
@@ -231,14 +232,22 @@ function SubscribePageInner() {
           background: '#fef2f2', border: '1px solid #fca5a5',
           borderRadius: '24px', padding: '6px 16px', marginBottom: '20px',
         }}>
-          <span style={{ fontSize: '14px' }}>⏰</span>
-          <span style={{ fontSize: '13px', fontWeight: 600, color: '#991b1b' }}>Your free trial has ended</span>
+          <span style={{ fontSize: '14px' }}>{reason === 'canceled' ? '🔒' : '⏰'}</span>
+          <span style={{ fontSize: '13px', fontWeight: 600, color: '#991b1b' }}>
+            {reason === 'canceled'
+              ? 'Your subscription was canceled'
+              : reason === 'paused'
+              ? 'Your subscription is paused'
+              : 'Your free trial has ended'}
+          </span>
         </div>
         <h1 style={{ fontSize: '30px', fontWeight: 800, color: '#111827', marginBottom: '10px' }}>
-          Choose a plan to continue
+          {reason === 'canceled' || reason === 'paused' ? 'Reactivate your account' : 'Choose a plan to continue'}
         </h1>
         <p style={{ fontSize: '16px', color: '#6b7280', maxWidth: '440px', margin: '0 auto' }}>
-          All plans include full access to DumpTruckBoss. No setup fees.
+          {reason === 'canceled'
+            ? 'Your data is safe. Subscribe to any plan to get back in — no setup fees.'
+            : 'All plans include full access to DumpTruckBoss. No setup fees.'}
         </p>
       </div>
 

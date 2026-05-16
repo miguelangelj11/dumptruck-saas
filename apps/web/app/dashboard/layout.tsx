@@ -80,11 +80,19 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const subscriptionOverride = (co?.subscription_override as string | null | undefined) ?? null
   const companyPlan        = (co?.plan                   as string | null | undefined) ?? null
 
-  const subscribeUrl = companyPlan === 'founding_member' ? '/subscribe?founding_member=true' : '/subscribe'
+  // Statuses that hard-block dashboard access (account still exists, just no active payment)
+  const BLOCKED_STATUSES = new Set(['expired', 'canceled', 'paused', 'incomplete_expired'])
+
+  function blockedRedirectUrl(status: string | null) {
+    if (companyPlan === 'founding_member') return '/subscribe?founding_member=true'
+    if (status === 'canceled') return '/subscribe?reason=canceled'
+    if (status === 'paused')   return '/subscribe?reason=paused'
+    return '/subscribe'
+  }
 
   if (!isInternal && !isSuperAdmin && !subscriptionOverride) {
-    if (subscriptionStatus === 'expired' && !isSettingsPath) {
-      redirect(subscribeUrl)
+    if (BLOCKED_STATUSES.has(subscriptionStatus ?? '') && !isSettingsPath) {
+      redirect(blockedRedirectUrl(subscriptionStatus))
     }
 
     if (subscriptionStatus === 'trial' && trialEndsAt && new Date(trialEndsAt) < new Date()) {
@@ -92,17 +100,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
         .from('companies')
         .update({ trial_expired: true, subscription_status: 'expired' })
         .eq('id', organizationId)
-      if (!isSettingsPath) redirect(subscribeUrl)
+      if (!isSettingsPath) redirect(blockedRedirectUrl('expired'))
     }
   }
 
-  // Past-due payment banner (never shown to super admin)
+  // Past-due payment banner — Stripe is retrying; user still has access but must fix payment
   let pastDueBanner: React.ReactNode = null
   if (!isSuperAdmin && !subscriptionOverride && subscriptionStatus === 'past_due') {
     pastDueBanner = (
       <div style={{
-        background: '#fef2f2',
-        borderBottom: '1px solid #fca5a5',
+        background: '#7f1d1d',
         padding: '10px 24px',
         display: 'flex',
         alignItems: 'center',
@@ -110,8 +117,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
         flexWrap: 'wrap',
       }}>
         <span style={{ fontSize: '16px' }}>🚨</span>
-        <span style={{ fontSize: '13px', fontWeight: 600, color: '#991b1b', flex: 1 }}>
-          Your last payment failed. Update your payment method to avoid losing access.
+        <span style={{ fontSize: '13px', fontWeight: 600, color: '#fef2f2', flex: 1 }}>
+          Payment failed — your account will be suspended if not resolved. Update your card now to keep access.
         </span>
         <Link
           href="/dashboard/settings?tab=billing"
@@ -124,9 +131,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
             color: '#fff',
             textDecoration: 'none',
             whiteSpace: 'nowrap',
+            border: '1px solid #fca5a5',
           }}
         >
-          Update Payment →
+          Fix Payment Now →
         </Link>
       </div>
     )
