@@ -4,6 +4,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 import type { EmailOtpType } from '@supabase/supabase-js'
 import Stripe from 'stripe'
 import { Resend } from 'resend'
+import { getTrialDays } from '@/lib/plans'
 
 function getAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -111,14 +112,15 @@ export async function GET(request: Request) {
   await admin.from('companies').delete().eq('owner_id', user.id)
 
   const now = new Date()
+  const signupPlan = user.user_metadata?.plan ?? 'pro'
   const { data: newCompany } = await admin
     .from('companies')
     .insert({
       owner_id:            user.id,
       name:                user.user_metadata?.company_name ?? user.email,
-      plan:                user.user_metadata?.plan ?? 'pro',
+      plan:                signupPlan,
       trial_started_at:    now.toISOString(),
-      trial_ends_at:       new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      trial_ends_at:       new Date(now.getTime() + getTrialDays(signupPlan) * 24 * 60 * 60 * 1000).toISOString(),
       subscription_status: 'trial',
     })
     .select('id')
@@ -139,9 +141,10 @@ export async function GET(request: Request) {
         const firstName   = (user.user_metadata?.full_name as string | undefined)?.split(' ')[0]?.trim() || 'there'
         const companyName = (user.user_metadata?.company_name as string | undefined) || user.email
         const plan        = (user.user_metadata?.plan as string | undefined) ?? 'pro'
-        const trialEnd    = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+        const planTrialDays = getTrialDays(plan)
+        const trialEnd    = new Date(now.getTime() + planTrialDays * 24 * 60 * 60 * 1000)
         const trialEndStr = trialEnd.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-        const planLabel   = plan === 'fleet' ? 'Fleet Plan' : plan === 'enterprise' ? 'Enterprise Plan' : plan === 'solo' ? 'Owner Operator Solo Plan' : 'Owner Operator Pro Plan'
+        const planLabel   = plan === 'fleet' ? 'Fleet Plan' : plan === 'founding_member' ? 'Founding Member Plan' : plan === 'enterprise' ? 'Enterprise Plan' : plan === 'solo' ? 'Owner Operator Solo Plan' : 'Owner Operator Pro Plan'
 
         await Promise.allSettled([
           // Welcome email to new user
@@ -149,7 +152,7 @@ export async function GET(request: Request) {
             from:    'DumpTruckBoss <noreply@dumptruckboss.com>',
             to:      user.email,
             subject: 'Welcome to DumpTruckBoss! Here\'s how to get started 🚛',
-            html:    buildWelcomeEmail({ firstName, trialEndStr }),
+            html:    buildWelcomeEmail({ firstName, trialEndStr, trialDays: planTrialDays }),
           }),
           // Internal signup notification
           resend.emails.send({
@@ -191,7 +194,7 @@ export async function GET(request: Request) {
 
 // ── Email templates ───────────────────────────────────────────────────────────
 
-function buildWelcomeEmail({ firstName, trialEndStr }: { firstName: string; trialEndStr: string }): string {
+function buildWelcomeEmail({ firstName, trialEndStr, trialDays = 7 }: { firstName: string; trialEndStr: string; trialDays?: number }): string {
   const steps = [
     { n: '1', title: 'Add your first driver', body: 'Go to the Drivers page and add the drivers in your fleet. You can include their name, phone, and email.' },
     { n: '2', title: 'Create a job and dispatch', body: 'Head to Dispatch and create your first job assignment. Assign a driver, set the job site, and track loads in real time.' },
@@ -232,7 +235,7 @@ function buildWelcomeEmail({ firstName, trialEndStr }: { firstName: string; tria
           <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1px solid #86efac;border-radius:12px;margin-bottom:32px;">
             <tr>
               <td style="padding:18px 22px;">
-                <p style="margin:0;font-size:13px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.05em;">✅ 7-Day Free Trial Active</p>
+                <p style="margin:0;font-size:13px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.05em;">✅ ${trialDays}-Day Free Trial Active</p>
                 <p style="margin:6px 0 0;font-size:14px;color:#166534;">
                   Your trial runs until <strong>${trialEndStr}</strong>. Full access, no credit card required.
                 </p>

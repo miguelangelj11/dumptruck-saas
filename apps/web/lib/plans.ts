@@ -3,14 +3,16 @@ export const PLANS = {
     id: 'solo',
     name: 'Owner Operator Solo',
     shortName: 'Solo',
-    price: 25,
-    displayPrice: '$25',
+    price: 15,
+    displayPrice: '$15',
     priceLabel: '/mo',
     priceId: process.env.STRIPE_SOLO_PRICE_ID,
     tagline: 'One truck. Get organized and get paid.',
     description: 'Perfect for single truck owner-operators.',
     badge: null,
     isCustom: false,
+    isFoundingMember: false,
+    trial_days: 30,
     limits: { trucks: 1, drivers: 1, team_members: 1 },
     features: [
       '1 truck & 1 driver',
@@ -18,7 +20,7 @@ export const PLANS = {
       'Unlimited ticket tracking',
       'Basic invoicing',
       'Document storage',
-      '7-day free trial',
+      '30-day free trial',
     ],
     locked: [
       'Dispatch board',
@@ -33,14 +35,16 @@ export const PLANS = {
     id: 'pro',
     name: 'Owner Operator Pro',
     shortName: 'Pro',
-    price: 80,
-    displayPrice: '$80',
+    price: 65,
+    displayPrice: '$65',
     priceLabel: '/mo',
     priceId: process.env.STRIPE_OWNER_PRICE_ID,
     tagline: 'Growing your operation? This is your plan.',
     description: 'For owner-operators ready to scale to a small fleet.',
     badge: null,
     isCustom: false,
+    isFoundingMember: false,
+    trial_days: 7,
     limits: { trucks: 5, drivers: 5, team_members: 1 },
     features: [
       'Up to 5 trucks & drivers',
@@ -65,14 +69,16 @@ export const PLANS = {
     id: 'fleet',
     name: 'Fleet',
     shortName: 'Fleet',
-    price: 200,
-    displayPrice: '$200',
+    price: 125,
+    displayPrice: '$125',
     priceLabel: '/mo',
     priceId: process.env.STRIPE_FLEET_PRICE_ID,
     tagline: 'Run your entire operation from one dashboard.',
     description: 'For growing fleets that need full operational control.',
     badge: 'Most Popular',
     isCustom: false,
+    isFoundingMember: false,
+    trial_days: 7,
     limits: { trucks: null, drivers: null, team_members: null },
     features: [
       'Unlimited trucks & drivers',
@@ -100,6 +106,32 @@ export const PLANS = {
     ],
   },
 
+  founding_member: {
+    id: 'founding_member',
+    name: 'Founding Member',
+    shortName: 'Founding',
+    price: 99,
+    displayPrice: '$99',
+    priceLabel: '/mo forever',
+    priceId: process.env.STRIPE_FOUNDING_MEMBER_PRICE_ID,
+    tagline: 'First 50 members only — locked in for life.',
+    description: 'Full Fleet plan at a founding price, locked forever.',
+    badge: '⭐ Founding Member',
+    isCustom: false,
+    isFoundingMember: true,
+    trial_days: 30,
+    limits: { trucks: null, drivers: null, team_members: null },
+    features: [
+      'Everything in Fleet — forever',
+      'Price locked at $99/mo for life',
+      'Founding Member badge on account',
+      '1 month free trial',
+      'Priority support',
+      'Input on product roadmap',
+    ],
+    locked: [],
+  },
+
   enterprise: {
     id: 'enterprise',
     name: 'Enterprise',
@@ -112,6 +144,8 @@ export const PLANS = {
     description: 'Custom solutions for large dump truck fleets and hauling companies.',
     badge: null,
     isCustom: true,
+    isFoundingMember: false,
+    trial_days: 7,
     limits: { trucks: null, drivers: null, team_members: null },
     features: [
       'Everything in Fleet',
@@ -140,6 +174,12 @@ export function getPlan(planId: string) {
   return PLANS[planId as PlanId] ?? PLANS.pro
 }
 
+export function getTrialDays(plan: string | null | undefined): number {
+  if (plan === 'solo') return 30
+  if (plan === 'founding_member') return 30
+  return 7
+}
+
 export type FeatureKey =
   | 'subcontractors'
   | 'missing_ticket_detection'
@@ -160,18 +200,18 @@ export type FeatureKey =
 
 export const FEATURE_GATES: Record<FeatureKey, PlanId[]> = {
   // Pro + above
-  realtime_dispatch: ['pro', 'fleet', 'enterprise'],
-  driver_portal:     ['pro', 'fleet', 'enterprise'],
+  realtime_dispatch: ['pro', 'fleet', 'founding_member', 'enterprise'],
+  driver_portal:     ['pro', 'fleet', 'founding_member', 'enterprise'],
 
   // Fleet + above
-  subcontractors:            ['fleet', 'enterprise'],
-  missing_ticket_detection:  ['fleet', 'enterprise'],
-  follow_up_automation:      ['fleet', 'enterprise'],
-  auto_invoice_intelligence: ['fleet', 'enterprise'],
-  profit_tracking:           ['fleet', 'enterprise'],
-  ai_dispatch:               ['fleet', 'enterprise'],
-  overdue_automation:        ['fleet', 'enterprise'],
-  weekly_reports:            ['fleet', 'enterprise'],
+  subcontractors:            ['fleet', 'founding_member', 'enterprise'],
+  missing_ticket_detection:  ['fleet', 'founding_member', 'enterprise'],
+  follow_up_automation:      ['fleet', 'founding_member', 'enterprise'],
+  auto_invoice_intelligence: ['fleet', 'founding_member', 'enterprise'],
+  profit_tracking:           ['fleet', 'founding_member', 'enterprise'],
+  ai_dispatch:               ['fleet', 'founding_member', 'enterprise'],
+  overdue_automation:        ['fleet', 'founding_member', 'enterprise'],
+  weekly_reports:            ['fleet', 'founding_member', 'enterprise'],
 
   // Enterprise only
   crm_pipeline:           ['enterprise'],
@@ -186,12 +226,25 @@ export function canAccess(planId: string, feature: FeatureKey): boolean {
   return (FEATURE_GATES[feature] as readonly string[]).includes(planId)
 }
 
+export const PLAN_LIMITS: Record<PlanId, { maxDrivers: number; maxTrucks: number }> = {
+  solo:           { maxDrivers: 1,        maxTrucks: 1 },
+  pro:            { maxDrivers: 5,        maxTrucks: 5 },
+  fleet:          { maxDrivers: Infinity, maxTrucks: Infinity },
+  founding_member:{ maxDrivers: Infinity, maxTrucks: Infinity },
+  enterprise:     { maxDrivers: Infinity, maxTrucks: Infinity },
+}
+
 function normalizePlanId(plan: string | null | undefined): PlanId {
-  if (plan === 'solo')                                            return 'solo'
-  if (plan === 'fleet')                                          return 'fleet'
-  if (plan === 'enterprise' || plan === 'growth')                return 'enterprise'
-  if (plan === 'pro' || plan === 'owner_operator' || plan === 'starter') return 'pro'
+  if (plan === 'solo')                                                    return 'solo'
+  if (plan === 'fleet')                                                   return 'fleet'
+  if (plan === 'founding_member')                                         return 'founding_member'
+  if (plan === 'enterprise' || plan === 'growth')                         return 'enterprise'
+  if (plan === 'pro' || plan === 'owner_operator' || plan === 'starter')  return 'pro'
   return 'pro'
+}
+
+export function normalizePlan(plan: string | null | undefined): PlanId {
+  return normalizePlanId(plan)
 }
 
 export function getPlanGate(company: {
@@ -210,25 +263,26 @@ export function getPlanGate(company: {
       isPro:           false,
       isFleet:         false,
       isEnterprise:    true,
+      isFoundingMember: false,
       isSuperAdmin:    true,
-      // backward-compat aliases
       isOwnerOperator: false,
       isGrowth:        true,
     }
   }
 
   const planId = normalizePlanId(company.plan ?? company.subscription_status)
+  const isFleetLevel = planId === 'fleet' || planId === 'founding_member'
   return {
     planId,
     can:             (feature: FeatureKey) => canAccess(planId, feature),
-    truckLimit:      PLANS[planId].limits.trucks as number | null,
-    driverLimit:     PLANS[planId].limits.drivers as number | null,
+    truckLimit:      PLAN_LIMITS[planId].maxTrucks === Infinity ? null : PLAN_LIMITS[planId].maxTrucks,
+    driverLimit:     PLAN_LIMITS[planId].maxDrivers === Infinity ? null : PLAN_LIMITS[planId].maxDrivers,
     isSolo:          planId === 'solo',
     isPro:           planId === 'pro',
-    isFleet:         planId === 'fleet',
+    isFleet:         isFleetLevel,
     isEnterprise:    planId === 'enterprise',
+    isFoundingMember: planId === 'founding_member',
     isSuperAdmin:    false,
-    // backward-compat aliases
     isOwnerOperator: planId === 'pro',
     isGrowth:        planId === 'enterprise',
   }

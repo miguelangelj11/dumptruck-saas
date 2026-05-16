@@ -69,10 +69,10 @@ export default function FoundingMemberPage() {
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '56px', fontWeight: 900, color: '#F5B731', lineHeight: 1 }}>$99</span>
             <span style={{ fontSize: '18px', color: 'rgba(255,255,255,0.4)' }}>/month</span>
-            <span style={{ fontSize: '20px', color: 'rgba(255,255,255,0.25)', textDecoration: 'line-through' }}>$200</span>
+            <span style={{ fontSize: '20px', color: 'rgba(255,255,255,0.25)', textDecoration: 'line-through' }}>$125</span>
           </div>
           <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.5)', marginBottom: '6px' }}>
-            <strong style={{ color: '#F5B731' }}>Locked in for life.</strong> Fleet price goes back to $200/mo after {FOUNDING_MEMBER_TOTAL} spots fill.
+            <strong style={{ color: '#F5B731' }}>Locked in for life.</strong> Fleet price goes back to $125/mo after {FOUNDING_MEMBER_TOTAL} spots fill.
           </p>
 
           {/* Spots counter */}

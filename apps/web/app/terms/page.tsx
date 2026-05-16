@@ -70,9 +70,10 @@ export default function TermsPage() {
               <Subsection title="Available Plans">
                 DumpTruckBoss offers the following subscription tiers:
                 <ul className="list-disc list-inside space-y-1 mt-2">
-                  <li><strong>Owner Operator Solo Plan</strong> — 1 truck &amp; 1 driver, unlimited tickets, basic invoicing. $25/month.</li>
-                  <li><strong>Owner Operator Pro Plan</strong> — Up to 5 trucks &amp; drivers, full dispatch board, revenue analytics. $80/month.</li>
-                  <li><strong>Fleet Plan</strong> — Unlimited trucks &amp; drivers, all invoice types, subcontractor management, team access, AI document reader. $200/month.</li>
+                  <li><strong>Owner Operator Solo Plan</strong> — 1 truck &amp; 1 driver, unlimited tickets, basic invoicing. $15/month.</li>
+                  <li><strong>Owner Operator Pro Plan</strong> — Up to 5 trucks &amp; drivers, full dispatch board, revenue analytics. $65/month.</li>
+                  <li><strong>Fleet Plan</strong> — Unlimited trucks &amp; drivers, all invoice types, subcontractor management, team access, AI document reader. $125/month.</li>
+                  <li><strong>Founding Member Plan</strong> — Full Fleet access at $99/month, locked in for life. Available to first 50 members only.</li>
                   <li><strong>Enterprise Plan</strong> — Custom pricing. Everything in Fleet plus CRM Growth Pipeline, quote builder, advanced profitability, dedicated account manager, and custom integrations. Contact us for pricing.</li>
                 </ul>
               </Subsection>

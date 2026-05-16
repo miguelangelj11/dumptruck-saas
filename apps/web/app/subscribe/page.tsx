@@ -8,26 +8,41 @@ import { Suspense } from 'react'
 
 const plans = [
   {
-    key: 'owner',
-    name: 'Owner Operator',
-    price: '$80',
+    key: 'solo',
+    name: 'Owner Operator Solo',
+    price: '$15',
     period: '/mo',
-    description: 'Perfect for solo operators with up to 5 trucks',
+    description: 'One truck. Get organized and get paid.',
     features: [
-      'Up to 5 trucks & 5 drivers',
-      'Dispatching & job management',
-      'Ticket tracking (unlimited)',
+      '1 truck & 1 driver',
+      'Dashboard',
+      'Unlimited ticket tracking',
       'Basic invoicing',
+      'Document storage',
+    ],
+    highlight: false,
+  },
+  {
+    key: 'pro',
+    name: 'Owner Operator Pro',
+    price: '$65',
+    period: '/mo',
+    description: 'Growing your operation? This is your plan.',
+    features: [
+      'Up to 5 trucks & drivers',
+      'Full dispatch board',
+      'Revenue analytics',
       'Driver management',
+      'Client companies',
     ],
     highlight: false,
   },
   {
     key: 'fleet',
     name: 'Fleet',
-    price: '$200',
+    price: '$125',
     period: '/mo',
-    description: 'For growing companies that need full control',
+    description: 'Run your entire operation from one dashboard.',
     features: [
       'Unlimited trucks & drivers',
       'Subcontractor management',
@@ -37,22 +52,6 @@ const plans = [
       'AI document reader (50/mo)',
     ],
     highlight: true,
-  },
-  {
-    key: 'growth',
-    name: 'Growth',
-    price: '$350',
-    period: '/mo',
-    description: 'Win more jobs and scale your revenue',
-    features: [
-      'Everything in Fleet',
-      'CRM Growth Pipeline',
-      'Quote builder',
-      'Advanced job profitability',
-      'Mobile ticket + signature capture',
-      'AI document reader (400/mo)',
-    ],
-    highlight: false,
   },
 ]
 
@@ -151,7 +150,7 @@ function SubscribePageInner() {
                 fontSize: '12px', fontWeight: 700, padding: '3px 10px', borderRadius: '20px',
                 border: '1px solid #86efac',
               }}>
-                Save $101/mo vs regular price
+                Save $26/mo vs regular Fleet price
               </span>
             </div>
             <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '24px' }}>

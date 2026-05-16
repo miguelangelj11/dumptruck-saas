@@ -1995,7 +1995,7 @@ export default function SettingsPage() {
             const NEXT: Record<'solo' | 'pro' | 'fleet' | 'enterprise', { label: string; price: string; checkoutKey: string | null; features: string[] } | null> = {
               solo: {
                 label:       'Owner Operator Pro',
-                price:       '$80/mo',
+                price:       '$65/mo',
                 checkoutKey: 'pro',
                 features: [
                   'Up to 5 trucks & 5 drivers',
@@ -2007,7 +2007,7 @@ export default function SettingsPage() {
               },
               pro: {
                 label:       'Fleet Plan',
-                price:       '$200/mo',
+                price:       '$125/mo',
                 checkoutKey: 'fleet',
                 features: [
                   'Unlimited trucks & drivers',

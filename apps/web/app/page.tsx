@@ -288,7 +288,7 @@ function WhyDifferent() {
     { icon: '⚡', title: 'Set up in 15 minutes',           body: "Add your company info, add your trucks, invite your first driver. First dispatch in under 15 minutes.",                   highlight: false },
     { icon: '🎯', title: 'Only what you actually need',    body: "No bloat. No features nobody uses. Built specifically for 1–25 truck operations, nothing more.",                          highlight: false },
     { icon: '💬', title: 'Plain English. No tech speak.',  body: 'Every screen uses the same language you use in the yard. Tickets, dispatches, loads — not "work orders" or "entities."', highlight: false },
-    { icon: '💰', title: 'Priced for real operators',      body: "Starting at $25/month. Less than one lost ticket. No long-term contracts.",                                               highlight: false },
+    { icon: '💰', title: 'Priced for real operators',      body: "Starting at $15/month. Less than one lost ticket. No long-term contracts.",                                               highlight: false },
   ]
 
   return (

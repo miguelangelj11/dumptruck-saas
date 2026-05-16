@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
+import { getTrialDays } from '@/lib/plans'
 
 function getAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -80,7 +81,7 @@ export async function POST(request: Request) {
         name:                company_name,
         plan:                plan,
         trial_started_at:    now.toISOString(),
-        trial_ends_at:       new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        trial_ends_at:       new Date(now.getTime() + getTrialDays(plan) * 24 * 60 * 60 * 1000).toISOString(),
         subscription_status: 'trial',
       })
       .select('id')
@@ -105,15 +106,16 @@ export async function POST(request: Request) {
     if (process.env.RESEND_API_KEY) {
       const resend      = new Resend(process.env.RESEND_API_KEY)
       const firstName   = (full_name as string | undefined)?.split(' ')[0]?.trim() || 'there'
-      const trialEnd    = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+      const planTrialDays = getTrialDays(plan)
+      const trialEnd    = new Date(now.getTime() + planTrialDays * 24 * 60 * 60 * 1000)
       const trialEndStr = trialEnd.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-      const planLabel   = plan === 'fleet' ? 'Fleet Plan' : plan === 'enterprise' ? 'Enterprise Plan' : 'Owner Operator Plan'
+      const planLabel   = plan === 'fleet' ? 'Fleet Plan' : plan === 'founding_member' ? 'Founding Member Plan' : plan === 'enterprise' ? 'Enterprise Plan' : plan === 'solo' ? 'Owner Operator Solo Plan' : 'Owner Operator Pro Plan'
 
       resend.emails.send({
         from:    'DumpTruckBoss <noreply@dumptruckboss.com>',
         to:      email,
         subject: 'Welcome to DumpTruckBoss! Here\'s how to get started 🚛',
-        html:    buildWelcomeEmail({ firstName, trialEndStr }),
+        html:    buildWelcomeEmail({ firstName, trialEndStr, trialDays: planTrialDays }),
       }).catch(err => console.error('[register] welcome email failed:', err))
 
       resend.emails.send({
@@ -162,7 +164,7 @@ export async function POST(request: Request) {
 
 // ── Email templates ───────────────────────────────────────────────────────────
 
-function buildWelcomeEmail({ firstName, trialEndStr }: { firstName: string; trialEndStr: string }): string {
+function buildWelcomeEmail({ firstName, trialEndStr, trialDays = 7 }: { firstName: string; trialEndStr: string; trialDays?: number }): string {
   const steps = [
     { n: '1', title: 'Add your first driver', body: 'Go to the Drivers page and add the drivers in your fleet. You can include their name, phone, and email.' },
     { n: '2', title: 'Create a job and dispatch', body: 'Head to Dispatch and create your first job assignment. Assign a driver, set the job site, and track loads in real time.' },
@@ -203,7 +205,7 @@ function buildWelcomeEmail({ firstName, trialEndStr }: { firstName: string; tria
           <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1px solid #86efac;border-radius:12px;margin-bottom:32px;">
             <tr>
               <td style="padding:18px 22px;">
-                <p style="margin:0;font-size:13px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.05em;">✅ 7-Day Free Trial Active</p>
+                <p style="margin:0;font-size:13px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.05em;">✅ ${trialDays}-Day Free Trial Active</p>
                 <p style="margin:6px 0 0;font-size:14px;color:#166534;">
                   Your trial runs until <strong>${trialEndStr}</strong>. Full access, no credit card required.
                 </p>

@@ -5,40 +5,39 @@ import { Check } from 'lucide-react'
 
 const tiers = [
   {
-    name: 'Owner Operator',
+    name: 'Owner Operator Solo',
     badge: 'Solo Operators',
     badgeStyle: 'gold' as const,
-    price: '$80',
+    price: '$15',
     period: '/mo',
-    description: 'Perfect for solo operators with up to 5 trucks',
-    trialBanner: { icon: '🎉', line1: '7-Day Free Trial', line2: 'No credit card required' },
+    description: 'One truck. Get organized and get paid.',
+    trialBanner: { icon: '🎉', line1: '30-Day Free Trial', line2: 'No credit card required' },
     sectionHeader: null,
     cta: 'Start Free Trial →',
-    href: '/signup?plan=owner_operator',
-    checkoutPlan: 'owner' as string,
+    href: '/signup?plan=solo',
+    checkoutPlan: 'solo' as string,
     ctaStyle: 'gold' as const,
     style: 'light' as const,
     features: [
-      'Up to 5 trucks & 5 drivers',
-      'Dispatching & job management',
-      'Ticket tracking (unlimited)',
+      '1 truck & 1 driver',
+      'Dashboard',
+      'Unlimited ticket tracking',
       'Ticket photo upload',
-      'Basic invoicing (client invoices)',
+      'Basic invoicing',
       'Download invoices as PDF',
       'Basic revenue dashboard',
-      'Driver management',
-      'Client companies',
+      'Document storage',
     ],
   },
   {
     name: 'Fleet',
     badge: 'Most Popular',
     badgeStyle: 'green' as const,
-    price: '$200',
+    price: '$125',
     period: '/mo',
-    description: 'For growing companies that need full control',
+    description: 'Run your entire operation from one dashboard.',
     trialBanner: { icon: '🎉', line1: '7-Day Free Trial', line2: 'No credit card required' },
-    sectionHeader: 'Everything in Owner Operator, plus:',
+    sectionHeader: 'Everything in Owner Operator Pro, plus:',
     cta: 'Start Free Trial →',
     href: '/signup?plan=fleet',
     checkoutPlan: 'fleet' as string,
@@ -61,32 +60,30 @@ const tiers = [
     ],
   },
   {
-    name: 'Growth',
-    badge: 'Win More Jobs',
+    name: 'Enterprise',
+    badge: 'Large Fleets',
     badgeStyle: 'dark-gold' as const,
-    price: '$350',
-    period: '/mo',
-    description: 'For operators ready to scale their revenue',
-    trialBanner: { icon: '🚀', line1: '7-Day Free Trial', line2: 'No credit card required' },
+    price: 'Custom',
+    period: ' pricing',
+    description: 'Built around your operation. Priced to match.',
+    trialBanner: { icon: '🚛', line1: 'Custom Onboarding', line2: 'Dedicated account manager' },
     sectionHeader: 'Everything in Fleet, plus:',
-    cta: 'Start Free Trial →',
-    href: '/signup?plan=growth',
-    checkoutPlan: 'growth' as string,
+    cta: 'Contact Sales →',
+    href: '/enterprise',
+    checkoutPlan: 'enterprise' as string,
     ctaStyle: 'gold-outline' as const,
     style: 'navy' as const,
     features: [
       'CRM Growth Pipeline',
-      'Lead & job tracking',
       'Quote builder',
-      'Convert quotes → jobs → invoices',
       'Advanced job profitability',
       'Revenue per driver & truck',
       'Customer insights dashboard',
-      'Top clients & slow payer tracking',
-      'Mobile ticket with signature capture',
-      'AI document reader (400/mo)',
+      'Mobile ticket + signature capture',
+      'AI document reader (unlimited)',
       'Documents hub',
       'Priority support',
+      'Custom integrations',
     ],
   },
 ]
@@ -96,6 +93,7 @@ export default function PricingSection() {
 
   async function handleCheckout(planKey: string, fallbackHref: string) {
     if (checkoutLoading) return
+    if (planKey === 'enterprise') { window.location.href = fallbackHref; return }
     setCheckoutLoading(planKey)
     try {
       const res = await fetch('/api/stripe/checkout', {
@@ -123,7 +121,7 @@ export default function PricingSection() {
         <div className="text-center mb-12">
           <p className="text-sm font-semibold text-[#F5B731] uppercase tracking-wider mb-3">Pricing</p>
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">Simple, honest pricing</h2>
-          <p className="text-gray-500 text-lg max-w-xl mx-auto">All plans include a free 7-day trial. No credit card required.</p>
+          <p className="text-gray-500 text-lg max-w-xl mx-auto">Solo plan includes a 30-day trial. All other plans include a 7-day trial. No credit card required.</p>
         </div>
 
         {/* Cards */}
@@ -232,7 +230,11 @@ export default function PricingSection() {
 
                 {/* Trust bullets */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '20px' }}>
-                  {['No credit card required', 'Full access for 7 days', 'Cancel anytime'].map((bullet) => (
+                  {[
+                    'No credit card required',
+                    tier.checkoutPlan === 'enterprise' ? 'Custom contract terms' : tier.checkoutPlan === 'solo' ? 'Full access for 30 days' : 'Full access for 7 days',
+                    'Cancel anytime',
+                  ].map((bullet) => (
                     <div key={bullet} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: isDark ? 'rgba(255,255,255,0.6)' : '#6b7280' }}>
                       <span style={{ color: isDark ? '#4ade80' : '#F5B731', fontWeight: 600 }}>✓</span>
                       {bullet}
@@ -271,7 +273,7 @@ export default function PricingSection() {
         </div>
 
         <p className="text-center text-sm text-gray-400 mt-10">
-          All plans include a 7-day free trial. No credit card required. Cancel anytime.
+          Solo plan includes a 30-day free trial. Pro &amp; Fleet include a 7-day trial. No credit card required. Cancel anytime.
         </p>
       </div>
     </section>

@@ -103,7 +103,7 @@ export default function ExpensesPage() {
       const { data } = await supaClient.from('companies').select('plan, is_super_admin, subscription_override').eq('id', id).maybeSingle()
       if (data?.is_super_admin || data?.subscription_override) return
       const p = (data?.plan as string | null) ?? 'owner_operator'
-      if (p === 'solo') setPlanLocked({ plan: 'Owner Operator', price: 80 })
+      if (p === 'solo') setPlanLocked({ plan: 'Owner Operator Pro', price: 65 })
     })
   }, [])
 

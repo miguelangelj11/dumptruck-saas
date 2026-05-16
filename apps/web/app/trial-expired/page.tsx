@@ -86,7 +86,24 @@ export default async function TrialExpiredPage() {
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '24px' }}>
               <Link
-                href="/signup?plan=owner_operator"
+                href="/subscribe?plan=solo"
+                style={{
+                  display: 'block',
+                  padding: '14px',
+                  borderRadius: '10px',
+                  background: '#374151',
+                  color: '#fff',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                  textAlign: 'center',
+                }}
+              >
+                Subscribe — $15/mo
+                <div style={{ fontSize: '11px', fontWeight: 400, marginTop: '2px', opacity: 0.7 }}>Solo Plan</div>
+              </Link>
+              <Link
+                href="/subscribe?plan=pro"
                 style={{
                   display: 'block',
                   padding: '14px',
@@ -99,11 +116,11 @@ export default async function TrialExpiredPage() {
                   textAlign: 'center',
                 }}
               >
-                Subscribe — $80/mo
-                <div style={{ fontSize: '11px', fontWeight: 400, marginTop: '2px', opacity: 0.7 }}>Owner Operator</div>
+                Subscribe — $65/mo
+                <div style={{ fontSize: '11px', fontWeight: 400, marginTop: '2px', opacity: 0.7 }}>Owner Operator Pro</div>
               </Link>
               <Link
-                href="/signup?plan=fleet"
+                href="/subscribe?plan=fleet"
                 style={{
                   display: 'block',
                   padding: '14px',
@@ -116,25 +133,8 @@ export default async function TrialExpiredPage() {
                   textAlign: 'center',
                 }}
               >
-                Subscribe — $200/mo
+                Subscribe — $125/mo
                 <div style={{ fontSize: '11px', fontWeight: 400, marginTop: '2px', opacity: 0.7 }}>Fleet Plan</div>
-              </Link>
-              <Link
-                href="/signup?plan=growth"
-                style={{
-                  display: 'block',
-                  padding: '14px',
-                  borderRadius: '10px',
-                  background: '#6d28d9',
-                  color: '#fff',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  textDecoration: 'none',
-                  textAlign: 'center',
-                }}
-              >
-                Subscribe — $350/mo
-                <div style={{ fontSize: '11px', fontWeight: 400, marginTop: '2px', opacity: 0.7 }}>Growth Plan</div>
               </Link>
             </div>
           )}

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
+import { getTrialDays } from '@/lib/plans'
 
 type PlanKey = 'solo' | 'pro' | 'owner_operator' | 'owner' | 'fleet' | 'growth' | 'enterprise' | 'founding_member'
 
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
   const stripe   = new Stripe(secretKey)
   const siteUrl  = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin
   const trialParams = !skipTrial ? {
-    trial_period_days: 7,
+    trial_period_days: getTrialDays(plan),
     trial_settings: { end_behavior: { missing_payment_method: 'cancel' as const } },
   } : {}
   const paymentCollection: Stripe.Checkout.SessionCreateParams['payment_method_collection'] =

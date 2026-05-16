@@ -17,17 +17,17 @@ const plans = [
     key: 'solo',
     name: 'Owner Operator Solo',
     tagline: 'One truck. Get organized and get paid.',
-    monthlyPrice: '$25',
+    monthlyPrice: '$15',
     popular: false,
     isEnterprise: false,
-    ctaLabel: 'Start Free 7-Day Trial',
+    ctaLabel: 'Start Free 30-Day Trial',
     features: [
       '1 truck & 1 driver',
       'Dashboard',
       'Unlimited ticket tracking',
       'Basic invoicing',
       'Document storage',
-      '7-day free trial',
+      '30-day free trial',
     ],
     locked: [
       'Dispatch board',
@@ -41,7 +41,7 @@ const plans = [
     key: 'pro',
     name: 'Owner Operator Pro',
     tagline: 'Growing your operation? This is your plan.',
-    monthlyPrice: '$80',
+    monthlyPrice: '$65',
     popular: false,
     isEnterprise: false,
     ctaLabel: 'Start Free 7-Day Trial',
@@ -67,7 +67,7 @@ const plans = [
     key: 'fleet',
     name: 'Fleet',
     tagline: 'Run your entire operation from one dashboard.',
-    monthlyPrice: '$200',
+    monthlyPrice: '$125',
     popular: true,
     isEnterprise: false,
     ctaLabel: 'Start Free 7-Day Trial',
@@ -174,7 +174,7 @@ const table: { section: string; rows: { label: string; vals: [V, V, V, V] }[] }[
     section: 'Support',
     rows: [
       { label: 'Support tier',   vals: ['Email', 'Email', 'Priority email', 'Dedicated manager'] },
-      { label: 'Free trial',     vals: ['7 days', '7 days', '7 days', 'Custom'] },
+      { label: 'Free trial',     vals: ['30 days', '7 days', '7 days', 'Custom'] },
     ],
   },
 ]
@@ -182,7 +182,7 @@ const table: { section: string; rows: { label: string; vals: [V, V, V, V] }[] }[
 // ─── FAQ ─────────────────────────────────────────────────────────────────────
 
 const faq = [
-  { q: 'Is there a free trial?', a: 'Yes — Solo, Owner Operator Pro, and Fleet plans include a 7-day free trial. No credit card required. Full access from day one.' },
+  { q: 'Is there a free trial?', a: 'Yes — Solo includes a 30-day free trial. Owner Operator Pro and Fleet include a 7-day free trial. No credit card required. Full access from day one.' },
   { q: 'Can I change plans later?', a: 'Absolutely. Upgrade or downgrade any time. Changes take effect at the next billing cycle.' },
   { q: 'What happens to my data if I cancel?', a: 'Your data stays in the system for 30 days after cancellation. You can export everything before then.' },
   { q: 'Is there a limit on load tickets?', a: 'No. All plans include unlimited ticket tracking.' },
@@ -251,7 +251,7 @@ export default function PricingPage() {
           <span style={{ color: '#F5B731' }}>Run your dump truck business the right way.</span>
         </h1>
         <p style={{ fontSize: '17px', color: 'rgba(255,255,255,0.45)', marginBottom: '56px', lineHeight: 1.6 }}>
-          Solo, Pro, and Fleet plans include a free 7-day trial. No credit card required.
+          Solo includes a 30-day trial. Pro &amp; Fleet include a 7-day trial. No credit card required.
         </p>
       </div>
 
@@ -312,15 +312,15 @@ export default function PricingPage() {
             <span style={{ fontSize: '60px', fontWeight: 900, color: '#F5B731', lineHeight: 1 }}>$99</span>
             <span style={{ fontSize: '18px', color: 'rgba(255,255,255,0.4)' }}>/month</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '20px', color: 'rgba(255,255,255,0.3)', textDecoration: 'line-through' }}>$200</span>
+              <span style={{ fontSize: '20px', color: 'rgba(255,255,255,0.3)', textDecoration: 'line-through' }}>$125</span>
               <span style={{ fontSize: '12px', fontWeight: 700, background: 'rgba(74,222,128,0.15)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.3)', borderRadius: '6px', padding: '2px 8px' }}>
-                SAVE $101/MO
+                SAVE $26/MO
               </span>
             </div>
           </div>
 
           <p style={{ fontSize: '16px', color: 'rgba(255,255,255,0.6)', marginBottom: '36px', lineHeight: 1.5 }}>
-            <strong style={{ color: '#F5B731' }}>Locked in for life.</strong> Fleet price returns to $200/mo after {FOUNDING_MEMBER_TOTAL} spots fill.
+            <strong style={{ color: '#F5B731' }}>Locked in for life.</strong> Fleet price returns to $125/mo after {FOUNDING_MEMBER_TOTAL} spots fill.
           </p>
 
           {/* Two-column content */}
@@ -346,7 +346,7 @@ export default function PricingPage() {
                   'AI document reader (50/mo)',
                   'Overdue invoice automation',
                   'Weekly performance reports',
-                  '7-day free trial',
+                  '30-day free trial',
                 ].map((f) => (
                   <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: '9px' }}>
                     <span style={{ color: '#F5B731', fontWeight: 700, flexShrink: 0, marginTop: '1px' }}>✓</span>
@@ -600,7 +600,7 @@ export default function PricingPage() {
                 </ul>
 
                 <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: hl ? '1px solid rgba(245,183,49,0.3)' : '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {['7-day free trial', 'No credit card required', 'Cancel anytime'].map((t) => (
+                  {[plan.key === 'solo' ? '30-day free trial' : '7-day free trial', 'No credit card required', 'Cancel anytime'].map((t) => (
                     <div key={t} style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: 'rgba(255,255,255,0.35)' }}>
                       <span style={{ color: hl ? GREEN_LIGHT : GREEN, fontWeight: 700 }}>✓</span>
                       {t}
@@ -726,7 +726,7 @@ export default function PricingPage() {
             Ready to run your business like a boss?
           </h2>
           <p style={{ fontSize: '16px', color: 'rgba(255,255,255,0.45)', marginBottom: '36px', maxWidth: '480px', margin: '0 auto 36px' }}>
-            7-day free trial. No credit card required. Set up in 10 minutes.
+            30-day free trial for Solo. 7-day trial for Pro &amp; Fleet. No credit card required.
           </p>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link

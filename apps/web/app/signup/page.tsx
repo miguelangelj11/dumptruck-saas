@@ -20,9 +20,9 @@ const HEARD_FROM_OPTIONS = [
 ]
 
 const PLANS: { id: Plan; name: string; price: string; desc: string; color: string; badge?: string }[] = [
-  { id: 'solo',  name: 'Owner Operator Solo', price: '$25/mo',  desc: '1 truck & 1 driver, basic tickets',   color: '#1a1a1a' },
-  { id: 'pro',   name: 'Owner Operator Pro',  price: '$80/mo',  desc: 'Up to 5 trucks, dispatch & jobs',     color: '#1a1a1a' },
-  { id: 'fleet', name: 'Fleet',               price: '$200/mo', desc: 'Unlimited trucks & drivers',          color: '#F5B731', badge: 'Most Popular' },
+  { id: 'solo',  name: 'Owner Operator Solo', price: '$15/mo',  desc: '1 truck & 1 driver, basic tickets',   color: '#1a1a1a' },
+  { id: 'pro',   name: 'Owner Operator Pro',  price: '$65/mo',  desc: 'Up to 5 trucks, dispatch & jobs',     color: '#1a1a1a' },
+  { id: 'fleet', name: 'Fleet',               price: '$125/mo', desc: 'Unlimited trucks & drivers',          color: '#F5B731', badge: 'Most Popular' },
 ]
 
 export default function SignupPage() {
@@ -127,7 +127,7 @@ export default function SignupPage() {
       }
 
       const now = new Date().toISOString()
-      const trialDays = isFoundingMember ? 30 : 7
+      const trialDays = isFoundingMember ? 30 : selectedPlan === 'solo' ? 30 : 7
       const trialEndsAt = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000).toISOString()
       await supabase.from('companies').insert({
         id:                       user.id,
@@ -277,7 +277,7 @@ export default function SignupPage() {
             </div>
           )}
           <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#fff', marginBottom: '6px' }}>
-            {isFoundingMember ? 'Claim Your Founding Member Account' : subscribeMode ? 'Subscribe to DumpTruckBoss' : 'Start your free 7-day trial'}
+            {isFoundingMember ? 'Claim Your Founding Member Account' : subscribeMode ? 'Subscribe to DumpTruckBoss' : selectedPlan === 'solo' ? 'Start your free 30-day trial' : 'Start your free 7-day trial'}
           </h1>
           <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.45)' }}>
             {isFoundingMember ? 'First 30 days free. Then just $99/mo locked in for life.' : subscribeMode ? 'Enter your info below and you\'ll be taken to checkout.' : 'No credit card required. Full access from day one.'}
@@ -419,7 +419,7 @@ export default function SignupPage() {
                 cursor: (!selectedPlan && !isFoundingMember) ? 'not-allowed' : 'pointer', transition: 'all 0.15s',
                 opacity: (loading || buyLoading) ? 0.7 : 1,
               }}>
-                {loading ? 'Creating account…' : isFoundingMember ? 'Create My Founding Member Account →' : 'Start My Free 7-Day Trial'}
+                {loading ? 'Creating account…' : isFoundingMember ? 'Create My Founding Member Account →' : selectedPlan === 'solo' ? 'Start My Free 30-Day Trial' : 'Start My Free 7-Day Trial'}
               </button>
 
               {!isFoundingMember && (
@@ -455,7 +455,7 @@ export default function SignupPage() {
               <p style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.5 }}>
                 {isFoundingMember
                   ? 'Your 30-day free trial starts immediately. After 30 days you\'ll be billed $99/mo — your Founding Member rate locked in for life.'
-                  : 'Your 7-day free trial starts immediately. After 7 days you\'ll be asked to subscribe to continue using DumpTruckBoss.'}
+                  : selectedPlan === 'solo' ? 'Your 30-day free trial starts immediately. After 30 days you\'ll be asked to subscribe to continue using DumpTruckBoss.' : 'Your 7-day free trial starts immediately. After 7 days you\'ll be asked to subscribe to continue using DumpTruckBoss.'}
               </p>
             </div>
           )}
