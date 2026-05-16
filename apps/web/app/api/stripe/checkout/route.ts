@@ -8,9 +8,9 @@ type PlanKey = 'solo' | 'pro' | 'owner_operator' | 'owner' | 'fleet' | 'growth' 
 
 const PRICE_IDS: Record<PlanKey, string | undefined | null> = {
   solo:            process.env.STRIPE_SOLO_PRICE_ID,
-  pro:             process.env.STRIPE_OWNER_PRICE_ID,   // Owner Operator Pro reuses STRIPE_OWNER_PRICE_ID
-  owner_operator:  process.env.STRIPE_OWNER_PRICE_ID,   // backward compat
-  owner:           process.env.STRIPE_OWNER_PRICE_ID,   // backward compat
+  pro:             process.env.owner_opp_pro,            // $65/mo Owner Operator Pro
+  owner_operator:  process.env.owner_opp_pro,            // backward compat
+  owner:           process.env.owner_opp_pro,            // backward compat
   fleet:           process.env.STRIPE_FLEET_PRICE_ID,
   founding_member: process.env.STRIPE_FOUNDING_MEMBER_PRICE_ID, // $99/mo locked-in rate
   growth:          null,   // enterprise — no Stripe checkout
