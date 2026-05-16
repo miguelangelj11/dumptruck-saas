@@ -67,6 +67,24 @@ function Hero() {
               <span className="text-xl">▶</span> Watch Demo
             </button>
           </div>
+
+          {/* Social proof strip */}
+          <Link href="/testimonials" className="inline-flex items-center gap-3 mt-6 text-sm text-gray-500 hover:text-gray-300 transition-colors no-underline">
+            <div className="flex -space-x-2">
+              {['MR', 'JC', 'DB', 'TG', 'KT'].map((initials, i) => (
+                <div
+                  key={i}
+                  className="w-8 h-8 rounded-full bg-[#F5B731]/20 border-2 border-[#1a1a1a] flex items-center justify-center text-xs font-bold text-[#F5B731]"
+                >
+                  {initials}
+                </div>
+              ))}
+            </div>
+            <p>
+              <span className="text-white font-semibold">24 founding members</span>
+              {' '}already running on DumpTruckBoss
+            </p>
+          </Link>
         </div>
 
         {/* Dashboard mockup */}
