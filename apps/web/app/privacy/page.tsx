@@ -3,7 +3,7 @@ import Footer from '@/components/landing/footer'
 
 export const metadata = {
   title: 'Privacy Policy — DumpTruckBoss',
-  description: 'How DumpTruckBoss (operated by DumpTruckBoss LLC) collects, uses, and protects your data.',
+  description: 'How DumpTruckBoss LLC collects, uses, and protects your data.',
 }
 
 const EFFECTIVE_DATE = 'May 3, 2026'
@@ -28,8 +28,7 @@ export default function PrivacyPage() {
           <div className="prose prose-gray max-w-none">
 
             <p className="text-gray-600 leading-relaxed mb-4">
-              <strong>DumpTruckBoss LLC</strong>, doing business as DumpTruckBoss ("DumpTruckBoss," "we,"
-              "us," or "our"), operates the DumpTruckBoss platform — a cloud-based SaaS product for dispatch,
+              <strong>DumpTruckBoss LLC</strong> ("DumpTruckBoss," "we," "us," or "our") operates the DumpTruckBoss platform — a cloud-based SaaS product for dispatch,
               ticketing, invoicing, and fleet management for dump truck and hauling companies.
             </p>
             <p className="text-gray-600 leading-relaxed mb-12">

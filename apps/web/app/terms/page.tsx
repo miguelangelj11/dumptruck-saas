@@ -29,9 +29,8 @@ export default function TermsPage() {
 
             <p className="text-gray-600 leading-relaxed mb-4">
               These Terms of Service ("Terms") govern your access to and use of the DumpTruckBoss platform
-              and related services (collectively, the "Service") operated by <strong>DumpTruckBoss LLC</strong>,
-              doing business as DumpTruckBoss ("DumpTruckBoss," "we," "us," or "our"), a company registered
-              in the State of Georgia, USA.
+              and related services (collectively, the "Service") operated by <strong>DumpTruckBoss LLC</strong>
+              ("DumpTruckBoss," "we," "us," or "our"), a company registered in the State of Georgia, USA.
             </p>
             <p className="text-gray-600 leading-relaxed mb-12">
               By creating an account or using the Service, you agree to be bound by these Terms. Please read
