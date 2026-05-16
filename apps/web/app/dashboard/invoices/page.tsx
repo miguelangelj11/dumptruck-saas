@@ -1741,7 +1741,7 @@ export default function InvoicesPage() {
                     className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Address</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('address')}</label>
                   <input value={editInvForm.client_address} onChange={e => setEditInvForm(p => ({ ...p, client_address: e.target.value }))}
                     placeholder="123 Main St, City, ST"
                     className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
@@ -1772,7 +1772,7 @@ export default function InvoicesPage() {
                     className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Payment Method</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('paymentMethod')}</label>
                   <select value={editInvForm.payment_method} onChange={e => setEditInvForm(p => ({ ...p, payment_method: e.target.value }))}
                     className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white">
                     <option value="">— Select —</option>
@@ -1825,13 +1825,13 @@ export default function InvoicesPage() {
         <form onSubmit={handleCreate} className="space-y-6">
           {/* Invoice Type */}
           <div className="bg-white rounded-xl border border-gray-100 p-5">
-            <p className="text-sm font-semibold text-gray-700 mb-3">Invoice Type</p>
+            <p className="text-sm font-semibold text-gray-700 mb-3">{t('invoiceTypeLabel')}</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {([
-                { type: 'client',     label: 'Client Invoice',        desc: 'Bill a client for work completed',          locked: false },
-                { type: 'paystub',    label: 'Driver Pay Stub',       desc: 'Pay your drivers for jobs completed',       locked: companyPlan === 'pro' || companyPlan === 'owner_operator' },
-                { type: 'contractor', label: 'Subcontractor Invoice', desc: 'Pay a subcontractor for work completed',    locked: companyPlan === 'pro' || companyPlan === 'owner_operator' },
-              ] as const).map(({ type, label, desc, locked }) => (
+                { type: 'client' as const,     label: t('clientInvoice'),        desc: t('clientInvoiceDesc'),        locked: false },
+                { type: 'paystub' as const,    label: t('driverPayStub'),        desc: t('driverPayStubDesc'),        locked: companyPlan === 'pro' || companyPlan === 'owner_operator' },
+                { type: 'contractor' as const, label: t('subcontractorInvoice'), desc: t('subcontractorInvoiceDesc'), locked: companyPlan === 'pro' || companyPlan === 'owner_operator' },
+              ]).map(({ type, label, desc, locked }) => (
                 <div key={type} className="relative">
                   <button
                     type="button"
@@ -1858,7 +1858,7 @@ export default function InvoicesPage() {
           {/* Bill To / Pay To */}
           <div className="bg-white rounded-xl border border-gray-100 p-5">
             <p className="text-sm font-semibold text-gray-700 mb-3">
-              {invoiceType === 'client' ? t('billTo') : 'Pay To'}
+              {invoiceType === 'client' ? t('billTo') : t('payTo')}
             </p>
             <div className="grid grid-cols-2 gap-4">
               {/* Contractor type: pick from dropdown */}
@@ -1883,7 +1883,7 @@ export default function InvoicesPage() {
                 <>
                   <div className="col-span-2 sm:col-span-1">
                     <label className="block text-xs font-medium text-gray-600 mb-1">
-                      {invoiceType === 'client' ? 'Client / Company Name *' : 'Driver Name *'}
+                      {invoiceType === 'client' ? t('clientCompanyName') : t('driverNameLabel')}
                     </label>
                     {invoiceType === 'paystub' ? (
                       <select
@@ -1952,7 +1952,7 @@ export default function InvoicesPage() {
                     )}
                   </div>
                   <div className="col-span-2 sm:col-span-1">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Address</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">{t('address')}</label>
                     <input
                       value={createForm.client_address}
                       onChange={e => setCreateForm(p => ({ ...p, client_address: e.target.value }))}
@@ -2050,7 +2050,7 @@ export default function InvoicesPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Payment Method</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{t('paymentMethod')}</label>
                 <select
                   value={createForm.payment_method}
                   onChange={e => setCreateForm(p => ({ ...p, payment_method: e.target.value }))}
@@ -2078,7 +2078,7 @@ export default function InvoicesPage() {
           {/* Job / Ticket Selection */}
           <div className="bg-white rounded-xl border border-gray-100 p-5">
             <p className="text-sm font-semibold text-gray-700 mb-3">
-              {invoiceType === 'contractor' ? 'Select Contractor Tickets' : 'Select Jobs'}
+              {invoiceType === 'contractor' ? t('selectContractorTickets') : t('selectJobs')}
             </p>
 
             {invoiceType === 'contractor' ? (
@@ -2136,7 +2136,7 @@ export default function InvoicesPage() {
                     <input type="date" value={createForm.date_to} onChange={e => setCreateForm(p => ({ ...p, date_to: e.target.value }))} className="rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
                   </div>
                   <select value={driverFilter} onChange={e => setDriverFilter(e.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20">
-                    <option value="">All Drivers</option>
+                    <option value="">{t('allDrivers')}</option>
                     {drivers.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
                   {unselectedApprovedLoads.length > 0 && canUse(companyPlan, 'auto_invoicing') && (
@@ -2148,7 +2148,7 @@ export default function InvoicesPage() {
                       Select All Uninvoiced ({unselectedApprovedLoads.length})
                     </button>
                   )}
-                  <button type="button" onClick={selectAllFiltered} className="text-xs text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] font-medium">Select filtered ({filteredLoads.length})</button>
+                  <button type="button" onClick={selectAllFiltered} className="text-xs text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] font-medium">{t('selectFiltered', { count: filteredLoads.length })}</button>
                   {selectedLoadIds.size > 0 && (
                     <button type="button" onClick={() => setSelectedLoadIds(new Set())} className="text-xs text-red-400 hover:text-red-600 font-medium">Clear ({selectedLoadIds.size})</button>
                   )}
@@ -2165,7 +2165,7 @@ export default function InvoicesPage() {
 
                 <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                   {filteredLoads.length === 0 ? (
-                    <p className="text-sm text-gray-400 text-center py-6">No jobs match the current filters</p>
+                    <p className="text-sm text-gray-400 text-center py-6">{t('noJobsMatch')}</p>
                   ) : filteredLoads.map(load => {
                     const slips = load.load_tickets ?? []
                     const totalTons = slips.reduce((s, t) => s + (t.tonnage ?? 0), 0)
@@ -2204,7 +2204,7 @@ export default function InvoicesPage() {
                   <div className="mt-5 pt-4 border-t border-gray-100">
                     <div className="flex items-center justify-between mb-3">
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                        Subcontractor Tickets
+                        {t('subcontractorTickets')}
                         {allContractorTicketsForClient.length > 0 && (
                           <span className="ml-1.5 text-gray-400 font-normal normal-case">({allContractorTicketsForClient.length} available)</span>
                         )}

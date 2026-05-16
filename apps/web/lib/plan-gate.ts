@@ -8,9 +8,10 @@ export function planTier(plan: string | null | undefined): number {
 }
 
 export function normalizePlan(plan: string | null | undefined): Plan {
-  if (plan === 'solo' || plan === 'starter')      return 'solo'
-  if (plan === 'fleet')                           return 'fleet'
-  if (plan === 'enterprise' || plan === 'growth') return 'enterprise'
+  if (plan === 'solo' || plan === 'starter')                          return 'solo'
+  if (plan === 'fleet' || plan === 'founding_member')                 return 'fleet'
+  if (plan === 'enterprise' || plan === 'growth')                     return 'enterprise'
+  if (plan === 'pro' || plan === 'owner_operator' || plan === 'owner') return 'owner_operator'
   return 'owner_operator'
 }
 

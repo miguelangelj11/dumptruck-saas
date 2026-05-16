@@ -693,7 +693,7 @@ export default function ExpensesPage() {
                         form.category === cat.id ? 'bg-gray-900 text-white' : `${cat.color} hover:opacity-80`
                       }`}
                     >
-                      {cat.emoji} {cat.label}
+                      {cat.emoji} {t(`categories.${cat.id.toLowerCase()}` as Parameters<typeof t>[0])}
                     </button>
                   ))}
                 </div>
@@ -701,7 +701,7 @@ export default function ExpensesPage() {
 
               {/* Vendor autocomplete */}
               <div className="relative">
-                <label className="block text-xs font-medium text-gray-700 mb-1">Vendor / Payee</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">{t('vendorPayee')}</label>
                 <input
                   type="text"
                   value={vendorInput}
@@ -728,7 +728,7 @@ export default function ExpensesPage() {
 
               {/* Payment method */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Payment Method</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">{t('paymentMethod')}</label>
                 <select
                   value={form.paymentMethod}
                   onChange={e => setForm(p => ({ ...p, paymentMethod: e.target.value }))}
@@ -741,8 +741,8 @@ export default function ExpensesPage() {
               {/* Link To */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Link To
-                  <span className="text-gray-400 font-normal ml-1">— optional, enables per-job/truck profit tracking</span>
+                  {t('linkTo')}
+                  <span className="text-gray-400 font-normal ml-1">{t('linkToOptional')}</span>
                 </label>
                 <div className="grid grid-cols-4 gap-1.5 mb-2">
                   {(['job', 'truck', 'driver', 'subcontractor'] as const).map(type => (
@@ -756,7 +756,7 @@ export default function ExpensesPage() {
                       }`}
                     >
                       {type === 'job' ? '🏗️' : type === 'truck' ? '🚛' : type === 'driver' ? '👷' : '🤝'}
-                      <br />{type}
+                      <br />{type === 'job' ? t('linkJob') : type === 'truck' ? t('linkTruck') : type === 'driver' ? t('linkDriver') : t('linkSubcontractor')}
                     </button>
                   ))}
                 </div>
@@ -802,7 +802,7 @@ export default function ExpensesPage() {
 
               {/* Notes */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">{t('notesLabel')}</label>
                 <textarea
                   value={form.notes}
                   onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}

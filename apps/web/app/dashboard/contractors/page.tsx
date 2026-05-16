@@ -1413,7 +1413,7 @@ export default function ContractorsPage() {
                 <input required value={contractorForm.name} onChange={e => setContractorForm(p => ({ ...p, name: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="Danny Schultz" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Address</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">{t('address')}</label>
                 <input value={contractorForm.address} onChange={e => setContractorForm(p => ({ ...p, address: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="123 Main St, City, ST 00000" />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -1439,14 +1439,14 @@ export default function ContractorsPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Default Day Rate</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('defaultDayRate')}</label>
                   <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/20 focus-within:border-[var(--brand-primary)]">
                     <span className="flex items-center px-3 bg-gray-50 text-sm text-gray-400 border-r border-gray-200">$</span>
                     <input type="number" min="0" step="0.01" value={contractorForm.day_rate} onChange={e => setContractorForm(p => ({ ...p, day_rate: e.target.value }))} placeholder="0.00" className="flex-1 px-3 py-2.5 text-sm focus:outline-none bg-white" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Default Night Rate</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('defaultNightRate')}</label>
                   <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/20 focus-within:border-[var(--brand-primary)]">
                     <span className="flex items-center px-3 bg-gray-50 text-sm text-gray-400 border-r border-gray-200">$</span>
                     <input type="number" min="0" step="0.01" value={contractorForm.night_rate} onChange={e => setContractorForm(p => ({ ...p, night_rate: e.target.value }))} placeholder="0.00" className="flex-1 px-3 py-2.5 text-sm focus:outline-none bg-white" />

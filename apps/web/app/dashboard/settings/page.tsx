@@ -652,7 +652,7 @@ export default function SettingsPage() {
     // Enforce per-plan truck limits
     const truckLimit = subscriptionPlan === 'solo' ? 1 : (subscriptionPlan === 'pro' || subscriptionPlan === 'owner_operator') ? 5 : null
     if (truckLimit !== null && trucks.length >= truckLimit) {
-      const nextPlan = subscriptionPlan === 'solo' ? 'Owner Operator Pro ($80/mo)' : 'Fleet ($200/mo)'
+      const nextPlan = subscriptionPlan === 'solo' ? 'Owner Operator Pro ($65/mo)' : 'Fleet ($125/mo)'
       toast.error(`Truck limit (${truckLimit}) reached. Upgrade to ${nextPlan} for more trucks.`)
       return
     }
@@ -1625,7 +1625,7 @@ export default function SettingsPage() {
                     style={{ background: '#F5B731', color: '#1a1a1a' }}
                   >
                     {upgradePlanLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                    Upgrade to Fleet — $200/mo →
+                    Upgrade to Fleet — $125/mo →
                   </button>
                 </div>
               </div>
@@ -1745,8 +1745,8 @@ export default function SettingsPage() {
             <p className="text-base font-bold text-white">Unlock More Features</p>
             <p className="text-xs text-white/50 mt-1">
               {subscriptionPlan === 'solo'
-                ? 'Upgrade to Owner Operator Pro ($80/mo) to get dispatch, 5 trucks & 5 drivers.'
-                : 'Upgrade to Fleet ($200/mo) to stop leaving money on the table.'}
+                ? 'Upgrade to Owner Operator Pro ($65/mo) to get dispatch, 5 trucks & 5 drivers.'
+                : 'Upgrade to Fleet ($125/mo) to stop leaving money on the table.'}
             </p>
           </div>
           <div className="px-6 pb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">

@@ -1471,7 +1471,7 @@ export default function DispatchPage() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <h3 className="font-semibold text-gray-900 text-base leading-tight">{job.job_name}</h3>
-                                <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${cfg.color}`}>{cfg.label}</span>
+                                <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${cfg.color}`}>{job.status === 'active' ? t('active') : job.status === 'on_hold' ? t('onHold') : t('completed')}</span>
                               </div>
                               <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5">
                                 {job.contractor && <span className="flex items-center gap-1 text-xs text-gray-500"><Users className="h-3 w-3" />{job.contractor}</span>}
@@ -2561,7 +2561,7 @@ export default function DispatchPage() {
                       onClick={() => setContractorMode(m => m === 'dropdown' ? 'manual' : 'dropdown')}
                       className="text-xs text-[var(--brand-primary)] hover:underline"
                     >
-                      {contractorMode === 'dropdown' ? '✏️ Enter manually' : '← Back to list'}
+                      {contractorMode === 'dropdown' ? t('enterManually') : t('backToList')}
                     </button>
                   )}
                 </div>
@@ -2587,11 +2587,11 @@ export default function DispatchPage() {
               {/* Pick Up Location + Drop Location */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Pick Up Location *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('pickUpLocation')}</label>
                   <input required value={jobForm.pick_up_location} onChange={e => setJobForm(f => ({ ...f, pick_up_location: e.target.value }))} placeholder="e.g. 123 Quarry Rd, Atlanta GA" className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Drop Location *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('dropLocation')}</label>
                   <input required value={jobForm.drop_location} onChange={e => setJobForm(f => ({ ...f, drop_location: e.target.value }))} placeholder="e.g. 456 Site Blvd, Atlanta GA" className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]" />
                 </div>
               </div>
@@ -2603,9 +2603,9 @@ export default function DispatchPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{t('jobStatus')}</label>
                   <select value={jobForm.status} onChange={e => setJobForm(f => ({ ...f, status: e.target.value as Job['status'] }))} className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30">
-                    <option value="active">Active</option>
-                    <option value="on_hold">On Hold</option>
-                    <option value="completed">Completed</option>
+                    <option value="active">{t('active')}</option>
+                    <option value="on_hold">{t('onHold')}</option>
+                    <option value="completed">{t('completed')}</option>
                   </select>
                 </div>
               </div>
@@ -2617,7 +2617,7 @@ export default function DispatchPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{t('per')}</label>
                   <select value={jobForm.rate_type} onChange={e => setJobForm(f => ({ ...f, rate_type: e.target.value }))} className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30">
-                    {RATE_TYPES.map(r => <option key={r} value={r}>{r}</option>)}
+                    {RATE_TYPES.map(r => <option key={r} value={r}>{t(`rate${r.charAt(0).toUpperCase()}${r.slice(1)}` as 'rateLoad' | 'rateTon' | 'rateHour')}</option>)}
                   </select>
                 </div>
               </div>
