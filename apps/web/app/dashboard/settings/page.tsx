@@ -1037,7 +1037,7 @@ export default function SettingsPage() {
                 className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors disabled:opacity-50"
               >
                 {addingCompany ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                {t('add')}
+                {t('addCompany')}
               </button>
             </div>
             <input
@@ -1829,8 +1829,8 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {([
               { key: 'tickets'  as const, icon: FileText,   titleKey: 'exportTickets' as const,  desc: `${expStart} → ${expEnd}`,   iconColor: 'text-blue-600',   bg: 'bg-blue-50'   },
-              { key: 'invoices' as const, icon: CreditCard, titleKey: 'exportInvoices' as const, desc: t('fullHistory'),             iconColor: 'text-green-600',  bg: 'bg-green-50'  },
-              { key: 'payments' as const, icon: Check,      titleKey: 'exportPayments' as const, desc: t('fullHistory'),             iconColor: 'text-purple-600', bg: 'bg-purple-50' },
+              { key: 'invoices' as const, icon: CreditCard, titleKey: 'exportInvoices' as const, desc: t('fullHistory'),            iconColor: 'text-green-600',  bg: 'bg-green-50'  },
+              { key: 'payments' as const, icon: Check,      titleKey: 'exportPayments' as const, desc: t('fullHistory'),            iconColor: 'text-purple-600', bg: 'bg-purple-50' },
               { key: 'expenses' as const, icon: Building2,  titleKey: 'exportExpenses' as const, desc: `${expStart} → ${expEnd}`,   iconColor: 'text-amber-600',  bg: 'bg-amber-50'  },
             ]).map(({ key, icon: Icon, titleKey, desc, iconColor, bg }) => (
               <div key={key} className="border border-gray-100 rounded-xl p-4 flex items-start gap-3">
@@ -2373,7 +2373,7 @@ export default function SettingsPage() {
               className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors shrink-0"
             >
               {exportingMyData ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              {exportingMyData ? 'Exporting…' : 'Export Data'}
+              {exportingMyData ? t('exporting') : 'Export Data'}
             </button>
           </div>
 
@@ -2475,7 +2475,7 @@ export default function SettingsPage() {
               <input
                 value={delDataInput}
                 onChange={e => setDelDataInput(e.target.value)}
-                placeholder='Type "DELETE" to confirm'
+                placeholder={t('typeDelete')}
                 disabled={deletingData}
                 className="flex-1 rounded-lg border border-red-200 px-3 py-2 text-sm focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-200 disabled:opacity-50"
               />
@@ -2485,7 +2485,7 @@ export default function SettingsPage() {
                 className="flex items-center gap-1.5 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 {deletingData && <Loader2 className="h-4 w-4 animate-spin" />}
-                {deletingData ? 'Deleting…' : 'Delete Data'}
+                {deletingData ? t('deleting') : t('deleteData')}
               </button>
             </div>
           </div>
@@ -2494,16 +2494,16 @@ export default function SettingsPage() {
 
           <div className="space-y-3">
             <div>
-              <p className="text-sm font-semibold text-gray-900">Delete Account</p>
+              <p className="text-sm font-semibold text-gray-900">{t('deleteAccount')}</p>
               <p className="text-xs text-gray-500 mt-0.5">
-                Cancels your subscription and permanently deletes your account, all data, and all records. This cannot be undone.
+                {t('deleteAccountDesc')}
               </p>
             </div>
             <div className="flex items-center gap-3">
               <input
                 value={delAccInput}
                 onChange={e => setDelAccInput(e.target.value)}
-                placeholder='Type "DELETE" to confirm'
+                placeholder={t('typeDelete')}
                 disabled={deletingAccount}
                 className="flex-1 rounded-lg border border-red-200 px-3 py-2 text-sm focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-200 disabled:opacity-50"
               />
@@ -2513,7 +2513,7 @@ export default function SettingsPage() {
                 className="flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 {deletingAccount && <Loader2 className="h-4 w-4 animate-spin" />}
-                {deletingAccount ? 'Deleting…' : 'Delete Account'}
+                {deletingAccount ? t('deleting') : t('deleteAccount')}
               </button>
             </div>
           </div>
@@ -2527,14 +2527,14 @@ export default function SettingsPage() {
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
         <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
           <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
-            <h2 className="text-base font-bold text-gray-900">Edit Client Company</h2>
+            <h2 className="text-base font-bold text-gray-900">{t('clientCompanies')}</h2>
             <button onClick={() => setEditingCompany(null)} className="h-7 w-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400">
               <X className="h-4 w-4" />
             </button>
           </div>
           <form onSubmit={handleSaveEditCompany} className="p-5 space-y-3">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Company Name *</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">{t('companyName')} *</label>
               <input
                 required
                 value={editForm.name}
@@ -2543,7 +2543,7 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Address</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">{t('companyAddress')}</label>
               <input
                 value={editForm.address}
                 onChange={e => setEditForm(p => ({ ...p, address: e.target.value }))}
@@ -2552,7 +2552,7 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">{t('email')}</label>
               <input
                 type="email"
                 value={editForm.email}
@@ -2562,7 +2562,7 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">{t('phoneNumber')}</label>
               <input
                 type="tel"
                 value={editForm.phone}
@@ -2593,11 +2593,11 @@ export default function SettingsPage() {
             </div>
             <div className="flex gap-3 pt-1">
               <button type="button" onClick={() => setEditingCompany(null)} className="flex-1 h-10 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                Cancel
+                {t('cancel')}
               </button>
               <button type="submit" disabled={savingEdit || !editForm.name.trim()} className="flex-1 h-10 rounded-xl bg-[var(--brand-primary)] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[var(--brand-primary-hover)] disabled:opacity-60">
                 {savingEdit && <Loader2 className="h-4 w-4 animate-spin" />}
-                {savingEdit ? 'Saving…' : 'Save Changes'}
+                {savingEdit ? t('saving') : t('saveChanges')}
               </button>
             </div>
           </form>

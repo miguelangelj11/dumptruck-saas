@@ -59,17 +59,20 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => ({}))
-  const { name, email, phone, status } = body as Record<string, string>
+  const { name, email, phone, status, pay_type, pay_rate_value, worker_type } = body as Record<string, string>
   if (!name?.trim()) return NextResponse.json({ error: 'Name is required' }, { status: 400 })
 
   const { data, error } = await admin
     .from('drivers')
     .insert({
-      company_id: companyId,
-      name:       name.trim(),
-      email:      email || null,
-      phone:      phone || null,
-      status:     status ?? 'active',
+      company_id:     companyId,
+      name:           name.trim(),
+      email:          email || null,
+      phone:          phone || null,
+      status:         status ?? 'active',
+      pay_type:       pay_type || null,
+      pay_rate_value: pay_rate_value != null && pay_rate_value !== '' ? parseFloat(pay_rate_value) : null,
+      worker_type:    worker_type || null,
     })
     .select()
     .maybeSingle()

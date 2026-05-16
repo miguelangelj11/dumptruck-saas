@@ -205,7 +205,7 @@ export default function DriversPage() {
     if (!companyId) { toast.error('Company not found'); setSaving(false); return }
     const payFields = {
       pay_type: payType,
-      pay_rate_value: parseFloat(payRateValue) || null,
+      pay_rate_value: payRateValue !== '' ? parseFloat(payRateValue) : null,
       worker_type: workerType,
     }
     if (editingDriver) {
@@ -218,7 +218,7 @@ export default function DriversPage() {
       const res  = await fetch('/api/drivers', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ name: form.name, email: form.email, phone: form.phone, status: form.status }),
+        body:    JSON.stringify({ name: form.name, email: form.email, phone: form.phone, status: form.status, pay_type: payType, pay_rate_value: payRateValue, worker_type: workerType }),
       })
       const data = await res.json()
       if (!res.ok) { toast.error(data.error ?? 'Failed to add driver'); setSaving(false); return }

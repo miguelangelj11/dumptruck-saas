@@ -689,24 +689,24 @@ export default function ContractorsPage() {
           return (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-5 bg-gray-50 rounded-2xl border border-gray-200">
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Pending</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{t('status.pending')}</p>
                 <p className="text-2xl font-black text-amber-600">${pendingAmt.toLocaleString()}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{pendingCnt} ticket{pendingCnt !== 1 ? 's' : ''} owed</p>
+                <p className="text-xs text-gray-400 mt-0.5">{pendingCnt !== 1 ? t('ticketCountPlural', { count: pendingCnt }) : t('ticketCount', { count: pendingCnt })}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Invoiced</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{t('status.invoiced')}</p>
                 <p className="text-2xl font-black text-blue-600">${invoicedAmt.toLocaleString()}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{invoicedCnt} ticket{invoicedCnt !== 1 ? 's' : ''} billed</p>
+                <p className="text-xs text-gray-400 mt-0.5">{invoicedCnt !== 1 ? t('ticketCountPlural', { count: invoicedCnt }) : t('ticketCount', { count: invoicedCnt })}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Paid YTD</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{t('status.paid')}</p>
                 <p className="text-2xl font-black text-green-600">${ytdAmt.toLocaleString()}</p>
                 <p className="text-xs text-gray-400 mt-0.5">{new Date().getFullYear()} total</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Lifetime Paid</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{t('status.paid')}</p>
                 <p className="text-2xl font-black text-gray-700">${paidAmt.toLocaleString()}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{paidCnt} tickets total</p>
+                <p className="text-xs text-gray-400 mt-0.5">{paidCnt !== 1 ? t('ticketCountPlural', { count: paidCnt }) : t('ticketCount', { count: paidCnt })}</p>
               </div>
             </div>
           )
@@ -820,7 +820,7 @@ export default function ContractorsPage() {
           return (
             <div className="flex items-center gap-3 p-3 mb-3 bg-green-900 text-white rounded-xl">
               <div>
-                <p className="font-bold text-sm">{selectedForPay.length} ticket{selectedForPay.length !== 1 ? 's' : ''} selected</p>
+                <p className="font-bold text-sm">{selectedForPay.length !== 1 ? t('ticketCountPlural', { count: selectedForPay.length }) : t('ticketCount', { count: selectedForPay.length })}</p>
                 <p className="text-green-300 text-xs">Total: ${selectedTotal.toLocaleString()}</p>
               </div>
               <button onClick={() => setPaymentModal(true)} className="ml-auto px-4 py-2 bg-green-500 hover:bg-green-400 text-white font-bold rounded-xl text-sm">💵 {t('paymentModal')}</button>
@@ -856,15 +856,15 @@ export default function ContractorsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {visibleTickets.map(t => {
-                    const photos = getTicketPhotos(t)
-                    const slips = t.contractor_ticket_slips ?? []
+                  {visibleTickets.map(tk => {
+                    const photos = getTicketPhotos(tk)
+                    const slips = tk.contractor_ticket_slips ?? []
                     const totalTonnage = slips.reduce((s, r) => s + (r.tonnage ?? 0), 0)
                     return (
-                      <tr key={t.id} className="hover:bg-gray-50/50 transition-colors">
+                      <tr key={tk.id} className="hover:bg-gray-50/50 transition-colors">
                         {ticketTab === 'pending' && (
                           <td className="py-2 px-4 w-8">
-                            <input type="checkbox" checked={selectedForPay.includes(t.id)} onChange={e => setSelectedForPay(prev => e.target.checked ? [...prev, t.id] : prev.filter(id => id !== t.id))} className="w-4 h-4 rounded" />
+                            <input type="checkbox" checked={selectedForPay.includes(tk.id)} onChange={e => setSelectedForPay(prev => e.target.checked ? [...prev, tk.id] : prev.filter(id => id !== tk.id))} className="w-4 h-4 rounded" />
                           </td>
                         )}
                         <td className="px-4 py-3">
@@ -883,36 +883,36 @@ export default function ContractorsPage() {
                             </div>
                           )}
                         </td>
-                        <td className="px-4 py-3 font-medium text-gray-900">{t.job_name}</td>
-                        <td className="px-4 py-3 font-mono text-gray-600 text-xs">{t.ticket_number || <span className="text-gray-300 font-sans">—</span>}</td>
-                        <td className="px-4 py-3 text-gray-600">{t.client_company || <span className="text-gray-300">—</span>}</td>
-                        <td className="px-4 py-3 text-gray-600">{t.truck_number ? `#${t.truck_number}` : <span className="text-gray-300">—</span>}</td>
-                        <td className="px-4 py-3 text-gray-500">{t.material || '—'}</td>
-                        <td className="px-4 py-3 text-xs text-gray-500">{t.rate ? `$${t.rate.toLocaleString()}/${t.rate_type ?? 'job'}` : '—'}</td>
-                        <td className="px-4 py-3 font-semibold text-gray-900">${t.rate?.toLocaleString() ?? '—'}</td>
+                        <td className="px-4 py-3 font-medium text-gray-900">{tk.job_name}</td>
+                        <td className="px-4 py-3 font-mono text-gray-600 text-xs">{tk.ticket_number || <span className="text-gray-300 font-sans">—</span>}</td>
+                        <td className="px-4 py-3 text-gray-600">{tk.client_company || <span className="text-gray-300">—</span>}</td>
+                        <td className="px-4 py-3 text-gray-600">{tk.truck_number ? `#${tk.truck_number}` : <span className="text-gray-300">—</span>}</td>
+                        <td className="px-4 py-3 text-gray-500">{tk.material || '—'}</td>
+                        <td className="px-4 py-3 text-xs text-gray-500">{tk.rate ? `$${tk.rate.toLocaleString()}/${tk.rate_type ?? 'job'}` : '—'}</td>
+                        <td className="px-4 py-3 font-semibold text-gray-900">${tk.rate?.toLocaleString() ?? '—'}</td>
                         <td className="px-4 py-3">
                           {slips.length > 0 ? (
                             <div>
-                              <span className="text-sm font-medium text-gray-900">{slips.length} ticket{slips.length !== 1 ? 's' : ''}</span>
+                              <span className="text-sm font-medium text-gray-900">{slips.length !== 1 ? t('ticketCountPlural', { count: slips.length }) : t('ticketCount', { count: slips.length })}</span>
                               {totalTonnage > 0 && <p className="text-xs text-gray-400">{totalTonnage.toLocaleString()} tons</p>}
                             </div>
                           ) : <span className="text-gray-300">—</span>}
                         </td>
-                        <td className="px-4 py-3 text-gray-500 text-xs">{t.hours_worked || <span className="text-gray-300">—</span>}</td>
-                        <td className="px-4 py-3 text-gray-500">{fmtDate(t.date)}</td>
+                        <td className="px-4 py-3 text-gray-500 text-xs">{tk.hours_worked || <span className="text-gray-300">—</span>}</td>
+                        <td className="px-4 py-3 text-gray-500">{fmtDate(tk.date)}</td>
                         <td className="px-4 py-3">
-                          <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${statusColor[t.status as keyof typeof statusColor] ?? 'bg-gray-100 text-gray-600'}`}>{t.status === 'active' ? t('status.active') : t.status === 'inactive' ? t('status.inactive') : t.status === 'pending' ? t('status.pending') : t.status === 'invoiced' ? t('status.invoiced') : t('status.paid')}</span>
+                          <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${statusColor[tk.status as keyof typeof statusColor] ?? 'bg-gray-100 text-gray-600'}`}>{tk.status === 'active' ? t('status.active') : tk.status === 'inactive' ? t('status.inactive') : tk.status === 'pending' ? t('status.pending') : tk.status === 'invoiced' ? t('status.invoiced') : t('status.paid')}</span>
                         </td>
                         {ticketTab === 'paid' ? (
                           <td className="px-4 py-3 text-right text-xs">
-                            <p className="text-green-600 font-semibold">Paid {fmtDate(t.paid_at)}</p>
-                            <p className="text-gray-400">{t.payment_method}{t.payment_reference ? ` · ${t.payment_reference}` : ''}</p>
+                            <p className="text-green-600 font-semibold">Paid {fmtDate(tk.paid_at)}</p>
+                            <p className="text-gray-400">{tk.payment_method}{tk.payment_reference ? ` · ${tk.payment_reference}` : ''}</p>
                           </td>
                         ) : (
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
-                              <button onClick={() => openEditTicket(t)} className="p-1 text-gray-400 hover:text-[var(--brand-primary)] transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
-                              <button onClick={() => handleDeleteTicket(t.id)} className="p-1 text-gray-400 hover:text-red-500 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
+                              <button onClick={() => openEditTicket(tk)} className="p-1 text-gray-400 hover:text-[var(--brand-primary)] transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
+                              <button onClick={() => handleDeleteTicket(tk.id)} className="p-1 text-gray-400 hover:text-red-500 transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
                             </div>
                           </td>
                         )}
