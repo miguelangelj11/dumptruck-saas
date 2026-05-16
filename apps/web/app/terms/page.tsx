@@ -3,7 +3,7 @@ import Footer from '@/components/landing/footer'
 
 export const metadata = {
   title: 'Terms of Service — DumpTruckBoss',
-  description: 'DumpTruckBoss Terms of Service — your agreement with SALAO TRANSPORT INC.',
+  description: 'DumpTruckBoss Terms of Service — your agreement with DumpTruckBoss LLC.',
 }
 
 const EFFECTIVE_DATE = 'May 3, 2026'
@@ -29,7 +29,7 @@ export default function TermsPage() {
 
             <p className="text-gray-600 leading-relaxed mb-4">
               These Terms of Service ("Terms") govern your access to and use of the DumpTruckBoss platform
-              and related services (collectively, the "Service") operated by <strong>SALAO TRANSPORT INC</strong>,
+              and related services (collectively, the "Service") operated by <strong>DumpTruckBoss LLC</strong>,
               doing business as DumpTruckBoss ("DumpTruckBoss," "we," "us," or "our"), a company registered
               in the State of Georgia, USA.
             </p>
@@ -123,7 +123,7 @@ export default function TermsPage() {
               </ul>
               <p className="text-gray-600 leading-relaxed">
                 If you believe you have been charged in error, contact us within 30 days of the charge at{' '}
-                <a href="mailto:miguelangel.j11@gmail.com" className="text-[#2d7a4f] hover:underline">miguelangel.j11@gmail.com</a>.
+                <a href="mailto:mj@dumptruckboss.com" className="text-[#2d7a4f] hover:underline">mj@dumptruckboss.com</a>.
               </p>
             </Section>
 
@@ -198,7 +198,7 @@ export default function TermsPage() {
             <Section title="10. Intellectual Property">
               <p className="text-gray-600 leading-relaxed mb-4">
                 The DumpTruckBoss platform, including its design, software, source code, branding, logos,
-                text, graphics, and all other content created by us, is owned by SALAO TRANSPORT INC and
+                text, graphics, and all other content created by us, is owned by DumpTruckBoss LLC and
                 protected by U.S. and international copyright, trademark, and other intellectual property laws.
               </p>
               <p className="text-gray-600 leading-relaxed">
@@ -211,7 +211,7 @@ export default function TermsPage() {
 
             <Section title="11. Limitation of Liability">
               <p className="text-gray-600 leading-relaxed mb-4">
-                TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, SALAO TRANSPORT INC, ITS OFFICERS,
+                TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, DumpTruckBoss LLC, ITS OFFICERS,
                 DIRECTORS, EMPLOYEES, AGENTS, AND AFFILIATES SHALL NOT BE LIABLE FOR ANY INDIRECT,
                 INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, INCLUDING BUT NOT
                 LIMITED TO LOSS OF PROFITS, DATA, BUSINESS, GOODWILL, OR OTHER INTANGIBLE LOSSES, ARISING
@@ -228,7 +228,7 @@ export default function TermsPage() {
 
             <Section title="12. Indemnification">
               <p className="text-gray-600 leading-relaxed">
-                You agree to indemnify, defend, and hold harmless SALAO TRANSPORT INC and its affiliates,
+                You agree to indemnify, defend, and hold harmless DumpTruckBoss LLC and its affiliates,
                 officers, directors, employees, and agents from and against any claims, liabilities, damages,
                 judgments, awards, losses, costs, and expenses (including reasonable attorneys' fees) arising
                 out of or relating to: (a) your use of the Service; (b) your violation of these Terms;
@@ -298,13 +298,12 @@ export default function TermsPage() {
                 For questions, concerns, or legal notices regarding these Terms of Service, contact us:
               </p>
               <div className="bg-gray-50 rounded-xl p-6 text-sm text-gray-700 space-y-2">
-                <p className="font-bold text-gray-900 text-base">SALAO TRANSPORT INC</p>
-                <p className="text-gray-500 italic">Operating as DumpTruckBoss</p>
+                <p className="font-bold text-gray-900 text-base">DumpTruckBoss LLC</p>
                 <p>State of Incorporation: Georgia, USA</p>
                 <p>
                   Email:{' '}
-                  <a href="mailto:miguelangel.j11@gmail.com" className="text-[#2d7a4f] hover:underline font-medium">
-                    miguelangel.j11@gmail.com
+                  <a href="mailto:mj@dumptruckboss.com" className="text-[#2d7a4f] hover:underline font-medium">
+                    mj@dumptruckboss.com
                   </a>
                 </p>
                 <p>Website: <span className="text-[#2d7a4f]">dumptruckboss.com</span></p>

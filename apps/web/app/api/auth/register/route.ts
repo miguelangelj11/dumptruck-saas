@@ -118,7 +118,7 @@ export async function POST(request: Request) {
 
       resend.emails.send({
         from:    'DumpTruckBoss Alerts <noreply@dumptruckboss.com>',
-        to:      'miguelangel.j11@gmail.com',
+        to:      'mj@dumptruckboss.com',
         subject: `New signup: ${company_name}`,
         html:    buildAdminNotificationEmail({ email, companyName: company_name, planLabel, trialEndStr }),
       }).catch(err => console.error('[register] admin notification failed:', err))
@@ -250,8 +250,8 @@ function buildWelcomeEmail({ firstName, trialEndStr }: { firstName: string; tria
       <tr>
         <td style="background:#f9fafb;border-top:1px solid #f3f4f6;padding:24px 40px;text-align:center;">
           <p style="margin:0 0 6px;font-size:12px;color:#9ca3af;">Questions? We're here to help.</p>
-          <a href="mailto:miguelangel.j11@gmail.com" style="font-size:12px;color:#2d7a4f;text-decoration:none;font-weight:600;">miguelangel.j11@gmail.com</a>
-          <p style="margin:14px 0 0;font-size:11px;color:#d1d5db;">© ${new Date().getFullYear()} DumpTruckBoss — operated by SALAO TRANSPORT INC</p>
+          <a href="mailto:mj@dumptruckboss.com" style="font-size:12px;color:#2d7a4f;text-decoration:none;font-weight:600;">mj@dumptruckboss.com</a>
+          <p style="margin:14px 0 0;font-size:11px;color:#d1d5db;">© ${new Date().getFullYear()} DumpTruckBoss — DumpTruckBoss LLC</p>
         </td>
       </tr>
 

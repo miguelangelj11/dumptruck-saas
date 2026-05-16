@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     // Notification to owner
     resend.emails.send({
       from: 'DumpTruckBoss <noreply@dumptruckboss.com>',
-      to:   'miguelangel.j11@gmail.com',
+      to:   'mj@dumptruckboss.com',
       subject: `🚛 Enterprise Inquiry: ${company} (${truck_count} trucks)`,
       html: `
         <h2 style="font-family:sans-serif">New Enterprise Inquiry</h2>

@@ -3,7 +3,7 @@ import Footer from '@/components/landing/footer'
 
 export const metadata = {
   title: 'Privacy Policy — DumpTruckBoss',
-  description: 'How DumpTruckBoss (operated by SALAO TRANSPORT INC) collects, uses, and protects your data.',
+  description: 'How DumpTruckBoss (operated by DumpTruckBoss LLC) collects, uses, and protects your data.',
 }
 
 const EFFECTIVE_DATE = 'May 3, 2026'
@@ -28,7 +28,7 @@ export default function PrivacyPage() {
           <div className="prose prose-gray max-w-none">
 
             <p className="text-gray-600 leading-relaxed mb-4">
-              <strong>SALAO TRANSPORT INC</strong>, doing business as DumpTruckBoss ("DumpTruckBoss," "we,"
+              <strong>DumpTruckBoss LLC</strong>, doing business as DumpTruckBoss ("DumpTruckBoss," "we,"
               "us," or "our"), operates the DumpTruckBoss platform — a cloud-based SaaS product for dispatch,
               ticketing, invoicing, and fleet management for dump truck and hauling companies.
             </p>
@@ -111,8 +111,8 @@ export default function PrivacyPage() {
               <p className="text-gray-600 leading-relaxed">
                 No system is completely secure. If you believe your account has been compromised, contact
                 us immediately at{' '}
-                <a href="mailto:miguelangel.j11@gmail.com" className="text-[#2d7a4f] hover:underline">
-                  miguelangel.j11@gmail.com
+                <a href="mailto:mj@dumptruckboss.com" className="text-[#2d7a4f] hover:underline">
+                  mj@dumptruckboss.com
                 </a>.
               </p>
             </Section>
@@ -165,7 +165,7 @@ export default function PrivacyPage() {
                 the rights, property, or safety of DumpTruckBoss, our users, or the public.
               </Subsection>
               <Subsection title="Business Transfers">
-                If SALAO TRANSPORT INC is acquired by or merges with another company, your information may
+                If DumpTruckBoss LLC is acquired by or merges with another company, your information may
                 be transferred as part of that transaction. We will provide notice by email and/or a prominent
                 platform notice before your data is transferred or becomes subject to a different privacy
                 policy.
@@ -196,8 +196,8 @@ export default function PrivacyPage() {
               </ul>
               <p className="text-gray-600 leading-relaxed mt-4">
                 To exercise any of these rights, email us at{' '}
-                <a href="mailto:miguelangel.j11@gmail.com" className="text-[#2d7a4f] hover:underline">
-                  miguelangel.j11@gmail.com
+                <a href="mailto:mj@dumptruckboss.com" className="text-[#2d7a4f] hover:underline">
+                  mj@dumptruckboss.com
                 </a>. We will respond within 30 days.
               </p>
             </Section>
@@ -268,13 +268,12 @@ export default function PrivacyPage() {
                 For privacy-related questions, requests, complaints, or to exercise your data rights:
               </p>
               <div className="bg-gray-50 rounded-xl p-6 text-sm text-gray-700 space-y-2">
-                <p className="font-bold text-gray-900 text-base">SALAO TRANSPORT INC</p>
-                <p className="text-gray-500 italic">Operating as DumpTruckBoss</p>
+                <p className="font-bold text-gray-900 text-base">DumpTruckBoss LLC</p>
                 <p>State: Georgia, USA</p>
                 <p>
                   Email:{' '}
-                  <a href="mailto:miguelangel.j11@gmail.com" className="text-[#2d7a4f] hover:underline font-medium">
-                    miguelangel.j11@gmail.com
+                  <a href="mailto:mj@dumptruckboss.com" className="text-[#2d7a4f] hover:underline font-medium">
+                    mj@dumptruckboss.com
                   </a>
                 </p>
                 <p>Website: <span className="text-[#2d7a4f]">dumptruckboss.com</span></p>

@@ -249,7 +249,7 @@ export default function SignupPage() {
           <div style={{ background: 'rgba(45,122,79,0.15)', border: '1px solid rgba(45,122,79,0.4)', borderRadius: '12px', padding: '18px 24px', marginBottom: '28px' }}>
             <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.6 }}>
               Didn&apos;t get an email? Check your spam folder, or{' '}
-              <a href="mailto:miguelangel.j11@gmail.com" style={{ color: '#2d7a4f', textDecoration: 'none', fontWeight: 600 }}>contact support</a>.
+              <a href="mailto:mj@dumptruckboss.com" style={{ color: '#2d7a4f', textDecoration: 'none', fontWeight: 600 }}>contact support</a>.
             </p>
           </div>
           <Link href="/login" style={{ display: 'inline-block', padding: '12px 28px', background: '#2d7a4f', color: '#fff', borderRadius: '10px', textDecoration: 'none', fontSize: '14px', fontWeight: 700 }}>

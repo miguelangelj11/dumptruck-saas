@@ -421,7 +421,7 @@ function buildPaymentFailedEmail({ email, amountDue, billingUrl }: { email: stri
       </tr>
       <tr>
         <td style="background:#f9fafb;border-top:1px solid #f3f4f6;padding:20px 40px;text-align:center;">
-          <p style="margin:0;font-size:11px;color:#d1d5db;">© ${new Date().getFullYear()} DumpTruckBoss — operated by SALAO TRANSPORT INC</p>
+          <p style="margin:0;font-size:11px;color:#d1d5db;">© ${new Date().getFullYear()} DumpTruckBoss — DumpTruckBoss LLC</p>
         </td>
       </tr>
     </table>
@@ -467,7 +467,7 @@ function buildSetupEmail({ email, companyName, setupUrl }: { email: string; comp
       </tr>
       <tr>
         <td style="background:#f9fafb;border-top:1px solid #f3f4f6;padding:20px 40px;text-align:center;">
-          <p style="margin:0;font-size:11px;color:#d1d5db;">© ${new Date().getFullYear()} DumpTruckBoss — operated by SALAO TRANSPORT INC</p>
+          <p style="margin:0;font-size:11px;color:#d1d5db;">© ${new Date().getFullYear()} DumpTruckBoss — DumpTruckBoss LLC</p>
         </td>
       </tr>
     </table>
