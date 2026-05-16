@@ -10,10 +10,10 @@ import Link from 'next/link'
 const TESTIMONIALS = [
   {
     id: 1,
-    name: 'Marcus Rivera',
-    company: 'Rivera Hauling LLC',
+    name: 'Ivan Jimenez',
+    company: 'Camila Grading LLC',
     location: 'Atlanta, GA',
-    trucks: 3,
+    trucks: 1,
     photo: '/images/testimonials/placeholder-1.jpg',
     quote: 'Before DumpTruckBoss I was running everything out of a notebook and group texts. First week I used it I found two tickets I would have never invoiced. Already paid for itself.',
     isFoundingMember: true,
