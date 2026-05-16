@@ -335,7 +335,8 @@ export default function DocumentsPage() {
       if (!tokenRes.ok) throw new Error('Could not get upload token')
       const { path, token, publicUrl: uploadedUrl } = await tokenRes.json()
 
-      const { error: storageErr } = await supabase.storage
+      const supaClient = createClient()
+      const { error: storageErr } = await supaClient.storage
         .from('company-documents')
         .uploadToSignedUrl(path, token, uploadFile, { contentType: uploadFile.type })
       if (storageErr) throw new Error(storageErr.message)

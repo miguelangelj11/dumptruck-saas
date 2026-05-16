@@ -901,7 +901,7 @@ export default function ContractorsPage() {
                         <td className="px-4 py-3 text-gray-500 text-xs">{tk.hours_worked || <span className="text-gray-300">—</span>}</td>
                         <td className="px-4 py-3 text-gray-500">{fmtDate(tk.date)}</td>
                         <td className="px-4 py-3">
-                          <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${statusColor[tk.status as keyof typeof statusColor] ?? 'bg-gray-100 text-gray-600'}`}>{tk.status === 'active' ? t('status.active') : tk.status === 'inactive' ? t('status.inactive') : tk.status === 'pending' ? t('status.pending') : tk.status === 'invoiced' ? t('status.invoiced') : t('status.paid')}</span>
+                          <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${statusColor[tk.status as keyof typeof statusColor] ?? 'bg-gray-100 text-gray-600'}`}>{tk.status === 'pending' ? t('status.pending') : tk.status === 'invoiced' ? t('status.invoiced') : t('status.paid')}</span>
                         </td>
                         {ticketTab === 'paid' ? (
                           <td className="px-4 py-3 text-right text-xs">

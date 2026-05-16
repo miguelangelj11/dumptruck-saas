@@ -189,31 +189,35 @@ const TIMELINE_HOURS = Array.from({ length: 14 }, (_, i) => i + 5) // 5am–7pm
 function parseTimeToHour(t: string): number {
   const isPM = /PM/i.test(t)
   const timeStr = t.replace(/\s*(AM|PM)\s*/i, '').trim()
-  const [h, m] = timeStr.split(':').map(Number)
-  let hour = h ?? 8
+  const parts = timeStr.split(':').map(Number)
+  let hour = parts[0] ?? 8
+  const min = parts[1] ?? 0
   if (isPM && hour !== 12) hour += 12
   if (!isPM && hour === 12) hour = 0
-  return hour + (m ?? 0) / 60
+  return hour + min / 60
 }
 
 function parseTimeToMin(t: string): number {
   const isPM = /PM/i.test(t)
   const timeStr = t.replace(/\s*(AM|PM)\s*/i, '').trim()
-  const [h, m] = timeStr.split(':').map(Number)
-  let hour = h ?? 0
+  const parts = timeStr.split(':').map(Number)
+  let hour = parts[0] ?? 0
+  const min = parts[1] ?? 0
   if (isPM && hour !== 12) hour += 12
   if (!isPM && hour === 12) hour = 0
-  return hour * 60 + (m ?? 0)
+  return hour * 60 + min
 }
 
 function normalizeTimeToAmPm(t: string): string {
   if (!t) return ''
   if (/AM|PM/i.test(t)) return t
-  const [h, m] = t.split(':').map(Number)
-  if (isNaN(h)) return t
+  const parts = t.split(':').map(Number)
+  const h = parts[0]
+  const m = parts[1] ?? 0
+  if (h === undefined || isNaN(h)) return t
   const period = h < 12 ? 'AM' : 'PM'
   const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h
-  return `${h12}:${String(m ?? 0).padStart(2, '0')} ${period}`
+  return `${h12}:${String(m).padStart(2, '0')} ${period}`
 }
 
 function DispatchTimeInput({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
