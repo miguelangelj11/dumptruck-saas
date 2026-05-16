@@ -44,7 +44,7 @@ export async function updateSession(request: NextRequest) {
     '/', '/login', '/signup', '/forgot-password', '/reset-password', '/auth', '/api/test-setup',
     '/about', '/blog', '/careers', '/privacy', '/terms', '/security', '/changelog',
     '/pricing', '/features', '/schedule-demo', '/trial-expired', '/subscribe',
-    '/api/webhooks', '/api/stripe/webhook', '/api/health', '/api/invite', '/api/team/accept-invite', '/api/dispatches/respond',
+    '/api/webhooks', '/api/stripe/checkout', '/api/stripe/webhook', '/api/health', '/api/invite', '/api/team/accept-invite', '/api/dispatches/respond',
     '/api/public',
     '/invite', '/join', '/portal',
   ]
