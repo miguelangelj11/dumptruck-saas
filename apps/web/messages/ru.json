@@ -779,5 +779,89 @@
     "reasonHint": "Это будет показано водителю.",
     "notifications": "Уведомления",
     "noNotifications": "Уведомлений пока нет"
+  },
+  "documents": {
+    "title": "Документы",
+    "subtitle": "Все файлы, загруженные или созданные в вашем аккаунте",
+    "uploadDocument": "Загрузить Документ",
+    "selectDocuments": "Выбрать документы",
+    "folders": "Папки",
+    "allDocuments": "Все Документы",
+    "noFoldersYet": "Папок пока нет",
+    "folderNamePlaceholder": "Название папки…",
+    "create": "Создать",
+    "cancel": "Отмена",
+    "noDocsInFolder": "Нет документов в \"{name}\"",
+    "noDocsFound": "Документы не найдены",
+    "moveFolderHint": "Перемещайте документы сюда с помощью значка папки на карточке",
+    "tryDifferentSearch": "Попробуйте другой поисковый запрос",
+    "getStarted": "Загрузите фото талонов или импортируйте документы через ИИ для начала",
+    "searchPlaceholder": "Поиск документов…",
+    "selected": "{count} выбрано",
+    "deselectAll": "Снять выделение",
+    "selectAll": "Выбрать всё",
+    "download": "Скачать",
+    "deleting": "Удаление…",
+    "delete": "Удалить",
+    "moveToFolder": "Переместить в папку",
+    "noFoldersInSidebar": "Папок нет — создайте в боковой панели",
+    "noFoldersShort": "Папок пока нет",
+    "removeFromFolder": "Убрать из папки",
+    "table": {
+      "name": "Название",
+      "type": "Тип",
+      "category": "Категория",
+      "expiry": "Срок",
+      "date": "Дата"
+    },
+    "sort": {
+      "newest": "Сначала новые",
+      "oldest": "Сначала старые",
+      "name": "Название А–Я",
+      "type": "Тип документа",
+      "expiry": "Дата истечения"
+    },
+    "categories": {
+      "all": "Все",
+      "ai_import": "Импорт ИИ",
+      "ticket_photo": "Фото Талонов",
+      "subcontractor_photo": "Фото Субподр.",
+      "received_invoice": "Вх. Счета",
+      "uploaded": "Загруженные",
+      "coi": "ССО",
+      "expiring": "Скоро Истекают"
+    },
+    "categoryLabels": {
+      "all": "Все",
+      "ai_import": "Импорт ИИ",
+      "ticket_photo": "Фото Талона",
+      "subcontractor_photo": "Фото Субподр.",
+      "received_invoice": "Счёт",
+      "uploaded": "Загружено",
+      "coi": "ССО",
+      "expiring": "Истекает"
+    },
+    "upload": {
+      "title": "Загрузить Документ",
+      "fileLabel": "Файл",
+      "chooseFile": "Нажмите, чтобы выбрать файл",
+      "fileTypes": "Изображения, PDF или любые файлы",
+      "clickToChange": "нажмите для замены",
+      "nameLabel": "Название Документа",
+      "typeLabel": "Тип Документа",
+      "selectType": "Выберите тип…",
+      "autoDetected": "Определено автоматически — измените при необходимости",
+      "expiryLabel": "Срок Действия",
+      "linkLabel": "Привязать к",
+      "noLink": "Без привязки",
+      "notesLabel": "Заметки",
+      "uploading": "Загрузка…",
+      "upload": "Загрузить"
+    },
+    "preview": {
+      "openPdf": "Открыть PDF",
+      "openFile": "Открыть Файл"
+    },
+    "versionBanner": "сохранено как версия {version} — предыдущая версия помечена как устаревшая."
   }
 }

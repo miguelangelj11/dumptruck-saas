@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 import {
   Loader2, Plus, Trash2, Building2, Upload, X, Palette, Globe,
   FileText, Users, Bell, CreditCard, Shield, Download,
@@ -132,6 +133,7 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
+  const t = useTranslations('settings')
   const supabase = createClient()
   const router = useRouter()
 
@@ -928,19 +930,19 @@ export default function SettingsPage() {
 
       {/* Page header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Manage your account and company preferences</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
+        <p className="text-sm text-gray-500 mt-0.5">{t('subtitle')}</p>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════
           1. COMPANY INFORMATION
       ═══════════════════════════════════════════════════════════════════ */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <SectionHeader title="Company Information" subtitle="Appears on invoices and documents" />
+        <SectionHeader title={t('companyInfo')} subtitle={t('companyInfoSubtitle')} />
         <form onSubmit={handleSaveCompany} className="p-6 space-y-5">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Company Name <span className="text-red-400">*</span>
+              {t('companyName')} <span className="text-red-400">*</span>
             </label>
             <input
               required
@@ -951,7 +953,7 @@ export default function SettingsPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Company Address</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('companyAddress')}</label>
             <textarea
               value={companyAddress}
               onChange={e => setCompanyAddress(e.target.value)}
@@ -961,7 +963,7 @@ export default function SettingsPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone Number</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('phoneNumber')}</label>
             <input
               type="tel"
               value={companyPhone}
@@ -997,17 +999,17 @@ export default function SettingsPage() {
             <p className="text-xs text-gray-400 mt-1">Shown in the welcome message and sidebar.</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('email')}</label>
             <input
               value={email}
               disabled
               className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
             />
-            <p className="text-xs text-gray-400 mt-1">To change your email, use Account Security below.</p>
+            <p className="text-xs text-gray-400 mt-1">{t('emailNote')}</p>
           </div>
           <button type="submit" disabled={saving} className={btnPrimary}>
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-            {saving ? 'Saving…' : 'Save Changes'}
+            {saving ? t('saving') : t('saveChanges')}
           </button>
         </form>
       </div>
@@ -1017,8 +1019,8 @@ export default function SettingsPage() {
       ═══════════════════════════════════════════════════════════════════ */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <SectionHeader
-          title="Client Companies"
-          subtitle='These appear in the ticket form dropdown under "Working Under (Company)"'
+          title={t('clientCompanies')}
+          subtitle={t('clientCompaniesSubtitle')}
         />
         <div className="p-6 space-y-4">
           <form onSubmit={handleAddCompany} className="space-y-2">
@@ -1035,7 +1037,7 @@ export default function SettingsPage() {
                 className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors disabled:opacity-50"
               >
                 {addingCompany ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                Add
+                {t('add')}
               </button>
             </div>
             <input
@@ -1082,8 +1084,8 @@ export default function SettingsPage() {
           {clientCompanies.length === 0 ? (
             <div className="text-center py-8 border-2 border-dashed border-gray-100 rounded-xl">
               <Building2 className="h-8 w-8 text-gray-200 mx-auto mb-2" />
-              <p className="text-sm text-gray-400">No client companies added yet</p>
-              <p className="text-xs text-gray-300 mt-0.5">Add the contractors and companies your drivers work under</p>
+              <p className="text-sm text-gray-400">{t('noClientCompanies')}</p>
+              <p className="text-xs text-gray-300 mt-0.5">{t('clientCompaniesHint')}</p>
             </div>
           ) : (
             <ul className="divide-y divide-gray-50 border border-gray-100 rounded-xl overflow-hidden">
@@ -1145,7 +1147,7 @@ export default function SettingsPage() {
           3. BRANDING
       ═══════════════════════════════════════════════════════════════════ */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <SectionHeader title="Company Branding" subtitle="Your logo appears on invoices and in the sidebar" />
+        <SectionHeader title={t('branding')} subtitle={t('brandingSubtitle')} />
         <div className="p-6">
           <div className="flex items-start gap-5">
             <div className="h-20 w-20 rounded-xl border-2 border-dashed border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center shrink-0">
@@ -1163,8 +1165,8 @@ export default function SettingsPage() {
             </div>
             <div className="flex-1 space-y-3">
               <div>
-                <p className="text-sm font-medium text-gray-700 mb-1">Company Logo</p>
-                <p className="text-xs text-gray-400">PNG, JPG, or SVG · Max 5MB · Recommended 200×200px</p>
+                <p className="text-sm font-medium text-gray-700 mb-1">{t('companyLogo')}</p>
+                <p className="text-xs text-gray-400">{t('logoHint')}</p>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <button
@@ -1173,7 +1175,7 @@ export default function SettingsPage() {
                   className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   <Upload className="h-3.5 w-3.5" />
-                  {logoUrl || logoPreview ? 'Change Logo' : 'Upload Logo'}
+                  {logoUrl || logoPreview ? t('changeLogo') : t('uploadLogo')}
                 </button>
                 {logoPreview && (
                   <button
@@ -1183,7 +1185,7 @@ export default function SettingsPage() {
                     className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors disabled:opacity-50"
                   >
                     {uploadingLogo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                    {uploadingLogo ? 'Uploading…' : 'Save Logo'}
+                    {uploadingLogo ? t('saving') : t('saveLogo')}
                   </button>
                 )}
                 {(logoUrl || logoPreview) && !uploadingLogo && (
@@ -1196,12 +1198,12 @@ export default function SettingsPage() {
                     }}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors"
                   >
-                    <X className="h-3.5 w-3.5" /> Remove
+                    <X className="h-3.5 w-3.5" /> {t('remove')}
                   </button>
                 )}
               </div>
               {!companyId && (
-                <p className="text-xs text-amber-500">Save your company info before uploading a logo.</p>
+                <p className="text-xs text-amber-500">{t('saveCompanyFirst')}</p>
               )}
             </div>
           </div>
@@ -1217,10 +1219,10 @@ export default function SettingsPage() {
 
       {/* Appearance */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <SectionHeader title="Appearance" subtitle="Customize your sidebar and accent colors" />
+        <SectionHeader title={t('appearance')} subtitle={t('appearanceSubtitle')} />
         <div className="p-6 space-y-5">
           <div>
-            <p className="text-sm font-medium text-gray-700 mb-3">Color Theme</p>
+            <p className="text-sm font-medium text-gray-700 mb-3">{t('colorTheme')}</p>
             <div className="flex flex-wrap gap-3">
               {THEME_PRESETS.map(preset => {
                 const isActive = primaryColor === preset.primary
@@ -1244,7 +1246,7 @@ export default function SettingsPage() {
 
           <div className="flex flex-wrap gap-6">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">Sidebar Background</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">{t('sidebarBg')}</label>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
@@ -1256,7 +1258,7 @@ export default function SettingsPage() {
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">Accent Color</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">{t('accentColor')}</label>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
@@ -1271,7 +1273,7 @@ export default function SettingsPage() {
 
           <div className="flex items-center gap-2 text-xs text-gray-400">
             <Palette className="h-3.5 w-3.5" />
-            Changes preview live on the sidebar
+            {t('livePreview')}
           </div>
 
           <button
@@ -1281,14 +1283,14 @@ export default function SettingsPage() {
             className="inline-flex items-center gap-2 rounded-lg bg-[var(--hf-sidebar-accent)] px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             {savingTheme && <Loader2 className="h-4 w-4 animate-spin" />}
-            {savingTheme ? 'Saving…' : 'Save Theme'}
+            {savingTheme ? t('saving') : t('saveTheme')}
           </button>
         </div>
       </div>
 
       {/* Language */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <SectionHeader title="Language" subtitle="Choose your preferred display language" />
+        <SectionHeader title={t('language')} subtitle={t('languageSubtitle')} />
         <div className="p-6">
           <div className="flex items-center gap-3">
             <Globe className="h-4 w-4 text-gray-400" />
@@ -1297,7 +1299,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <p className="text-xs text-gray-400 mt-3">
-            Changing the language will also update how invoices are printed.
+            {t('languageNote')}
           </p>
         </div>
       </div>
@@ -1306,20 +1308,20 @@ export default function SettingsPage() {
           4. TRUCK MANAGEMENT
       ═══════════════════════════════════════════════════════════════════ */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <SectionHeader title="Truck Management" subtitle="Track your fleet — truck numbers appear in dispatch and tickets" />
+        <SectionHeader title={t('trucks')} subtitle={t('trucksSubtitle')} />
         <div className="p-6 space-y-4">
           <form onSubmit={handleAddTruck} className="space-y-3">
             <div className="flex flex-col sm:flex-row gap-2">
               <input
                 value={newTruckNum}
                 onChange={e => setNewTruckNum(e.target.value)}
-                placeholder="Truck number (e.g. SA07)"
+                placeholder={t('truckNumber')}
                 className="w-full sm:flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
               />
               <input
                 value={newTruckNotes}
                 onChange={e => setNewTruckNotes(e.target.value)}
-                placeholder="Assigned driver (optional)"
+                placeholder={t('truckDriver')}
                 className="w-full sm:flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
               />
               <button
@@ -1328,7 +1330,7 @@ export default function SettingsPage() {
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors disabled:opacity-50 shrink-0"
               >
                 {addingTruck ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                Add Truck
+                {t('addTruck')}
               </button>
             </div>
           </form>
@@ -1336,8 +1338,8 @@ export default function SettingsPage() {
           {trucks.length === 0 ? (
             <div className="text-center py-8 border-2 border-dashed border-gray-100 rounded-xl">
               <Truck className="h-8 w-8 text-gray-200 mx-auto mb-2" />
-              <p className="text-sm text-gray-400">No trucks added yet</p>
-              <p className="text-xs text-gray-300 mt-0.5">Add truck numbers to track your fleet</p>
+              <p className="text-sm text-gray-400">{t('noTrucks')}</p>
+              <p className="text-xs text-gray-300 mt-0.5">{t('trucksHint')}</p>
             </div>
           ) : (
             <ul className="divide-y divide-gray-50 border border-gray-100 rounded-xl overflow-hidden">
@@ -1373,16 +1375,16 @@ export default function SettingsPage() {
           5. INVOICE SETTINGS
       ═══════════════════════════════════════════════════════════════════ */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <SectionHeader title="Invoice Settings" subtitle="Defaults applied to all new invoices" />
+        <SectionHeader title={t('invoiceSettingsTitle')} subtitle={t('invoiceSettingsSubtitle')} />
         <form onSubmit={handleSaveInvoice} className="p-6 space-y-6">
 
           {/* Numbering */}
           <div>
-            <p className="text-sm font-semibold text-gray-800 mb-3">Invoice Numbering</p>
+            <p className="text-sm font-semibold text-gray-800 mb-3">{t('invoiceNumbering')}</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Number Prefix
+                  {t('numberPrefix')}
                   <span className="text-xs text-gray-400 font-normal ml-1">e.g. &quot;INV-&quot;</span>
                 </label>
                 <input
@@ -1394,7 +1396,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Starting Number</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('startingNumber')}</label>
                 <input
                   type="number"
                   min={1}
@@ -1404,42 +1406,42 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Default Due Days</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('defaultDueDays')}</label>
                 <select
                   value={invDueDays}
                   onChange={e => setInvDueDays(Number(e.target.value))}
                   className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                 >
                   {DUE_DAYS_OPTIONS.map(d => (
-                    <option key={d} value={d}>{d === 0 ? 'Due on receipt' : `Net ${d}`}</option>
+                    <option key={d} value={d}>{d === 0 ? t('dueOnReceipt') : t('netDays', { days: d })}</option>
                   ))}
                 </select>
               </div>
             </div>
             <div className="mt-2 px-3 py-2 bg-gray-50 rounded-lg">
               <p className="text-xs text-gray-500">
-                Preview: <span className="font-mono font-semibold text-gray-700">{invPrefix}{String(invStartNum).padStart(4, '0')}</span>
+                {t('previewLabel', { prefix: invPrefix, number: String(invStartNum).padStart(4, '0') })}
               </p>
             </div>
           </div>
 
           {/* Column toggles */}
           <div>
-            <p className="text-sm font-semibold text-gray-800 mb-1">Show / Hide Invoice Columns</p>
-            <p className="text-xs text-gray-400 mb-3">Toggle which columns appear on printed invoices</p>
+            <p className="text-sm font-semibold text-gray-800 mb-1">{t('showHideColumns')}</p>
+            <p className="text-xs text-gray-400 mb-3">{t('columnsSubtitle')}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {([
-                { icon: Truck,   label: 'Show Truck # column',  val: invShowTruck,  set: setInvShowTruck  },
-                { icon: Clock,   label: 'Show Time column',      val: invShowTime,   set: setInvShowTime   },
-                { icon: Hash,    label: 'Show Ticket # column',  val: invShowTicket, set: setInvShowTicket },
-                { icon: Package, label: 'Show Material column',  val: invShowMat,    set: setInvShowMat    },
-              ] as const).map(({ icon: Icon, label, val, set }) => (
+                { icon: Truck,   labelKey: 'showTruckCol' as const,  val: invShowTruck,  set: setInvShowTruck  },
+                { icon: Clock,   labelKey: 'showTimeCol' as const,   val: invShowTime,   set: setInvShowTime   },
+                { icon: Hash,    labelKey: 'showTicketCol' as const, val: invShowTicket, set: setInvShowTicket },
+                { icon: Package, labelKey: 'showMaterialCol' as const, val: invShowMat,  set: setInvShowMat    },
+              ]).map(({ icon: Icon, labelKey, val, set }) => (
                 <label
-                  key={label}
+                  key={labelKey}
                   className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors"
                 >
                   <span className="flex items-center gap-2 text-sm text-gray-700">
-                    <Icon className="h-4 w-4 text-gray-400" />{label}
+                    <Icon className="h-4 w-4 text-gray-400" />{t(labelKey)}
                   </span>
                   <Toggle on={val} onChange={set} />
                 </label>
@@ -1450,9 +1452,9 @@ export default function SettingsPage() {
           {/* Notes */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Default Invoice Notes / Terms
+              {t('defaultInvoiceNotes')}
             </label>
-            <p className="text-xs text-gray-400 mb-1.5">Appears at the bottom of every invoice</p>
+            <p className="text-xs text-gray-400 mb-1.5">{t('invoiceNotesSubtitle')}</p>
             <textarea
               value={invNotes}
               onChange={e => setInvNotes(e.target.value)}
@@ -1465,9 +1467,9 @@ export default function SettingsPage() {
           {/* Payment instructions */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Default Payment Instructions
+              {t('defaultPaymentInstructions')}
             </label>
-            <p className="text-xs text-gray-400 mb-1.5">How clients should pay you</p>
+            <p className="text-xs text-gray-400 mb-1.5">{t('paymentInstructionsSubtitle')}</p>
             <textarea
               value={invPayInstr}
               onChange={e => setInvPayInstr(e.target.value)}
@@ -1479,8 +1481,8 @@ export default function SettingsPage() {
 
           {/* Email signature */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Signature</label>
-            <p className="text-xs text-gray-400 mb-1.5">Appended to invoice emails</p>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('emailSignature')}</label>
+            <p className="text-xs text-gray-400 mb-1.5">{t('emailSignatureSubtitle')}</p>
             <textarea
               value={invSignature}
               onChange={e => setInvSignature(e.target.value)}
@@ -1492,7 +1494,7 @@ export default function SettingsPage() {
 
           <button type="submit" disabled={savingInvoice || !companyId} className={btnPrimary}>
             {savingInvoice && <Loader2 className="h-4 w-4 animate-spin" />}
-            {savingInvoice ? 'Saving…' : 'Save Invoice Settings'}
+            {savingInvoice ? t('saving') : t('saveInvoiceSettings')}
           </button>
         </form>
       </div>
@@ -1501,13 +1503,13 @@ export default function SettingsPage() {
           6. NOTIFICATIONS
       ═══════════════════════════════════════════════════════════════════ */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <SectionHeader title="Email Notifications" subtitle="Choose what events send you an email alert" />
+        <SectionHeader title={t('notifications')} subtitle={t('notificationsSubtitle')} />
         <form onSubmit={handleSaveNotify} className="p-6 space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Notification Email Address
+              {t('notificationEmail')}
             </label>
-            <p className="text-xs text-gray-400 mb-1.5">Where alerts are sent — defaults to your account email</p>
+            <p className="text-xs text-gray-400 mb-1.5">{t('notificationEmailSubtitle')}</p>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
@@ -1521,22 +1523,22 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <p className="text-sm font-semibold text-gray-800 mb-3">Notify me when…</p>
+            <p className="text-sm font-semibold text-gray-800 mb-3">{t('notifyWhen')}</p>
             <div className="divide-y divide-gray-50 border border-gray-100 rounded-xl overflow-hidden">
               {([
-                { label: 'New ticket submitted by driver', val: notifyNewTicket, set: setNotifyNewTicket },
-                { label: 'Ticket approved',                val: notifyApproved,  set: setNotifyApproved  },
-                { label: 'Invoice sent to client',         val: notifyInvSent,   set: setNotifyInvSent   },
-                { label: 'Payment received',               val: notifyPayment,   set: setNotifyPayment   },
-                { label: 'Invoice overdue (15+ days)',     val: notifyOverdue,   set: setNotifyOverdue   },
-                { label: 'Document expiring soon',         val: notifyExpiring,  set: setNotifyExpiring  },
-                { label: 'Driver has missing tickets',     val: notifyMissing,   set: setNotifyMissing   },
-              ] as const).map(({ label, val, set }) => (
+                { labelKey: 'notifyNewTicket' as const,      val: notifyNewTicket, set: setNotifyNewTicket },
+                { labelKey: 'notifyTicketApproved' as const, val: notifyApproved,  set: setNotifyApproved  },
+                { labelKey: 'notifyInvoiceSent' as const,    val: notifyInvSent,   set: setNotifyInvSent   },
+                { labelKey: 'notifyPaymentReceived' as const,val: notifyPayment,   set: setNotifyPayment   },
+                { labelKey: 'notifyInvoiceOverdue' as const, val: notifyOverdue,   set: setNotifyOverdue   },
+                { labelKey: 'notifyDocExpiring' as const,    val: notifyExpiring,  set: setNotifyExpiring  },
+                { labelKey: 'notifyMissingTickets' as const, val: notifyMissing,   set: setNotifyMissing   },
+              ]).map(({ labelKey, val, set }) => (
                 <label
-                  key={label}
+                  key={labelKey}
                   className="flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 cursor-pointer transition-colors"
                 >
-                  <span className="text-sm text-gray-700">{label}</span>
+                  <span className="text-sm text-gray-700">{t(labelKey)}</span>
                   <Toggle on={val} onChange={set} />
                 </label>
               ))}
@@ -1566,7 +1568,7 @@ export default function SettingsPage() {
 
           <button type="submit" disabled={savingNotify || !companyId} className={btnPrimary}>
             {savingNotify && <Loader2 className="h-4 w-4 animate-spin" />}
-            {savingNotify ? 'Saving…' : 'Save Notifications'}
+            {savingNotify ? t('saving') : t('saveNotifications')}
           </button>
         </form>
       </div>
@@ -1575,20 +1577,20 @@ export default function SettingsPage() {
           7. TEAM MEMBERS
       ═══════════════════════════════════════════════════════════════════ */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <SectionHeader title="Team Members" subtitle="Manage drivers and staff who access the platform" />
+        <SectionHeader title={t('team')} subtitle={t('teamSubtitle')} />
         <div className="p-6 space-y-6">
 
           {/* Role descriptions */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
-              { role: 'Admin',      color: 'bg-purple-100 text-purple-700', desc: 'Full access to everything' },
-              { role: 'Dispatcher', color: 'bg-blue-100 text-blue-700',    desc: 'Tickets, dispatch, and drivers' },
-              { role: 'Driver',     color: 'bg-green-100 text-green-700',  desc: 'Submit tickets only' },
-              { role: 'Accountant', color: 'bg-amber-100 text-amber-700',  desc: 'Invoices and revenue only' },
+              { roleKey: 'admin' as const,      color: 'bg-purple-100 text-purple-700', descKey: 'roleDesc.admin' as const },
+              { roleKey: 'dispatcher' as const, color: 'bg-blue-100 text-blue-700',    descKey: 'roleDesc.dispatcher' as const },
+              { roleKey: 'driver' as const,     color: 'bg-green-100 text-green-700',  descKey: 'roleDesc.driver' as const },
+              { roleKey: 'accountant' as const, color: 'bg-amber-100 text-amber-700',  descKey: 'roleDesc.accountant' as const },
             ].map(r => (
-              <div key={r.role} className="flex items-start gap-3 bg-gray-50 rounded-xl p-3">
-                <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 mt-0.5 ${r.color}`}>{r.role}</span>
-                <p className="text-xs text-gray-600">{r.desc}</p>
+              <div key={r.roleKey} className="flex items-start gap-3 bg-gray-50 rounded-xl p-3">
+                <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 mt-0.5 ${r.color}`}>{t(`roles.${r.roleKey}`)}</span>
+                <p className="text-xs text-gray-600">{t(r.descKey)}</p>
               </div>
             ))}
           </div>
@@ -1630,10 +1632,10 @@ export default function SettingsPage() {
             </div>
           ) : (
           <form onSubmit={handleSendInvite} className="space-y-4 border-t border-gray-100 pt-5">
-            <p className="text-sm font-semibold text-gray-800">Add Team Member</p>
+            <p className="text-sm font-semibold text-gray-800">{t('addTeamMember')}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('notificationEmail')}</label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
@@ -1641,13 +1643,13 @@ export default function SettingsPage() {
                     required
                     value={inviteEmail}
                     onChange={e => setInviteEmail(e.target.value)}
-                    placeholder="driver@email.com"
+                    placeholder={t('teamEmailPlaceholder')}
                     className="w-full rounded-lg border border-gray-200 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Role</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('teamRole')}</label>
                 <select
                   value={inviteRole}
                   onChange={e => setInviteRole(e.target.value)}
@@ -1659,10 +1661,10 @@ export default function SettingsPage() {
             </div>
             <button type="submit" disabled={sendingInvite || !companyId} className={btnPrimary}>
               {sendingInvite ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              {sendingInvite ? 'Adding…' : 'Add Member'}
+              {sendingInvite ? t('saving') : t('addMember')}
             </button>
             <p className="text-xs text-gray-400">
-              The team member must sign up with this email address to access the platform.
+              {t('teamHint')}
             </p>
           </form>
           )}
@@ -1670,18 +1672,18 @@ export default function SettingsPage() {
           {/* Current Members */}
           <div className="border-t border-gray-100 pt-5">
             <p className="text-sm font-semibold text-gray-800 mb-3">
-              Current Members
+              {t('currentMembers')}
               {members.length > 0 && (
                 <span className="text-xs text-gray-400 font-normal ml-2">
-                  {members.filter(m => !!m.accepted_at).length} active · {members.filter(m => !m.accepted_at).length} pending
+                  {t('memberSummary', { active: members.filter(m => !!m.accepted_at).length, pending: members.filter(m => !m.accepted_at).length })}
                 </span>
               )}
             </p>
             {members.length === 0 ? (
               <div className="text-center py-8 border-2 border-dashed border-gray-100 rounded-xl">
                 <Users className="h-8 w-8 text-gray-200 mx-auto mb-2" />
-                <p className="text-sm text-gray-400">No team members yet</p>
-                <p className="text-xs text-gray-300 mt-0.5">Invite someone above to get started</p>
+                <p className="text-sm text-gray-400">{t('noClientCompanies')}</p>
+                <p className="text-xs text-gray-300 mt-0.5">{t('teamHint')}</p>
               </div>
             ) : (
               <div className="divide-y divide-gray-50 border border-gray-100 rounded-xl overflow-hidden">
@@ -1703,8 +1705,8 @@ export default function SettingsPage() {
                             <span className="capitalize">{m.role}</span>
                             {' · '}
                             {isActive
-                              ? `Joined ${new Date(m.accepted_at!).toLocaleDateString()}`
-                              : `Invited ${new Date(m.created_at).toLocaleDateString()}`}
+                              ? t('joined', { date: new Date(m.accepted_at!).toLocaleDateString() })
+                              : t('memberStatusPending')}
                           </p>
                         </div>
                       </div>
@@ -1712,7 +1714,7 @@ export default function SettingsPage() {
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                           isActive ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
                         }`}>
-                          {isActive ? 'Active' : 'Pending'}
+                          {isActive ? t('memberStatusDriver') : t('memberStatusPending')}
                         </span>
                         <button
                           onClick={() => handleRemoveMember(m.id, m.email)}
@@ -1795,15 +1797,15 @@ export default function SettingsPage() {
           8. DATA EXPORT
       ═══════════════════════════════════════════════════════════════════ */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <SectionHeader title="Data Export" subtitle="Download your data as CSV files" />
+        <SectionHeader title={t('export')} subtitle={t('exportSubtitle')} />
         <div className="p-6 space-y-5">
 
           {/* Date range */}
           <div>
-            <p className="text-sm font-medium text-gray-700 mb-3">Date Range (for tickets and expenses)</p>
+            <p className="text-sm font-medium text-gray-700 mb-3">{t('dateRange')}</p>
             <div className="flex flex-wrap items-end gap-4">
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">From</label>
+                <label className="block text-xs text-gray-500 mb-1.5">{t('exportFrom')}</label>
                 <input
                   type="date"
                   value={expStart}
@@ -1812,7 +1814,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">To</label>
+                <label className="block text-xs text-gray-500 mb-1.5">{t('exportTo')}</label>
                 <input
                   type="date"
                   value={expEnd}
@@ -1826,17 +1828,17 @@ export default function SettingsPage() {
           {/* Export cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {([
-              { key: 'tickets'  as const, icon: FileText,   title: 'Tickets / Jobs',   desc: `${expStart} → ${expEnd}`,  iconColor: 'text-blue-600',   bg: 'bg-blue-50'   },
-              { key: 'invoices' as const, icon: CreditCard, title: 'Invoices',          desc: 'Full history',             iconColor: 'text-green-600',  bg: 'bg-green-50'  },
-              { key: 'payments' as const, icon: Check,      title: 'Driver Payments',   desc: 'Full history',             iconColor: 'text-purple-600', bg: 'bg-purple-50' },
-              { key: 'expenses' as const, icon: Building2,  title: 'Expenses',          desc: `${expStart} → ${expEnd}`,  iconColor: 'text-amber-600',  bg: 'bg-amber-50'  },
-            ]).map(({ key, icon: Icon, title, desc, iconColor, bg }) => (
+              { key: 'tickets'  as const, icon: FileText,   titleKey: 'exportTickets' as const,  desc: `${expStart} → ${expEnd}`,   iconColor: 'text-blue-600',   bg: 'bg-blue-50'   },
+              { key: 'invoices' as const, icon: CreditCard, titleKey: 'exportInvoices' as const, desc: t('fullHistory'),             iconColor: 'text-green-600',  bg: 'bg-green-50'  },
+              { key: 'payments' as const, icon: Check,      titleKey: 'exportPayments' as const, desc: t('fullHistory'),             iconColor: 'text-purple-600', bg: 'bg-purple-50' },
+              { key: 'expenses' as const, icon: Building2,  titleKey: 'exportExpenses' as const, desc: `${expStart} → ${expEnd}`,   iconColor: 'text-amber-600',  bg: 'bg-amber-50'  },
+            ]).map(({ key, icon: Icon, titleKey, desc, iconColor, bg }) => (
               <div key={key} className="border border-gray-100 rounded-xl p-4 flex items-start gap-3">
                 <div className={`h-9 w-9 rounded-xl ${bg} flex items-center justify-center shrink-0`}>
                   <Icon className={`h-4 w-4 ${iconColor}`} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900 text-sm">{title}</p>
+                  <p className="font-semibold text-gray-900 text-sm">{t(titleKey)}</p>
                   <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
                 </div>
                 <button
@@ -1845,7 +1847,7 @@ export default function SettingsPage() {
                   className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
                 >
                   {exporting === key ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                  {exporting === key ? 'Exporting…' : 'CSV'}
+                  {exporting === key ? t('exporting') : 'CSV'}
                 </button>
               </div>
             ))}
@@ -1854,8 +1856,8 @@ export default function SettingsPage() {
           {/* Export all */}
           <div className="flex items-center justify-between border-t border-gray-100 pt-4">
             <div>
-              <p className="text-sm font-semibold text-gray-900">Export Everything</p>
-              <p className="text-xs text-gray-400 mt-0.5">Downloads all four CSVs at once</p>
+              <p className="text-sm font-semibold text-gray-900">{t('exportAll')}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{t('exportAllSubtitle')}</p>
             </div>
             <button
               onClick={async () => {
@@ -1871,7 +1873,7 @@ export default function SettingsPage() {
               className={btnPrimary}
             >
               {exporting === 'all' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              {exporting === 'all' ? 'Exporting…' : 'Export All'}
+              {exporting === 'all' ? t('exporting') : t('exportAll')}
             </button>
           </div>
         </div>
@@ -2127,14 +2129,14 @@ export default function SettingsPage() {
           10. ACCOUNT SECURITY
       ═══════════════════════════════════════════════════════════════════ */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <SectionHeader title="Change Email Address" subtitle="Confirm with your password — a verification link will be sent to your current address" />
+        <SectionHeader title={t('changeEmail')} subtitle={t('changeEmailSubtitle')} />
         <form onSubmit={handleChangeEmail} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Current Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('currentEmail')}</label>
             <input value={email} disabled className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Current Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('currentPassword')}</label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
@@ -2151,7 +2153,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">New Email Address</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('newEmail')}</label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
@@ -2166,16 +2168,16 @@ export default function SettingsPage() {
           </div>
           <button type="submit" disabled={savingEmail || !newEmail.trim() || !emailCurrentPwd} className={btnPrimary}>
             {savingEmail && <Loader2 className="h-4 w-4 animate-spin" />}
-            {savingEmail ? 'Sending…' : 'Update Email'}
+            {savingEmail ? t('saving') : t('updateEmail')}
           </button>
         </form>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <SectionHeader title="Change Password" subtitle="Must be at least 8 characters" />
+        <SectionHeader title={t('changePassword')} subtitle={t('passwordHint')} />
         <form onSubmit={handleChangePassword} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Current Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('currentPassword')}</label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
@@ -2192,7 +2194,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">New Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('newPassword')}</label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
@@ -2213,7 +2215,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm New Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('confirmNewPassword')}</label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
@@ -2231,22 +2233,22 @@ export default function SettingsPage() {
           </div>
           <button type="submit" disabled={savingPwd || !currentPwd || !newPwd || newPwd !== confirmPwd} className={btnPrimary}>
             {savingPwd && <Loader2 className="h-4 w-4 animate-spin" />}
-            {savingPwd ? 'Saving…' : 'Update Password'}
+            {savingPwd ? t('saving') : t('updatePassword')}
           </button>
         </form>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <SectionHeader title="Two-Factor Authentication" subtitle="Add an extra layer of security to your account" />
+        <SectionHeader title={t('twoFactor')} subtitle={t('twoFactorSubtitle')} />
         <div className="p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-700">Authenticator App (TOTP)</p>
-              <p className="text-xs text-gray-400 mt-0.5">Use Google Authenticator or Authy</p>
+              <p className="text-sm font-medium text-gray-700">{t('authenticatorApp')}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{t('authenticatorHint')}</p>
             </div>
             <div className="flex items-center gap-3">
               <span className={`text-xs font-medium ${mfaEnabled ? 'text-green-600' : 'text-gray-400'}`}>
-                {mfaEnabled ? 'Enabled' : 'Disabled'}
+                {mfaEnabled ? t('enabled') : t('disabled')}
               </span>
               {mfaEnabled ? (
                 <button
@@ -2255,7 +2257,7 @@ export default function SettingsPage() {
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 text-red-600 text-xs font-medium hover:bg-red-50 transition-colors disabled:opacity-50"
                 >
                   {mfaLoading && <Loader2 className="h-3 w-3 animate-spin" />}
-                  Disable
+                  {t('disable')}
                 </button>
               ) : mfaStep === 'idle' ? (
                 <button
@@ -2264,7 +2266,7 @@ export default function SettingsPage() {
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-medium hover:bg-gray-700 transition-colors disabled:opacity-50"
                 >
                   {mfaLoading && <Loader2 className="h-3 w-3 animate-spin" />}
-                  Enable
+                  {t('enable')}
                 </button>
               ) : null}
             </div>
@@ -2272,7 +2274,7 @@ export default function SettingsPage() {
 
           {mfaStep === 'enrolling' && (
             <div className="border border-gray-100 rounded-xl p-5 space-y-4 bg-gray-50">
-              <p className="text-sm font-medium text-gray-700">Scan this QR code with your authenticator app</p>
+              <p className="text-sm font-medium text-gray-700">{t('scanQr')}</p>
               {mfaQrCode && (
                 <img
                   src={mfaQrCode}
@@ -2281,14 +2283,14 @@ export default function SettingsPage() {
                 />
               )}
               <div>
-                <p className="text-xs text-gray-500 mb-1">Or enter this key manually:</p>
+                <p className="text-xs text-gray-500 mb-1">{t('orEnterKey')}</p>
                 <code className="block text-xs font-mono bg-white border border-gray-200 rounded-lg px-3 py-2 break-all text-gray-800 select-all">
                   {mfaSecret}
                 </code>
               </div>
               <form onSubmit={handleMfaVerify} className="space-y-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Enter the 6-digit code from your app</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">{t('enterCode')}</label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -2308,14 +2310,14 @@ export default function SettingsPage() {
                     className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 transition-colors disabled:opacity-50"
                   >
                     {mfaLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                    Verify &amp; Enable
+                    {t('verifyEnable')}
                   </button>
                   <button
                     type="button"
                     onClick={() => { setMfaStep('idle'); setMfaCode(''); setMfaQrCode(''); setMfaSecret('') }}
                     className="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"
                   >
-                    Cancel
+                    {t('cancel')}
                   </button>
                 </div>
               </form>
@@ -2459,14 +2461,14 @@ export default function SettingsPage() {
       <div className="bg-white rounded-xl border-2 border-red-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-red-100 flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 text-red-500" />
-          <h2 className="font-semibold text-sm text-red-700">Danger Zone</h2>
+          <h2 className="font-semibold text-sm text-red-700">{t('dangerZone')}</h2>
         </div>
         <div className="p-6 space-y-6">
           <div className="space-y-3">
             <div>
-              <p className="text-sm font-semibold text-gray-900">Delete All Data</p>
+              <p className="text-sm font-semibold text-gray-900">{t('deleteAllData')}</p>
               <p className="text-xs text-gray-500 mt-0.5">
-                Cancels your subscription and permanently removes all tickets, invoices, dispatch records, and company data. This cannot be undone.
+                {t('deleteAllDataDesc')}
               </p>
             </div>
             <div className="flex items-center gap-3">

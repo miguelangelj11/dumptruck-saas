@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, Loader2, Users, Phone, Mail, X, Pencil, Trash2, DollarSign, CreditCard, Calendar, AlertCircle, Lock, FileText, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react'
 import { toast } from 'sonner'
@@ -54,6 +55,7 @@ const EMPTY_PAY = {
 }
 
 export default function DriversPage() {
+  const t = useTranslations('drivers')
   const [drivers, setDrivers]               = useState<Driver[]>([])
   const [loads, setLoads]                   = useState<Load[]>([])
   const [driverPayments, setDriverPayments] = useState<DriverPayment[]>([])
@@ -227,7 +229,7 @@ export default function DriversPage() {
 
   async function handleDelete(d: Driver, e: React.MouseEvent) {
     e.stopPropagation()
-    if (!confirm(`Delete ${d.name}? This cannot be undone.`)) return
+    if (!confirm(t('deleteConfirm', { name: d.name }))) return
     const { error } = await supabase.from('drivers').delete().eq('id', d.id)
     if (error) { toast.error('Delete failed: ' + error.message); return }
     toast.success('Driver deleted')
@@ -389,10 +391,9 @@ export default function DriversPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Drivers</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
           <p className="text-gray-500 text-sm mt-0.5">
-            {activeDriverCount}/{limitLabel} drivers used
-            {driverUnpaidSummary.length > 0 && ` · ${driverUnpaidSummary.length} with unpaid work`}
+            {t('summary', { active: `${activeDriverCount}/${limitLabel}`, unpaid: driverUnpaidSummary.length })}
           </p>
         </div>
         <button
@@ -405,7 +406,7 @@ export default function DriversPage() {
           }}
           className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors ${atLimit ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary-hover)]'}`}
         >
-          <Plus className="h-4 w-4" /> Add Driver
+          <Plus className="h-4 w-4" /> {t('addDriver')}
         </button>
       </div>
 
@@ -433,10 +434,10 @@ export default function DriversPage() {
       {totalOwed > 0 && (
         <div className="mb-5 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center justify-between gap-3">
           <div>
-            <p className="font-bold text-red-800">💰 Driver Pay Outstanding</p>
-            <p className="text-sm text-red-600 mt-0.5">${totalOwed.toLocaleString(undefined, { minimumFractionDigits: 2 })} owed across {driversWithOwedCount} driver{driversWithOwedCount !== 1 ? 's' : ''}</p>
+            <p className="font-bold text-red-800">💰 {t('awaitingPayment')}</p>
+            <p className="text-sm text-red-600 mt-0.5">{t('totalOwed', { total: totalOwed.toLocaleString(undefined, { minimumFractionDigits: 2 }) })} — {t('driversWithUnpaid')}: {driversWithOwedCount}</p>
           </div>
-          <button onClick={() => setActiveTab('unpaid')} className="shrink-0 px-4 py-2 bg-red-600 text-white font-bold rounded-xl text-sm hover:bg-red-700">Review Unpaid →</button>
+          <button onClick={() => setActiveTab('unpaid')} className="shrink-0 px-4 py-2 bg-red-600 text-white font-bold rounded-xl text-sm hover:bg-red-700">{t('tabs.unpaid')} →</button>
         </div>
       )}
 
@@ -444,9 +445,9 @@ export default function DriversPage() {
       <div className="flex gap-1 mb-5 bg-gray-100 rounded-lg p-1 w-fit">
         {(['all', 'unpaid'] as const).map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === tab ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-            {tab === 'all' ? 'All Drivers' : (
+            {tab === 'all' ? t('tabs.all') : (
               <span className="flex items-center gap-1.5">
-                Unpaid
+                {t('tabs.unpaid')}
                 {driverUnpaidSummary.length > 0 && <span className="h-4 w-4 rounded-full bg-orange-500 text-white text-[10px] flex items-center justify-center font-bold">{driverUnpaidSummary.length}</span>}
               </span>
             )}
@@ -460,7 +461,7 @@ export default function DriversPage() {
         // ── Unpaid Tab ──────────────────────────────────────────────────────
         <div>
           <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-gray-500">{unpaidLoads.length} unpaid ticket{unpaidLoads.length !== 1 ? 's' : ''} across all drivers</p>
+            <p className="text-sm text-gray-500">{unpaidLoads.length !== 1 ? t('ticketsUnpaidPlural', { count: unpaidLoads.length }) : t('ticketsUnpaid', { count: unpaidLoads.length })}</p>
             <select value={unpaidSortBy} onChange={e => setUnpaidSortBy(e.target.value)} className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none">
               <option value="oldest">Oldest First</option>
               <option value="newest">Newest First</option>
@@ -471,7 +472,7 @@ export default function DriversPage() {
           {sortedUnpaidLoads.length === 0 ? (
             <div className="text-center py-16 bg-white rounded-xl border border-gray-100">
               <span className="text-5xl block mb-3">✅</span>
-              <p className="text-sm font-medium text-gray-400">All drivers are paid up</p>
+              <p className="text-sm font-medium text-gray-400">{t('allTicketsSettled')}</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -491,7 +492,7 @@ export default function DriversPage() {
                     <div className="text-right">
                       {payOwed > 0 ? (
                         <>
-                          <p className="font-black text-red-600">${payOwed.toFixed(2)} owed</p>
+                          <p className="font-black text-red-600">${payOwed.toFixed(2)} {t('owed')}</p>
                           <p className="text-xs text-gray-400 mt-0.5">{driver?.pay_type?.replace(/_/g, ' ')} rate</p>
                         </>
                       ) : (
@@ -511,8 +512,8 @@ export default function DriversPage() {
             const firstTicketDriver = drivers.find(d => d.name === loads.find(l => l.id === selectedUnpaid[0])?.driver_name)
             return (
               <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 px-6 py-4 bg-gray-900 text-white rounded-2xl shadow-2xl">
-                <p className="font-semibold text-sm">{selectedUnpaid.length} ticket{selectedUnpaid.length !== 1 ? 's' : ''} · ${selectedUnpaidTotal.toFixed(2)}</p>
-                <button onClick={() => { setPayModalDriver(firstTicketDriver ?? null); setPayDriverModal(true) }} className="px-4 py-2 bg-green-500 hover:bg-green-400 text-white font-bold rounded-xl text-sm">💵 Pay Selected</button>
+                <p className="font-semibold text-sm">{selectedUnpaid.length !== 1 ? t('ticketCountPlural', { count: selectedUnpaid.length }) : t('ticketCount', { count: selectedUnpaid.length })} · ${selectedUnpaidTotal.toFixed(2)}</p>
+                <button onClick={() => { setPayModalDriver(firstTicketDriver ?? null); setPayDriverModal(true) }} className="px-4 py-2 bg-green-500 hover:bg-green-400 text-white font-bold rounded-xl text-sm">💵 {t('recordPayment')}</button>
                 <button onClick={() => setSelectedUnpaid([])} className="text-gray-400 hover:text-white">✕</button>
               </div>
             )
@@ -523,8 +524,8 @@ export default function DriversPage() {
         drivers.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-xl border border-gray-100">
             <Users className="h-12 w-12 text-gray-200 mx-auto mb-4" />
-            <p className="text-sm font-medium text-gray-400 mb-1">No drivers yet</p>
-            <button onClick={openAdd} className="text-sm text-[var(--brand-primary)]">Add your first driver →</button>
+            <p className="text-sm font-medium text-gray-400 mb-1">{t('noDrivers')}</p>
+            <button onClick={openAdd} className="text-sm text-[var(--brand-primary)]">{t('addFirstDriver')} →</button>
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -545,7 +546,7 @@ export default function DriversPage() {
                       </div>
                       <div>
                         <p className="font-semibold text-gray-900">{d.name}</p>
-                        <span className={`inline-flex text-xs rounded-full px-2 py-0.5 font-medium ${d.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{d.status}</span>
+                        <span className={`inline-flex text-xs rounded-full px-2 py-0.5 font-medium ${d.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{d.status === 'active' ? t('status.active') : t('status.inactive')}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -555,7 +556,7 @@ export default function DriversPage() {
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-sm">
                     <div className="bg-gray-50 rounded-lg p-2.5">
-                      <p className="text-gray-400 text-xs mb-0.5">Earned</p>
+                      <p className="text-gray-400 text-xs mb-0.5">{t('loads')}</p>
                       <p className="font-bold text-gray-900 text-xs">
                         {d.pay_rate_value
                           ? `$${stats.earned.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -564,11 +565,11 @@ export default function DriversPage() {
                       </p>
                     </div>
                     <div className="bg-gray-50 rounded-lg p-2.5">
-                      <p className="text-gray-400 text-xs mb-0.5">Revenue</p>
+                      <p className="text-gray-400 text-xs mb-0.5">{t('revenue')}</p>
                       <p className="font-bold text-[var(--brand-primary)] text-xs">${stats.revenue.toLocaleString()}</p>
                     </div>
                     <div className={`rounded-lg p-2.5 ${stats.owed > 0 ? 'bg-orange-50' : 'bg-gray-50'}`}>
-                      <p className="text-gray-400 text-xs mb-0.5">Owed</p>
+                      <p className="text-gray-400 text-xs mb-0.5">{t('owed')}</p>
                       <p className={`font-bold text-xs ${stats.owed > 0 ? 'text-orange-600' : 'text-gray-400'}`}>{stats.owed > 0 ? `$${stats.owed.toFixed(2)}` : d.pay_rate_value ? '—' : <span className="text-gray-300 text-[10px]">Set rate</span>}</p>
                     </div>
                   </div>
@@ -578,10 +579,10 @@ export default function DriversPage() {
                   <div className="mt-2 text-xs">
                     {lastWorked ? (
                       <span className={daysSinceWork! > 60 ? 'text-gray-300' : daysSinceWork! > 30 ? 'text-gray-400' : 'text-green-600'}>
-                        Last worked: {fmtDate(lastWorked)}{daysSinceWork! > 60 ? ' — consider marking inactive' : ''}
+                        {t('since', { date: fmtDate(lastWorked) })}
                       </span>
                     ) : (
-                      <span className="text-gray-300 italic">No tickets yet</span>
+                      <span className="text-gray-300 italic">{t('noUnpaidWork')}</span>
                     )}
                   </div>
                   {/* Compliance issues tooltip */}
@@ -592,11 +593,11 @@ export default function DriversPage() {
                   )}
                   <div className="flex gap-2 mt-4">
                     <button onClick={e => { e.stopPropagation(); toggleStatus(d) }} className="flex-1 text-xs py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)] transition-colors">
-                      {d.status === 'active' ? 'Mark Inactive' : 'Mark Active'}
+                      {d.status === 'active' ? t('markInactive') : t('markActive')}
                     </button>
                     {stats.owed > 0 && (
                       <button onClick={e => { e.stopPropagation(); openPayModal(d, stats.owed) }} className="flex-1 text-xs py-1.5 rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-50 transition-colors font-medium">
-                        Pay ${stats.owed.toFixed(2)}
+                        {t('payAmount', { amount: stats.owed.toFixed(2) })}
                       </button>
                     )}
                   </div>
@@ -664,7 +665,7 @@ export default function DriversPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-semibold text-gray-900">{editingDriver ? 'Edit Driver' : atLimit ? 'Driver Limit Reached' : 'Add Driver'}</h2>
+              <h2 className="font-semibold text-gray-900">{editingDriver ? t('editDriver') : atLimit ? 'Driver Limit Reached' : t('addDriver')}</h2>
               <button onClick={() => { setShowForm(false); setEditingDriver(null); setForm(EMPTY_DRIVER) }} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
 
@@ -698,23 +699,23 @@ export default function DriversPage() {
             ) : (
               <form onSubmit={handleSave} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Full Name *</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('fullName')} *</label>
                   <input required value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="Jake Morrison" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('phone')}</label>
                   <input type="tel" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="(555) 000-0000" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('email')}</label>
                   <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="driver@email.com" />
                 </div>
                 {editingDriver && (
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">{t('statusLabel')}</label>
                     <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]">
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
+                      <option value="active">{t('status.active')}</option>
+                      <option value="inactive">{t('status.inactive')}</option>
                     </select>
                   </div>
                 )}
@@ -762,7 +763,7 @@ export default function DriversPage() {
                   <button type="button" onClick={() => { setShowForm(false); setEditingDriver(null); setForm(EMPTY_DRIVER) }} className="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
                   <button type="submit" disabled={saving} className="flex-1 rounded-lg bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] disabled:opacity-50 flex items-center justify-center gap-2">
                     {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                    {saving ? 'Saving…' : editingDriver ? 'Save Changes' : 'Add Driver'}
+                    {saving ? t('saving') : editingDriver ? t('saveChanges') : t('addDriver')}
                   </button>
                 </div>
               </form>
@@ -777,7 +778,7 @@ export default function DriversPage() {
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
             <div className="px-5 pt-5 pb-4 border-b border-gray-100 flex items-center justify-between">
               <div>
-                <h2 className="text-base font-bold text-gray-900">Record Payment</h2>
+                <h2 className="text-base font-bold text-gray-900">{t('paymentModal')}</h2>
                 <p className="text-sm text-gray-500 mt-0.5">{payingDriver.name}</p>
               </div>
               <button onClick={() => { setPayingDriver(null); setPayForm(EMPTY_PAY) }} className="h-7 w-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400"><X className="h-4 w-4" /></button>
@@ -789,22 +790,22 @@ export default function DriversPage() {
                 const cnt  = loads.filter(l => l.driver_name === payingDriver.name && l.status === 'approved' && !l.driver_paid).length
                 return owed > 0 ? (
                   <div className="rounded-xl bg-orange-50 border border-orange-100 px-4 py-3 flex items-center justify-between text-sm">
-                    <span className="text-orange-700">{cnt} approved ticket{cnt !== 1 ? 's' : ''} unpaid</span>
-                    <span className="font-bold text-orange-700">${owed.toLocaleString()} owed</span>
+                    <span className="text-orange-700">{cnt !== 1 ? t('ticketsUnpaidPlural', { count: cnt }) : t('ticketsUnpaid', { count: cnt })}</span>
+                    <span className="font-bold text-orange-700">${owed.toLocaleString()} {t('owed')}</span>
                   </div>
                 ) : null
               })()}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Amount ($) *</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">{t('amountLabel')} ($) *</label>
                 <input required type="number" min="0.01" step="0.01" value={payForm.amount} onChange={e => setPayForm(p => ({ ...p, amount: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="0.00" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Payment Date *</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('paymentDate')} *</label>
                   <input required type="date" value={payForm.payment_date} onChange={e => setPayForm(p => ({ ...p, payment_date: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Method</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('method')}</label>
                   <select value={payForm.payment_method} onChange={e => setPayForm(p => ({ ...p, payment_method: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]">
                     {PAY_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
@@ -812,29 +813,29 @@ export default function DriversPage() {
               </div>
               {payForm.payment_method === 'Check' && (
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Check Number</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('checkNumber')}</label>
                   <input value={payForm.check_number} onChange={e => setPayForm(p => ({ ...p, check_number: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="1234" />
                 </div>
               )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Period Start</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('periodStart')}</label>
                   <input type="date" value={payForm.period_start} onChange={e => setPayForm(p => ({ ...p, period_start: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Period End</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('periodEnd')}</label>
                   <input type="date" value={payForm.period_end} onChange={e => setPayForm(p => ({ ...p, period_end: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
-                <input value={payForm.notes} onChange={e => setPayForm(p => ({ ...p, notes: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="Reference, memo, etc." />
+                <label className="block text-xs font-medium text-gray-700 mb-1">{t('notesLabel')}</label>
+                <input value={payForm.notes} onChange={e => setPayForm(p => ({ ...p, notes: e.target.value }))} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder={t('notesPlaceholder')} />
               </div>
               <div className="flex gap-3 pt-1">
                 <button type="button" onClick={() => { setPayingDriver(null); setPayForm(EMPTY_PAY) }} className="flex-1 h-10 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
                 <button type="submit" disabled={savingPay} className="flex-1 h-10 rounded-xl bg-[var(--brand-primary)] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[var(--brand-primary-hover)] disabled:opacity-60">
                   {savingPay && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {savingPay ? 'Saving…' : 'Record Payment'}
+                  {savingPay ? t('saving') : t('recordPayment')}
                 </button>
               </div>
             </form>
@@ -848,42 +849,46 @@ export default function DriversPage() {
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
             <div className="px-5 pt-5 pb-4 border-b border-gray-100 flex items-center justify-between">
               <div>
-                <h2 className="text-base font-bold text-gray-900">Pay Selected Tickets</h2>
-                <p className="text-sm text-gray-500 mt-0.5">{selectedUnpaid.length} ticket{selectedUnpaid.length !== 1 ? 's' : ''} · ${selectedUnpaidTotal.toFixed(2)}</p>
+                <h2 className="text-base font-bold text-gray-900">{t('paymentModal')}</h2>
+                <p className="text-sm text-gray-500 mt-0.5">{selectedUnpaid.length !== 1 ? t('ticketCountPlural', { count: selectedUnpaid.length }) : t('ticketCount', { count: selectedUnpaid.length })} · ${selectedUnpaidTotal.toFixed(2)}</p>
               </div>
               <button onClick={() => setPayDriverModal(false)} className="h-7 w-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400"><X className="h-4 w-4" /></button>
             </div>
             <div className="p-5 space-y-4">
               {payModalDriver && (
                 <div className="rounded-xl bg-blue-50 border border-blue-100 px-4 py-3 text-sm text-blue-800">
-                  Paying <strong>{payModalDriver.name}</strong> for {selectedUnpaid.length} ticket{selectedUnpaid.length !== 1 ? 's' : ''}
+                  Paying <strong>{payModalDriver.name}</strong> for {selectedUnpaid.length !== 1 ? t('ticketCountPlural', { count: selectedUnpaid.length }) : t('ticketCount', { count: selectedUnpaid.length })}
                 </div>
               )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Payment Method</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('method')}</label>
                   <select value={payModalMethod} onChange={e => setPayModalMethod(e.target.value)} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]">
-                    {['check', 'cash', 'zelle', 'ach', 'direct_deposit'].map(m => <option key={m} value={m}>{m.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>)}
+                    <option value="check">{t('methods.check')}</option>
+                    <option value="cash">{t('methods.cash')}</option>
+                    <option value="zelle">{t('methods.zelle')}</option>
+                    <option value="ach">{t('methods.ach')}</option>
+                    <option value="direct_deposit">{t('methods.direct')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Payment Date</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('paymentDate')}</label>
                   <input type="date" value={payModalDate} onChange={e => setPayModalDate(e.target.value)} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">{payModalMethod === 'check' ? 'Check Number' : 'Reference / Memo'}</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">{payModalMethod === 'check' ? t('checkNumber') : 'Reference / Memo'}</label>
                 <input value={payModalRef} onChange={e => setPayModalRef(e.target.value)} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder={payModalMethod === 'check' ? '1234' : 'Optional reference'} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
-                <input value={payModalNotes} onChange={e => setPayModalNotes(e.target.value)} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="Optional note" />
+                <label className="block text-xs font-medium text-gray-700 mb-1">{t('notesLabel')}</label>
+                <input value={payModalNotes} onChange={e => setPayModalNotes(e.target.value)} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder={t('notesPlaceholder')} />
               </div>
               <div className="flex gap-3 pt-1">
                 <button onClick={() => setPayDriverModal(false)} className="flex-1 h-10 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
                 <button onClick={handleBatchPay} disabled={savingDriverPay} className="flex-1 h-10 rounded-xl bg-green-600 text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-green-700 disabled:opacity-60">
                   {savingDriverPay && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {savingDriverPay ? 'Saving…' : `Pay $${selectedUnpaidTotal.toFixed(2)}`}
+                  {savingDriverPay ? t('saving') : t('payAmount', { amount: selectedUnpaidTotal.toFixed(2) })}
                 </button>
               </div>
             </div>
@@ -1169,15 +1174,15 @@ export default function DriversPage() {
               {/* Stats */}
               <div className="grid grid-cols-3 gap-2 mb-6">
                 <div className="bg-gray-50 rounded-xl p-3">
-                  <p className="text-xs text-gray-400 mb-1">Total Jobs</p>
+                  <p className="text-xs text-gray-400 mb-1">{t('totalLoads')}</p>
                   <p className="text-xl font-bold text-gray-900">{driverLoads.length}</p>
                 </div>
                 <div className="bg-[var(--brand-primary)]/5 rounded-xl p-3">
-                  <p className="text-xs text-gray-400 mb-1">Revenue</p>
+                  <p className="text-xs text-gray-400 mb-1">{t('revenue')}</p>
                   <p className="text-base font-bold text-[var(--brand-primary)]">${driverLoads.filter(l => ['approved', 'invoiced', 'paid'].includes(l.status)).reduce((s, l) => s + ((l as { total_pay?: number | null }).total_pay ?? l.rate ?? 0), 0).toLocaleString()}</p>
                 </div>
                 <div className={`rounded-xl p-3 ${driverAmountOwed > 0 ? 'bg-orange-50' : 'bg-gray-50'}`}>
-                  <p className="text-xs text-gray-400 mb-1">Owed</p>
+                  <p className="text-xs text-gray-400 mb-1">{t('owed')}</p>
                   <p className={`text-base font-bold ${driverAmountOwed > 0 ? 'text-orange-600' : 'text-gray-400'}`}>{driverAmountOwed > 0 ? `$${driverAmountOwed.toLocaleString()}` : '—'}</p>
                 </div>
               </div>
@@ -1187,10 +1192,10 @@ export default function DriversPage() {
                 <div className="mb-6">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-semibold text-sm text-gray-900 flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 text-orange-500" /> Unpaid Work
+                      <AlertCircle className="h-4 w-4 text-orange-500" /> {t('unpaidWork')}
                     </h3>
                     <button onClick={() => openPayModal(selectedDriver, driverAmountOwed)} className="inline-flex items-center gap-1 text-xs font-semibold text-white bg-[var(--brand-primary)] rounded-lg px-2.5 py-1.5 hover:bg-[var(--brand-primary-hover)] transition-colors">
-                      <CreditCard className="h-3 w-3" /> Pay Now
+                      <CreditCard className="h-3 w-3" /> {t('payNow')}
                     </button>
                   </div>
                   <div className="space-y-2">
@@ -1204,7 +1209,7 @@ export default function DriversPage() {
                       </div>
                     ))}
                     <div className="flex justify-between px-3 py-2 text-sm font-semibold border-t border-orange-200">
-                      <span className="text-orange-700">Total owed</span>
+                      <span className="text-orange-700">{t('owed')}</span>
                       <span className="text-orange-700">${driverAmountOwed.toLocaleString()}</span>
                     </div>
                   </div>
@@ -1214,7 +1219,7 @@ export default function DriversPage() {
               {/* Payment History */}
               {driverPaymentHistory.length > 0 && (
                 <div className="mb-6">
-                  <h3 className="font-semibold text-sm text-gray-900 mb-3">Payment History</h3>
+                  <h3 className="font-semibold text-sm text-gray-900 mb-3">{t('paymentHistory')}</h3>
                   <div className="space-y-2">
                     {driverPaymentHistory.map(p => (
                       <div key={p.id} className="flex items-start gap-3 p-3 rounded-lg border border-gray-100">
@@ -1238,9 +1243,9 @@ export default function DriversPage() {
               )}
 
               {/* Load History */}
-              <h3 className="font-semibold text-sm text-gray-900 mb-3">Job History</h3>
+              <h3 className="font-semibold text-sm text-gray-900 mb-3">{t('loadHistory')}</h3>
               {driverLoads.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-8">No jobs recorded</p>
+                <p className="text-sm text-gray-400 text-center py-8">{t('noLoadsRecorded')}</p>
               ) : (
                 <div className="space-y-2">
                   {driverLoads.map(l => (

@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { getCompanyId } from '@/lib/get-company-id'
@@ -57,6 +58,7 @@ const emptyForm = (): FormState => ({
 })
 
 export default function ExpensesPage() {
+  const t = useTranslations('revenue')
   const [planLocked, setPlanLocked] = useState<null | { plan: string; price: number }>(null)
   const [expenses, setExpenses]     = useState<Expense[]>([])
   const [loading, setLoading]       = useState(true)
@@ -344,7 +346,7 @@ export default function ExpensesPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Expenses</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t('expenseTracker')}</h1>
           <p className="text-sm text-gray-500 mt-0.5">Track your business costs</p>
         </div>
         <div className="flex items-center gap-2">
@@ -360,7 +362,7 @@ export default function ExpensesPage() {
             onClick={openAdd}
             className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand-dark)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors"
           >
-            <Plus className="h-4 w-4" /> Add Expense
+            <Plus className="h-4 w-4" /> {t('addExpense')}
           </button>
         </div>
       </div>
@@ -368,15 +370,15 @@ export default function ExpensesPage() {
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="col-span-2 sm:col-span-1 bg-white rounded-xl border border-gray-200 px-4 py-3">
-          <p className="text-xs text-gray-500 font-medium">Total Expenses</p>
+          <p className="text-xs text-gray-500 font-medium">{t('expenseTracker')}</p>
           <p className="text-2xl font-bold text-gray-900 mt-1">{fmt(expenses.reduce((s, e) => s + e.amount, 0))}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{expenses.length} entries</p>
+          <p className="text-xs text-gray-400 mt-0.5">{t('expenseCount', { count: expenses.length })}</p>
         </div>
         {byCategory.slice(0, 3).map(({ cat, label, emoji, total: catTotal }) => (
           <div key={cat} className="bg-white rounded-xl border border-gray-200 px-4 py-3">
             <p className="text-xs text-gray-500 font-medium">{emoji} {label}</p>
             <p className="text-xl font-bold text-gray-900 mt-1">{fmt(catTotal)}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{expenses.filter(e => e.category === cat).length} entries</p>
+            <p className="text-xs text-gray-400 mt-0.5">{t('expenseCount', { count: expenses.filter(e => e.category === cat).length })}</p>
           </div>
         ))}
       </div>
@@ -465,11 +467,11 @@ export default function ExpensesPage() {
         <div className="rounded-xl border-2 border-dashed border-gray-200 py-16 text-center">
           <Wallet className="h-10 w-10 mx-auto mb-3 text-gray-300" />
           <p className="text-sm font-medium text-gray-400">
-            {activeCategory !== 'all' || searchQuery ? 'No expenses match your filters' : 'No expenses recorded yet'}
+            {activeCategory !== 'all' || searchQuery ? 'No expenses match your filters' : t('noExpenses')}
           </p>
           {!searchQuery && activeCategory === 'all' && (
             <button onClick={openAdd} className="mt-4 text-sm text-[var(--brand-primary)] font-medium hover:underline">
-              + Add your first expense
+              + {t('addExpense')}
             </button>
           )}
         </div>
@@ -515,10 +517,10 @@ export default function ExpensesPage() {
               onChange={e => setSelectedExpenses(e.target.checked ? filtered.map(ex => ex.id) : [])}
               className="w-4 h-4 rounded mt-0.5"
             />
-            <span>Description</span>
-            <span>Category</span>
-            <span>Date</span>
-            <span className="text-right">Amount</span>
+            <span>{t('expenseTable.description')}</span>
+            <span>{t('expenseTable.category')}</span>
+            <span>{t('expenseTable.date')}</span>
+            <span className="text-right">{t('expenseTable.amount')}</span>
             <span className="text-center">Receipt</span>
             <span />
           </div>
@@ -623,7 +625,7 @@ export default function ExpensesPage() {
           {/* Footer total */}
           <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-100">
             <span className="text-xs text-gray-500">
-              {filtered.length} expense{filtered.length !== 1 ? 's' : ''}
+              {t('expenseSummary', { count: filtered.length, total: fmt(total) })}
               {activeCategory !== 'all' ? ` · ${getCategoryConfig(activeCategory).label}` : ''}
               {searchQuery ? ` · "${searchQuery}"` : ''}
             </span>
@@ -637,7 +639,7 @@ export default function ExpensesPage() {
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
           <div className="bg-white w-full sm:rounded-2xl sm:max-w-lg shadow-2xl max-h-[95vh] overflow-y-auto">
             <div className="sticky top-0 bg-white px-6 py-4 border-b border-gray-100 flex items-center justify-between z-10">
-              <h2 className="font-semibold text-gray-900">{editing ? 'Edit Expense' : 'Add Expense'}</h2>
+              <h2 className="font-semibold text-gray-900">{t('addExpenseModal')}</h2>
               <button onClick={closeForm} className="text-gray-400 hover:text-gray-600">
                 <X className="h-5 w-5" />
               </button>
@@ -646,7 +648,7 @@ export default function ExpensesPage() {
             <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
               {/* Description */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Description *</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">{t('descriptionLabel')} *</label>
                 <input
                   type="text" required
                   value={form.description}
@@ -659,7 +661,7 @@ export default function ExpensesPage() {
               {/* Amount + Date */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Amount ($) *</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('amountLabel')} *</label>
                   <input
                     type="number" required min="0.01" step="0.01"
                     value={form.amount}
@@ -669,7 +671,7 @@ export default function ExpensesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Date *</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('dateLabel')} *</label>
                   <input
                     type="date" required
                     value={form.date}
@@ -681,7 +683,7 @@ export default function ExpensesPage() {
 
               {/* Category */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-2">Category</label>
+                <label className="block text-xs font-medium text-gray-700 mb-2">{t('categoryLabel')}</label>
                 <div className="flex flex-wrap gap-1.5">
                   {EXPENSE_CATEGORIES.map(cat => (
                     <button
@@ -881,7 +883,7 @@ export default function ExpensesPage() {
                   type="submit" disabled={saving}
                   className="flex-1 rounded-xl bg-[var(--brand-dark)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] disabled:opacity-50 transition-colors"
                 >
-                  {saving ? (editing ? 'Saving…' : 'Adding…') : (editing ? 'Save Changes' : 'Add Expense')}
+                  {saving ? t('adding') : t('addExpense')}
                 </button>
               </div>
             </form>

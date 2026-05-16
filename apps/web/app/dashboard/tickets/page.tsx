@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, Pencil, Trash2, Loader2, FileText, Camera, X, ImageIcon, ChevronLeft, ChevronRight, Search, Filter, CheckCircle2, XCircle, DollarSign, Send, Bot, History, AlertTriangle } from 'lucide-react'
@@ -204,6 +205,7 @@ function AuditTrailDrawer({ ticketId, isOpen, onClose }: { ticketId: string | nu
 }
 
 export default function TicketsPage() {
+  const t = useTranslations('tickets')
   const [loads, setLoads]         = useState<Load[]>([])
   const [loadingMore, setLoadingMore] = useState(false)
   const [page, setPage]           = useState(0)
@@ -769,18 +771,18 @@ export default function TicketsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Tickets</h1>
-          <p className="text-gray-500 text-sm mt-0.5">{loads.length} total · {filtered.length} shown</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
+          <p className="text-gray-500 text-sm mt-0.5">{t('total', { total: loads.length, shown: filtered.length })}</p>
         </div>
         <div className="flex items-center gap-2">
           <Link href="/dashboard/tickets/import" className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-            <Bot className="h-4 w-4" /> Import from Document
+            <Bot className="h-4 w-4" /> {t('driverUpload')}
           </Link>
           <Link href="/dashboard/tickets/new" className="inline-flex items-center gap-2 rounded-lg border border-[var(--brand-primary)] px-3 py-2 text-sm font-medium text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/5 transition-colors">
-            <Camera className="h-4 w-4" /> Quick Entry
+            <Camera className="h-4 w-4" /> {t('quickEntry')}
           </Link>
           <button onClick={openAdd} className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors">
-            <Plus className="h-4 w-4" /> Add Ticket
+            <Plus className="h-4 w-4" /> {t('addTicket')}
           </button>
         </div>
       </div>
@@ -788,13 +790,13 @@ export default function TicketsPage() {
       {/* Source filter tabs */}
       <div className="flex gap-1 mb-3 bg-gray-100 rounded-lg p-1 w-fit">
         <button onClick={() => setSourceFilter('all')} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${sourceFilter === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-          All Tickets
+          {t('allTickets')}
         </button>
         <button onClick={() => setSourceFilter('office')} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${sourceFilter === 'office' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-          Office Entered
+          {t('officeEntered')}
         </button>
         <button onClick={() => setSourceFilter('driver')} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 ${sourceFilter === 'driver' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-          Driver Submitted
+          {t('driverSubmitted')}
           {driverPendingCount > 0 && (
             <span className="h-4 min-w-[1rem] px-1 rounded-full bg-blue-500 text-white text-[10px] flex items-center justify-center font-bold">{driverPendingCount}</span>
           )}
@@ -810,10 +812,10 @@ export default function TicketsPage() {
       {/* Section tabs */}
       <div className="flex gap-1 mb-5 bg-gray-100 rounded-lg p-1 w-fit">
         <button onClick={() => setActiveTab('tickets')} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'tickets' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-          Tickets
+          {t('allTickets')}
         </button>
         <button onClick={() => { setActiveTab('missing'); if (missingDispatches.length === 0) fetchMissingTickets() }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 ${activeTab === 'missing' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-          Missing
+          {t('missing')}
           {missingDispatches.length > 0 && <span className="h-4 w-4 rounded-full bg-orange-500 text-white text-[10px] flex items-center justify-center font-bold">{missingDispatches.length}</span>}
         </button>
       </div>
@@ -827,17 +829,17 @@ export default function TicketsPage() {
           ) : missingDispatches.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-xl border border-gray-100">
               <CheckCircle2 className="h-10 w-10 text-green-300 mx-auto mb-3" />
-              <p className="text-sm font-medium text-gray-400">No missing tickets</p>
-              <p className="text-xs text-gray-400 mt-1">All dispatched drivers have submitted tickets</p>
+              <p className="text-sm font-medium text-gray-400">{t('noMissingTickets')}</p>
+              <p className="text-xs text-gray-400 mt-1">{t('allDriversSubmitted')}</p>
             </div>
           ) : (
             <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                 <div>
-                  <h2 className="font-semibold text-sm text-gray-900">Dispatches Without Tickets</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">Past dispatches where no tickets were submitted</p>
+                  <h2 className="font-semibold text-sm text-gray-900">{t('dispatchesWithoutTickets')}</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">{t('pastDispatchesNoTickets')}</p>
                 </div>
-                <button onClick={fetchMissingTickets} className="text-xs text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] font-medium">Refresh</button>
+                <button onClick={fetchMissingTickets} className="text-xs text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] font-medium">{t('refresh')}</button>
               </div>
               <div className="divide-y divide-gray-50">
                 {missingDispatches.map(d => (
@@ -852,7 +854,7 @@ export default function TicketsPage() {
                             <p className="font-semibold text-gray-900">{d.driver_name}</p>
                             <p className="text-xs text-gray-500 mt-0.5">
                               {d.job_name ?? 'No job assigned'} · {new Date(d.dispatch_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                              {' · '}<span className="text-orange-500 font-medium">{d.daysAgo} day{d.daysAgo !== 1 ? 's' : ''} ago</span>
+                              {' · '}<span className="text-orange-500 font-medium">{d.daysAgo === 1 ? t('daysAgo', { count: d.daysAgo }) : t('daysAgoPlural', { count: d.daysAgo })}</span>
                             </p>
                           </div>
                           {d.missingRevenue > 0 && (
@@ -913,7 +915,7 @@ export default function TicketsPage() {
                             <span className="text-xs text-gray-400">Not sent</span>
                           )}
                           <button onClick={() => markNoWork(d.id)} className="text-xs text-gray-400 hover:text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 hover:border-gray-300 transition-colors ml-auto">
-                            Mark No Work
+                            {t('markNoWork')}
                           </button>
                         </div>
                       </div>
@@ -960,37 +962,37 @@ export default function TicketsPage() {
         <div className="flex gap-3">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tickets..." className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('searchPlaceholder')} className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
           </div>
           <button onClick={() => setShowFilters(!showFilters)} className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${showFilters || activeFilters > 0 ? 'border-[var(--brand-primary)] text-[var(--brand-primary)] bg-[var(--brand-primary)]/5' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
             <Filter className="h-4 w-4" />
-            Filters {activeFilters > 0 && <span className="h-4 w-4 rounded-full bg-[var(--brand-primary)] text-white text-[10px] flex items-center justify-center">{activeFilters}</span>}
+            {t('filters')} {activeFilters > 0 && <span className="h-4 w-4 rounded-full bg-[var(--brand-primary)] text-white text-[10px] flex items-center justify-center">{activeFilters}</span>}
           </button>
           {activeFilters > 0 && (
-            <button onClick={() => { setFilterStatus(''); setFilterContractor(''); setFilterTruck(''); setFilterDriver(''); setFilterFrom(''); setFilterTo('') }} className="text-sm text-red-400 hover:text-red-600 font-medium">Clear</button>
+            <button onClick={() => { setFilterStatus(''); setFilterContractor(''); setFilterTruck(''); setFilterDriver(''); setFilterFrom(''); setFilterTo('') }} className="text-sm text-red-400 hover:text-red-600 font-medium">{t('clear')}</button>
           )}
         </div>
 
         {showFilters && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
             <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-xs bg-white focus:outline-none">
-              <option value="">All Statuses</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="disputed">Disputed</option>
-              <option value="invoiced">Invoiced</option>
-              <option value="paid">Paid</option>
+              <option value="">{t('allStatuses')}</option>
+              <option value="pending">{t('status.pending')}</option>
+              <option value="approved">{t('status.approved')}</option>
+              <option value="disputed">{t('status.disputed')}</option>
+              <option value="invoiced">{t('status.invoiced')}</option>
+              <option value="paid">{t('status.paid')}</option>
             </select>
             <select value={filterContractor} onChange={e => setFilterContractor(e.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-xs bg-white focus:outline-none">
-              <option value="">All Companies</option>
+              <option value="">{t('allCompanies')}</option>
               {contractors.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
             </select>
             <select value={filterDriver} onChange={e => setFilterDriver(e.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-xs bg-white focus:outline-none">
-              <option value="">All Drivers</option>
+              <option value="">{t('allDrivers')}</option>
               {drivers.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
             <select value={filterTruck} onChange={e => setFilterTruck(e.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-xs bg-white focus:outline-none">
-              <option value="">All Trucks</option>
+              <option value="">{t('allTrucks')}</option>
               {trucks.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
             <input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-xs bg-white focus:outline-none" placeholder="From" />
@@ -1006,8 +1008,8 @@ export default function TicketsPage() {
         ) : filtered.length === 0 ? (
           <div className="text-center py-16">
             <FileText className="h-10 w-10 text-gray-200 mx-auto mb-3" />
-            <p className="text-sm font-medium text-gray-400">No tickets found</p>
-            <button onClick={openAdd} className="mt-3 text-sm text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)]">Add your first ticket →</button>
+            <p className="text-sm font-medium text-gray-400">{t('noTicketsFound')}</p>
+            <button onClick={openAdd} className="mt-3 text-sm text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)]">{t('addFirstTicket')}</button>
           </div>
         ) : (
           <>
@@ -1031,17 +1033,17 @@ export default function TicketsPage() {
                   <th className="w-10 px-3 py-3">
                     <input type="checkbox" checked={allSelected} onChange={e => setSelectedTickets(e.target.checked ? filtered.map(t => t.id) : [])} className="w-4 h-4 rounded" />
                   </th>
-                  {(['Photo', 'Date', 'Job / Company'] as const).map(h => (
+                  {([t('table.photo'), t('table.date'), t('table.job')] as const).map(h => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
-                  <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Load Type</th>
-                  <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Driver</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Truck</th>
-                  <th className="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Origin → Dest</th>
-                  <th className="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Jobs</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Tons</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Total Pay</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Status</th>
+                  <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{t('table.loadType')}</th>
+                  <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{t('table.driver')}</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{t('table.truck')}</th>
+                  <th className="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{t('table.route')}</th>
+                  <th className="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{t('table.slips')}</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{t('tonnage')}</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{t('table.rate')}</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{t('table.status')}</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap"></th>
                 </tr>
               </thead>
@@ -1072,7 +1074,7 @@ export default function TicketsPage() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-medium text-gray-900 whitespace-nowrap">{l.job_name}</p>
                           {l.source === 'driver' && (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 text-[10px] font-bold uppercase tracking-wide whitespace-nowrap">Driver Upload</span>
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 text-[10px] font-bold uppercase tracking-wide whitespace-nowrap">{t('driverUpload')}</span>
                           )}
                           {l.generated_by_ai && (
                             <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-700 text-[10px] font-bold uppercase tracking-wide whitespace-nowrap">🤖 AI Import</span>
@@ -1110,11 +1112,11 @@ export default function TicketsPage() {
                             onChange={e => handleStatusChange(l, e.target.value)}
                             className={`rounded-full px-2.5 py-0.5 text-xs font-medium border-0 cursor-pointer focus:outline-none ${statusColor[l.status as keyof typeof statusColor] ?? 'bg-gray-100 text-gray-600'}`}
                           >
-                            <option value="pending">Pending</option>
-                            <option value="approved">Approved</option>
-                            <option value="disputed">Disputed</option>
-                            <option value="invoiced">Invoiced</option>
-                            <option value="paid">Paid</option>
+                            <option value="pending">{t('status.pending')}</option>
+                            <option value="approved">{t('status.approved')}</option>
+                            <option value="disputed">{t('status.disputed')}</option>
+                            <option value="invoiced">{t('status.invoiced')}</option>
+                            <option value="paid">{t('status.paid')}</option>
                           </select>
                         )}
                       </td>
@@ -1145,8 +1147,8 @@ export default function TicketsPage() {
         {!loading && loads.length > 0 && (
           <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
             <span>
-              Showing {filtered.length} of {totalCount ?? loads.length} tickets
-              {hasMore ? ' (more available)' : ''}
+              {t('showing', { shown: filtered.length, total: totalCount ?? loads.length })}
+              {hasMore ? ` (${t('moreAvailable')})` : ''}
             </span>
             {hasMore && (
               <button
@@ -1155,7 +1157,7 @@ export default function TicketsPage() {
                 className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
                 {loadingMore && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                {loadingMore ? 'Loading…' : 'Load More'}
+                {loadingMore ? t('saving') : t('loadMore')}
               </button>
             )}
           </div>
@@ -1167,7 +1169,7 @@ export default function TicketsPage() {
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
           <div className="bg-white w-full sm:rounded-2xl sm:max-w-2xl shadow-2xl max-h-[95vh] overflow-y-auto">
             <div className="sticky top-0 bg-white px-6 py-4 border-b border-gray-100 flex items-center justify-between z-10">
-              <h2 className="font-semibold text-gray-900">{editing ? 'Edit Ticket' : 'New Ticket'}</h2>
+              <h2 className="font-semibold text-gray-900">{editing ? t('editTicket') : t('newTicket')}</h2>
               <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
 
@@ -1206,7 +1208,7 @@ export default function TicketsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-medium text-gray-700">Job Name *</label>
+                    <label className="block text-xs font-medium text-gray-700">{t('jobName')} *</label>
                     <button type="button" onClick={() => { setJobMode(m => m === 'dropdown' ? 'manual' : 'dropdown'); setAutoFilledFromJob(false) }} className="text-xs text-[var(--brand-primary)] hover:underline">
                       {jobMode === 'dropdown' ? '✏️ Enter manually' : '← Back to list'}
                     </button>
@@ -1242,39 +1244,39 @@ export default function TicketsPage() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Working Under (Company)</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('workingUnder')}</label>
                   <select value={form.client_company} onChange={e => setForm(p => ({ ...p, client_company: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white">
-                    <option value="">— Select company —</option>
+                    <option value="">{t('selectCompany')}</option>
                     {clientCompanies.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                   </select>
                 </div>
 
                 {/* Row 2: Load Type + Date */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Load Type</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('loadType')}</label>
                   <select value={form.load_type} onChange={e => setForm(p => ({ ...p, load_type: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white">
-                    <option value="">Select type</option>
+                    <option value="">{t('selectType')}</option>
                     {LOAD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Date *</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('fields.date')} *</label>
                   <input required type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
                 </div>
 
                 {/* Row 3: Origin + Destination */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Origin Location</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('originLocation')}</label>
                   <input value={form.origin} onChange={e => setForm(p => ({ ...p, origin: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="Quarry Rd pit" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Destination</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('destination')}</label>
                   <input value={form.destination} onChange={e => setForm(p => ({ ...p, destination: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="Hwy 90 job site" />
                 </div>
 
                 {/* Row 4: Driver + Truck */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Driver Name *</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('driverName')} *</label>
                   {driverMode === 'dropdown' ? (
                     <select
                       required
@@ -1321,22 +1323,22 @@ export default function TicketsPage() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Truck #</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('truckNum')}</label>
                   <input value={form.truck_number} onChange={e => setForm(p => ({ ...p, truck_number: e.target.value }))} list="truck-dl" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="SA07" />
                   <datalist id="truck-dl">{trucks.map(t => <option key={t} value={t} />)}</datalist>
                 </div>
 
                 {/* Row 5: Time in + Time out */}
                 <div>
-                  <TimeInput label="Time In" value={form.time_in} onChange={v => setForm(p => ({ ...p, time_in: v }))} />
+                  <TimeInput label={t('timeIn')} value={form.time_in} onChange={v => setForm(p => ({ ...p, time_in: v }))} />
                 </div>
                 <div>
-                  <TimeInput label="Time Out" value={form.time_out} onChange={v => setForm(p => ({ ...p, time_out: v }))} />
+                  <TimeInput label={t('timeOut')} value={form.time_out} onChange={v => setForm(p => ({ ...p, time_out: v }))} />
                 </div>
 
                 {/* Rate Type Selector */}
                 <div className="col-span-2">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Rate Type</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('rateLabel')}</label>
                   <div className="flex gap-2">
                     {(['load', 'hr', 'ton'] as const).map(type => (
                       <button
@@ -1350,7 +1352,7 @@ export default function TicketsPage() {
                         }`}
                         style={{ minHeight: 44 }}
                       >
-                        {type === 'load' ? '/job' : type === 'hr' ? '/hr' : '/ton'}
+                        {type === 'load' ? t('perLoad') : type === 'hr' ? t('perHour') : t('perTon')}
                       </button>
                     ))}
                   </div>
@@ -1359,7 +1361,7 @@ export default function TicketsPage() {
                 {/* Row 6: Job Rate + Qty */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
-                    {form.rate_type === 'hr' ? 'Hourly Rate' : form.rate_type === 'ton' ? 'Rate per Ton' : 'Job Rate'}
+                    {form.rate_type === 'hr' ? t('perHour') : form.rate_type === 'ton' ? t('perTon') : t('perLoad')}
                   </label>
                   <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/20 focus-within:border-[var(--brand-primary)]">
                     <span className="flex items-center px-3 bg-gray-50 text-sm text-gray-500 border-r border-gray-200">$</span>
@@ -1409,7 +1411,7 @@ export default function TicketsPage() {
 
                 {/* Total Pay */}
                 <div className="col-span-2">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Total Pay ($) *</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('fields.rate')} *</label>
                   <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/20 focus-within:border-[var(--brand-primary)]">
                     <span className="flex items-center px-3 bg-gray-50 text-sm text-gray-500 border-r border-gray-200">$</span>
                     <input
@@ -1427,30 +1429,30 @@ export default function TicketsPage() {
 
                 {/* Status */}
                 <div className="col-span-2">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('statusLabel')}</label>
                   <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white">
-                    <option value="pending">Pending</option>
-                    <option value="approved">Approved</option>
-                    <option value="disputed">Disputed</option>
-                    <option value="invoiced">Invoiced</option>
-                    <option value="paid">Paid</option>
+                    <option value="pending">{t('status.pending')}</option>
+                    <option value="approved">{t('status.approved')}</option>
+                    <option value="disputed">{t('status.disputed')}</option>
+                    <option value="invoiced">{t('status.invoiced')}</option>
+                    <option value="paid">{t('status.paid')}</option>
                   </select>
                 </div>
 
                 <div className="col-span-2">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
-                  <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] resize-none" placeholder="Optional notes..." />
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('notesLabel')}</label>
+                  <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] resize-none" placeholder={t('notesLabel')} />
                 </div>
               </div>
 
               {/* Ticket Slips */}
               <div>
-                <p className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3">Load Tickets / Slips</p>
+                <p className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3">{t('slips')}</p>
                 {ticketRows[0] && (() => {
                   const main = ticketRows[0]
                   return (
                     <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
-                      <span className="text-xs font-semibold text-[var(--brand-primary)] bg-[var(--brand-primary)]/10 px-2 py-0.5 rounded-full">Main Ticket</span>
+                      <span className="text-xs font-semibold text-[var(--brand-primary)] bg-[var(--brand-primary)]/10 px-2 py-0.5 rounded-full">{t('mainTicket')}</span>
                       <div>
                         {main.imagePreview ? (
                           <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-white">
@@ -1462,18 +1464,18 @@ export default function TicketsPage() {
                         ) : (
                           <button type="button" onClick={() => fileInputRefs.current.get(main.id)?.click()} className="w-full rounded-xl border-2 border-dashed border-gray-200 bg-white hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/5 transition-all py-6 flex flex-col items-center gap-2">
                             <Camera className="h-6 w-6 text-gray-400" />
-                            <p className="text-sm font-medium text-gray-500">Take photo or upload</p>
+                            <p className="text-sm font-medium text-gray-500">{t('photoHint')}</p>
                           </button>
                         )}
                         <input ref={el => { if (el) fileInputRefs.current.set(main.id, el); else fileInputRefs.current.delete(main.id) }} type="file" accept="image/*" onChange={e => handleTicketImageChange(main.id, e)} className="hidden" />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Ticket #</label>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">{t('ticketNum')}</label>
                           <input value={main.ticket_number} onChange={e => updateRow(main.id, { ticket_number: e.target.value })} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white" placeholder="T-1001" />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Tons / Qty</label>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">{t('tonnage')}</label>
                           <input type="number" min="0" step="0.01" value={main.tonnage} onChange={e => updateRow(main.id, { tonnage: e.target.value })} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white" placeholder="14.5" />
                         </div>
                       </div>
@@ -1484,20 +1486,20 @@ export default function TicketsPage() {
                 {ticketRows.slice(1).map((row, i) => (
                   <div key={row.id} className="mt-3 rounded-xl border border-gray-100 bg-gray-50 p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-medium text-gray-400">Extra Ticket #{i + 2}</span>
+                      <span className="text-xs font-medium text-gray-400">{t('extraTicketNum', { num: i + 2 })}</span>
                       <button type="button" onClick={() => setTicketRows(prev => prev.filter(r => r.id !== row.id))} className="text-gray-300 hover:text-red-400"><X className="h-4 w-4" /></button>
                     </div>
                     <div className="flex gap-3 items-start">
                       <div className="w-28 shrink-0">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Ticket #</label>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">{t('ticketNum')}</label>
                         <input value={row.ticket_number} onChange={e => updateRow(row.id, { ticket_number: e.target.value })} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none bg-white" placeholder="T-1002" />
                       </div>
                       <div className="flex-1">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Tons / Qty</label>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">{t('tonnage')}</label>
                         <input type="number" min="0" step="0.01" value={row.tonnage} onChange={e => updateRow(row.id, { tonnage: e.target.value })} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none bg-white" placeholder="14.5" />
                       </div>
                       <div className="shrink-0">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Photo</label>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">{t('fields.photo')}</label>
                         {row.imagePreview ? (
                           <div className="relative h-[42px] w-[42px] rounded-lg overflow-hidden border border-gray-200">
                             <Image src={row.imagePreview} alt="Ticket" fill className="object-cover" sizes="42px" />
@@ -1514,15 +1516,15 @@ export default function TicketsPage() {
                 ))}
 
                 <button type="button" onClick={() => setTicketRows(prev => [...prev, makeEmptyRow()])} className="mt-3 w-full rounded-xl border-2 border-dashed border-gray-200 py-2.5 text-sm font-medium text-gray-400 hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)] transition-all flex items-center justify-center gap-2">
-                  <Plus className="h-4 w-4" /> Add Extra Ticket
+                  <Plus className="h-4 w-4" /> {t('addExtraTicket')}
                 </button>
               </div>
 
               <div className="flex gap-3 pt-1">
-                <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded-lg border border-gray-200 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
+                <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded-lg border border-gray-200 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">{t('cancel')}</button>
                 <button type="submit" disabled={saving} className="flex-1 rounded-lg bg-[var(--brand-primary)] py-3 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                   {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {saving ? 'Saving…' : editing ? 'Update Ticket' : 'Add Ticket'}
+                  {saving ? t('saving') : editing ? t('updateTicket') : t('addTicket')}
                 </button>
               </div>
             </form>

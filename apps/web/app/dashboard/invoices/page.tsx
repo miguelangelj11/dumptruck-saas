@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, Loader2, Receipt, ArrowLeft, Printer, Check, CreditCard, X, ChevronDown, FileText, Upload, Trash2, Mail, Lock, Pencil, DollarSign } from 'lucide-react'
@@ -309,6 +310,8 @@ function buildContractorLineItems(tickets: CTWithSlips[], deductionPct: number, 
 }
 
 export default function InvoicesPage() {
+  const t = useTranslations('invoices')
+  const tCommon = useTranslations('common')
   const searchParams = useSearchParams()
   const [view, setView] = useState<View>(searchParams.get('new') === '1' ? 'create' : 'list')
   const [invStatusFilter, setInvStatusFilter] = useState<string>(searchParams.get('filter') ?? '')
@@ -1269,12 +1272,12 @@ export default function InvoicesPage() {
       <div className="p-6 md:p-8 max-w-5xl">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Invoices</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
             <p className="text-gray-500 text-sm mt-0.5">Client invoices, pay stubs &amp; bills received</p>
           </div>
           {invoiceTab === 'sent' ? (
             <button onClick={() => { resetCreateForm(); setView('create') }} className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors">
-              <Plus className="h-4 w-4" /> New Invoice
+              <Plus className="h-4 w-4" /> {t('createInvoice')}
             </button>
           ) : (
             <button onClick={() => setShowRecvForm(true)} className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors">
@@ -1373,8 +1376,8 @@ export default function InvoicesPage() {
                               className={`rounded-full px-2.5 py-0.5 text-xs font-medium border-0 cursor-pointer focus:outline-none ${recvStatusColor[r.status] ?? 'bg-gray-100 text-gray-600'}`}
                             >
                               <option value="pending_review">Pending Review</option>
-                              <option value="approved">Approved</option>
-                              <option value="paid">Paid</option>
+                              <option value="approved">{tCommon('approve')}</option>
+                              <option value="paid">{tCommon('paid')}</option>
                               <option value="disputed">Disputed</option>
                             </select>
                           </td>
@@ -1496,10 +1499,10 @@ export default function InvoicesPage() {
                 </div>
 
                 <div className="flex gap-3 pt-1">
-                  <button type="button" onClick={() => { setShowRecvForm(false); setRecvFile(null); setRecvFilePreview(null) }} className="flex-1 h-10 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                  <button type="button" onClick={() => { setShowRecvForm(false); setRecvFile(null); setRecvFilePreview(null) }} className="flex-1 h-10 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">{tCommon('cancel')}</button>
                   <button type="submit" disabled={savingRecv} className="flex-1 h-10 rounded-xl bg-[var(--brand-primary)] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[var(--brand-primary-hover)] disabled:opacity-60">
                     {savingRecv && <Loader2 className="h-4 w-4 animate-spin" />}
-                    {savingRecv ? 'Saving…' : 'Add Invoice'}
+                    {savingRecv ? tCommon('saving') : 'Add Invoice'}
                   </button>
                 </div>
               </form>
@@ -1634,12 +1637,12 @@ export default function InvoicesPage() {
                             onChange={e => handleStatusChange(inv, e.target.value)}
                             className={`rounded-full px-2.5 py-0.5 text-xs font-medium border-0 cursor-pointer focus:outline-none ${statusColor[inv.status as keyof typeof statusColor] ?? 'bg-gray-100 text-gray-600'}`}
                           >
-                            <option value="draft">Draft</option>
-                            <option value="sent">Sent</option>
-                            <option value="partially_paid">Partially Paid</option>
+                            <option value="draft">{t('status.draft')}</option>
+                            <option value="sent">{t('status.sent')}</option>
+                            <option value="partially_paid">{t('status.partially_paid')}</option>
                             <option value="overpaid">Overpaid</option>
-                            <option value="paid">Paid</option>
-                            <option value="overdue">Overdue</option>
+                            <option value="paid">{t('status.paid')}</option>
+                            <option value="overdue">{t('status.overdue')}</option>
                           </select>
                           {(inv.status === 'partially_paid' || inv.status === 'overpaid') && (inv.amount_paid ?? 0) > 0 && (
                             <div className="w-24">
@@ -1711,7 +1714,7 @@ export default function InvoicesPage() {
                 className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
                 {loadingMoreInvoices ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                {loadingMoreInvoices ? 'Loading…' : 'Load More'}
+                {loadingMoreInvoices ? tCommon('loading') : 'Load More'}
               </button>
             </div>
           )}
@@ -1723,7 +1726,7 @@ export default function InvoicesPage() {
           <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
               <div>
-                <h2 className="text-base font-bold text-gray-900">Edit Invoice</h2>
+                <h2 className="text-base font-bold text-gray-900">{tCommon('edit')} Invoice</h2>
                 <p className="text-xs text-gray-400 mt-0.5">{editingInvoice.invoice_number}</p>
               </div>
               <button onClick={() => setEditingInvoice(null)} className="h-7 w-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400">
@@ -1783,10 +1786,10 @@ export default function InvoicesPage() {
                 </div>
               </div>
               <div className="flex gap-3 pt-1">
-                <button type="button" onClick={() => setEditingInvoice(null)} className="flex-1 h-10 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                <button type="button" onClick={() => setEditingInvoice(null)} className="flex-1 h-10 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">{tCommon('cancel')}</button>
                 <button type="submit" disabled={savingEdit} className="flex-1 h-10 rounded-xl bg-[var(--brand-primary)] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[var(--brand-primary-hover)] disabled:opacity-60">
                   {savingEdit && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {savingEdit ? 'Saving…' : 'Save Changes'}
+                  {savingEdit ? tCommon('saving') : tCommon('save')}
                 </button>
               </div>
             </form>
@@ -1814,7 +1817,7 @@ export default function InvoicesPage() {
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">New Invoice</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t('createInvoice')}</h1>
             <p className="text-gray-500 text-sm mt-0.5">Create a client invoice, pay your drivers, or pay your contractors</p>
           </div>
         </div>
@@ -1855,7 +1858,7 @@ export default function InvoicesPage() {
           {/* Bill To / Pay To */}
           <div className="bg-white rounded-xl border border-gray-100 p-5">
             <p className="text-sm font-semibold text-gray-700 mb-3">
-              {invoiceType === 'client' ? 'Bill To' : 'Pay To'}
+              {invoiceType === 'client' ? t('billTo') : 'Pay To'}
             </p>
             <div className="grid grid-cols-2 gap-4">
               {/* Contractor type: pick from dropdown */}
@@ -2037,7 +2040,7 @@ export default function InvoicesPage() {
                 </div>
               )}
               <div className={invoiceType === 'client' ? 'col-span-2' : ''}>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{t('notes')}</label>
                 <textarea
                   value={createForm.notes}
                   onChange={e => setCreateForm(p => ({ ...p, notes: e.target.value }))}
@@ -2061,7 +2064,7 @@ export default function InvoicesPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Due Date</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{t('dueDate')}</label>
                 <input
                   type="date"
                   value={createForm.due_date}
@@ -2257,7 +2260,7 @@ export default function InvoicesPage() {
           {activeSelectionSize > 0 && (
             <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
               <div className="px-5 py-3 border-b border-gray-100">
-                <p className="text-sm font-semibold text-gray-700">Line Items Preview</p>
+                <p className="text-sm font-semibold text-gray-700">{t('lineItems')} Preview</p>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[700px] text-xs">
@@ -2294,7 +2297,7 @@ export default function InvoicesPage() {
                   return (
                     <>
                       <div className="flex items-center gap-8 text-sm text-gray-500">
-                        <span className="w-32 text-right">Subtotal</span>
+                        <span className="w-32 text-right">{t('subtotal')}</span>
                         <span className="w-24 text-right tabular-nums">${fmt(gross)}</span>
                       </div>
                       <div className="flex items-center gap-8 text-sm text-red-500">
@@ -2308,7 +2311,7 @@ export default function InvoicesPage() {
                 {invoiceType === 'client' && taxRateNum > 0 && (
                   <>
                     <div className="flex items-center gap-8 text-sm text-gray-500">
-                      <span className="w-32 text-right">Subtotal</span>
+                      <span className="w-32 text-right">{t('subtotal')}</span>
                       <span className="w-24 text-right tabular-nums">${fmt(subtotal)}</span>
                     </div>
                     <div className="flex items-center gap-8 text-sm text-gray-500">
@@ -2319,7 +2322,7 @@ export default function InvoicesPage() {
                 )}
                 <div className="flex items-center gap-8 pt-1.5 border-t border-gray-100 mt-0.5">
                   <span className="w-32 text-right text-sm font-bold text-gray-900">
-                    {invoiceType === 'contractor' ? 'Net Pay' : 'Total Due'}
+                    {invoiceType === 'contractor' ? 'Net Pay' : t('total')}
                   </span>
                   <span className="w-24 text-right text-base font-bold text-[var(--brand-primary)] tabular-nums">${fmt(invoiceTotal)}</span>
                 </div>
@@ -2414,11 +2417,11 @@ export default function InvoicesPage() {
 
           <div className="flex gap-3">
             <button type="button" onClick={() => setView('list')} className="flex-1 rounded-lg border border-gray-200 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-              Cancel
+              {tCommon('cancel')}
             </button>
             <button type="submit" disabled={saving || activeSelectionSize === 0} className="flex-1 rounded-lg bg-[var(--brand-primary)] py-3 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-              {saving ? 'Creating…' : 'Create Invoice'}
+              {saving ? tCommon('saving') : t('createInvoice')}
             </button>
           </div>
         </form>
@@ -2489,12 +2492,12 @@ export default function InvoicesPage() {
               onChange={e => handleStatusChange(inv, e.target.value)}
               className="rounded-lg border border-gray-200 px-2 py-2 text-xs text-gray-700 bg-white focus:outline-none"
             >
-              <option value="draft">Draft</option>
-              <option value="sent">Sent</option>
-              <option value="partially_paid">Partially Paid</option>
+              <option value="draft">{t('status.draft')}</option>
+              <option value="sent">{t('status.sent')}</option>
+              <option value="partially_paid">{t('status.partially_paid')}</option>
               <option value="overpaid">Overpaid</option>
-              <option value="paid">Paid</option>
-              <option value="overdue">Overdue</option>
+              <option value="paid">{t('status.paid')}</option>
+              <option value="overdue">{t('status.overdue')}</option>
             </select>
             <button
               onClick={() => setShowPaymentForm(true)}
@@ -2529,7 +2532,7 @@ export default function InvoicesPage() {
               onClick={() => openSendModal(inv)}
               className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--brand-primary)] bg-[var(--brand-primary)] px-3 py-2 text-xs font-medium text-white hover:bg-[var(--brand-primary-hover)] transition-colors"
             >
-              <Mail className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Send </span>Invoice
+              <Mail className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Send </span>{t('title')}
             </button>
           </div>
         </div>
@@ -2616,7 +2619,7 @@ export default function InvoicesPage() {
               {/* Bill To */}
               <div>
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.15em] mb-2">
-                  {isPaystub ? 'Pay To' : 'Bill To'}
+                  {isPaystub ? 'Pay To' : t('billTo')}
                 </p>
                 <p className="text-base font-bold text-gray-900">{inv.client_name}</p>
                 {inv.client_address && (
@@ -2631,10 +2634,10 @@ export default function InvoicesPage() {
                 <table className="w-full text-sm">
                   <tbody>
                     {([
-                      ['Invoice No',      inv.invoice_number],
-                      ['Invoice Date',    invoiceDate],
-                      ['Due Date',        fmtDate(inv.due_date)],
-                      ...(inv.payment_terms ? [['Terms', formatPaymentTerms(inv.payment_terms)] as [string, string]] : []),
+                      [t('invoiceNumber'),  inv.invoice_number],
+                      [t('date'),           invoiceDate],
+                      [t('dueDate'),        fmtDate(inv.due_date)],
+                      ...(inv.payment_terms ? [[t('paymentTerms'), formatPaymentTerms(inv.payment_terms)] as [string, string]] : []),
                       ...(inv.date_paid ? [['Paid On', fmtDate(inv.date_paid)] as [string, string]] : []),
                       ...(inv.payment_method ? [[
                         'Payment Method',
@@ -2691,7 +2694,7 @@ export default function InvoicesPage() {
             <div style={{borderTop:'1px solid #f3f4f6', padding:'24px 32px 24px 24px', display:'flex', justifyContent:'flex-end'}}>
               <div style={{width:240}}>
                 <div style={{display:'flex', justifyContent:'space-between', fontSize:14, color:'#6b7280', paddingBottom:10, borderBottom:'1px solid #f3f4f6'}}>
-                  <span>Subtotal</span>
+                  <span>{t('subtotal')}</span>
                   <span style={{fontVariantNumeric:'tabular-nums'}}>${fmt(grossTotal)}</span>
                 </div>
                 {firstDeduction > 0 && (
@@ -2707,7 +2710,7 @@ export default function InvoicesPage() {
                   </div>
                 )}
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'baseline', paddingTop:14}}>
-                  <span style={{fontSize:14, fontWeight:700, color:'#111827'}}>{isPaystub ? 'Net Pay' : 'Total Due'}</span>
+                  <span style={{fontSize:14, fontWeight:700, color:'#111827'}}>{isPaystub ? 'Net Pay' : t('total')}</span>
                   <span style={{fontSize:22, fontWeight:800, color:'var(--brand-primary)', fontVariantNumeric:'tabular-nums'}}>${fmt(detailTaxRate > 0 ? detailGrandTotal : total)}</span>
                 </div>
               </div>
@@ -2743,7 +2746,7 @@ export default function InvoicesPage() {
             {/* ── NOTES ── */}
             {inv.notes && (
               <div className="px-6 md:px-8 py-6 border-t border-gray-100">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-[0.15em] mb-2">Notes</p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-[0.15em] mb-2">{t('notes')}</p>
                 <p className="text-sm text-gray-600 whitespace-pre-line leading-relaxed">{inv.notes}</p>
               </div>
             )}
@@ -2764,7 +2767,7 @@ export default function InvoicesPage() {
                 </p>
               ) : (
                 <>
-                  <p className="text-sm font-semibold text-gray-700 mb-1">Thank you for your business!</p>
+                  <p className="text-sm font-semibold text-gray-700 mb-1">{t('thankYou')}</p>
                   <p className="text-xs text-gray-400">
                     {inv.payment_method === 'ach'
                       ? 'Payment via ACH/Bank Transfer.'
@@ -2774,7 +2777,7 @@ export default function InvoicesPage() {
                       ? `Send Zelle payment to ${userPhone || userEmail || 'your company contact'}.`
                       : inv.payment_method === 'other'
                       ? 'Please contact us for payment details.'
-                      : `Make checks payable to ${companyName}.`}
+                      : `${t('payableTo')} ${companyName}.`}
                   </p>
                 </>
               )}
@@ -2786,7 +2789,7 @@ export default function InvoicesPage() {
         {/* Supporting Tickets — web preview */}
         {includeTicketPhotos && detailTicketPhotos.length > 0 && (
           <div className="mx-auto max-w-4xl px-6 md:px-8 py-8 border-t-2 border-[#2d6a4f] mt-6">
-            <h2 className="text-lg font-bold text-[#1e3a2a] mb-1">Supporting Tickets</h2>
+            <h2 className="text-lg font-bold text-[#1e3a2a] mb-1">{t('supportingTicket')}</h2>
             <p className="text-xs text-gray-400 mb-6">Original ticket photos attached for verification</p>
             <div className="space-y-8">
               {detailTicketPhotos.map((photo, i) => (
@@ -2822,7 +2825,7 @@ export default function InvoicesPage() {
           <div className="no-print fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
             <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
               <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
-                <h2 className="text-base font-bold text-gray-900">Send Invoice</h2>
+                <h2 className="text-base font-bold text-gray-900">Send {t('title')}</h2>
                 <button onClick={() => setShowSendModal(false)} className="h-7 w-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400">
                   <X className="h-4 w-4" />
                 </button>
@@ -2962,11 +2965,11 @@ export default function InvoicesPage() {
                 )}
                 <div className="flex gap-3 pt-1">
                   <button type="button" onClick={() => setShowSendModal(false)} className="flex-1 h-10 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                    Cancel
+                    {tCommon('cancel')}
                   </button>
                   <button type="submit" disabled={sending} className="flex-1 h-10 rounded-xl bg-[var(--brand-primary)] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[var(--brand-primary-hover)] disabled:opacity-60">
                     {sending && <Loader2 className="h-4 w-4 animate-spin" />}
-                    {sending ? 'Sending…' : 'Send Invoice'}
+                    {sending ? tCommon('sending') : `Send ${t('title')}`}
                   </button>
                 </div>
               </form>
@@ -3042,11 +3045,11 @@ export default function InvoicesPage() {
                 </div>
                 <div className="flex gap-3 pt-1">
                   <button type="button" onClick={() => setShowPaymentForm(false)} className="flex-1 h-10 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                    Cancel
+                    {tCommon('cancel')}
                   </button>
                   <button type="submit" disabled={savingPayment} className="flex-1 h-10 rounded-xl bg-[var(--brand-primary)] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[var(--brand-primary-hover)] disabled:opacity-60">
                     {savingPayment && <Loader2 className="h-4 w-4 animate-spin" />}
-                    {savingPayment ? 'Saving…' : 'Record Payment'}
+                    {savingPayment ? tCommon('saving') : 'Record Payment'}
                   </button>
                 </div>
               </form>

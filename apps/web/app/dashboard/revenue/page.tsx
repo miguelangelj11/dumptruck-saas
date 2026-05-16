@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { getCompanyId } from '@/lib/get-company-id'
@@ -186,6 +187,7 @@ function getWeekBounds(offset: 0 | -1) {
 }
 
 export default function RevenuePage() {
+  const t = useTranslations('revenue')
   const [planLocked, setPlanLocked] = useState<null | { plan: string; price: number }>(null)
   const [loads, setLoads] = useState<Load[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
@@ -498,13 +500,13 @@ export default function RevenuePage() {
     <div className="p-6 md:p-8 max-w-7xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Revenue</h1>
-          <p className="text-gray-500 text-sm mt-0.5">Track your earnings, expenses, and profit</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
+          <p className="text-gray-500 text-sm mt-0.5">{t('subtitle')}</p>
         </div>
         <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-          {(['overview', 'driverpay'] as const).map(t => (
-            <button key={t} onClick={() => setActiveTab(t)} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-              {t === 'overview' ? 'Overview' : 'Driver Pay'}
+          {(['overview', 'driverpay'] as const).map(tab => (
+            <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === tab ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+              {tab === 'overview' ? t('tabs.overview') : t('tabs.driverPay')}
             </button>
           ))}
         </div>
@@ -517,13 +519,13 @@ export default function RevenuePage() {
             <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit">
               {([0, -1] as const).map(w => (
                 <button key={w} onClick={() => setPayWeek(w)} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${payWeek === w ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                  {w === 0 ? 'This Week' : 'Last Week'}
+                  {w === 0 ? t('thisWeek') : t('lastWeek')}
                 </button>
               ))}
             </div>
             <div className="text-right">
               <p className="text-xs text-gray-400">{new Date(weekBounds.start + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – {new Date(weekBounds.end + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
-              <p className="text-sm font-bold text-gray-900 mt-0.5">${grandTotalOwed.toLocaleString()} total driver pay</p>
+              <p className="text-sm font-bold text-gray-900 mt-0.5">${grandTotalOwed.toLocaleString()} {t('totalDriverPay')}</p>
             </div>
           </div>
 
@@ -557,7 +559,7 @@ export default function RevenuePage() {
 
           {contractorBlocks.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-xl border border-gray-100">
-              <p className="text-sm text-gray-400">No approved/invoiced/paid loads for this week</p>
+              <p className="text-sm text-gray-400">{t('noLoadsThisWeek')}</p>
               <a href="/dashboard/tickets" className="text-xs text-[var(--brand-primary)] underline mt-1 block">Add tickets →</a>
             </div>
           ) : (
@@ -571,7 +573,7 @@ export default function RevenuePage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left">
-                        {['Driver', 'Jobs', 'Total Pay'].map(h => (
+                        {[t('driver'), t('loads'), t('totalPay')].map(h => (
                           <th key={h} className="px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                         ))}
                       </tr>
@@ -587,7 +589,7 @@ export default function RevenuePage() {
                     </tbody>
                     <tfoot>
                       <tr className="border-t border-gray-100 bg-gray-50/50">
-                        <td className="px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase" colSpan={2}>Subtotal — {block.contractor}</td>
+                        <td className="px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase" colSpan={2}>{t('subtotalRow', { contractor: block.contractor })}</td>
                         <td className="px-5 py-2.5 font-bold text-[var(--brand-primary)]">${block.total.toLocaleString()}</td>
                       </tr>
                     </tfoot>
@@ -595,7 +597,7 @@ export default function RevenuePage() {
                 </div>
               ))}
               <div className="bg-[var(--brand-dark)] rounded-xl px-5 py-4 flex items-center justify-between">
-                <span className="text-white font-semibold">Grand Total — All Drivers</span>
+                <span className="text-white font-semibold">{t('grandTotal')}</span>
                 <span className="text-2xl font-extrabold text-[#4ade80]">${grandTotalOwed.toLocaleString()}</span>
               </div>
             </div>
@@ -653,8 +655,8 @@ export default function RevenuePage() {
             <CreditCard className="h-4 w-4" />
           </div>
           <p className="text-xl font-bold text-gray-900">${cashCollected.toLocaleString()}</p>
-          <p className="text-xs text-gray-400 mt-0.5">Cash Collected</p>
-          <p className="text-xs text-gray-300 mt-0.5">{paidInvoices.length} paid invoices</p>
+          <p className="text-xs text-gray-400 mt-0.5">{t('cashCollected')}</p>
+          <p className="text-xs text-gray-300 mt-0.5">{t('invoiceCount', { count: paidInvoices.length })}</p>
           {trendCash !== null && (
             <span className={`text-xs font-bold mt-1 block ${trendCash >= 0 ? 'text-green-600' : 'text-red-500'}`}>
               {trendCash >= 0 ? '↑' : '↓'} {Math.abs(trendCash).toFixed(0)}%
@@ -668,8 +670,8 @@ export default function RevenuePage() {
             <TrendingDown className="h-4 w-4" />
           </div>
           <p className="text-xl font-bold text-gray-900">${totalExpenses.toLocaleString()}</p>
-          <p className="text-xs text-gray-400 mt-0.5">Expenses</p>
-          <p className="text-xs text-gray-300 mt-0.5">{filteredExpenses.length} entries</p>
+          <p className="text-xs text-gray-400 mt-0.5">{t('expenses')}</p>
+          <p className="text-xs text-gray-300 mt-0.5">{t('expenseCount', { count: filteredExpenses.length })}</p>
           {trendExpenses !== null && (
             <span className={`text-xs font-bold mt-1 block ${trendExpenses <= 0 ? 'text-green-600' : 'text-red-500'}`}>
               {trendExpenses >= 0 ? '↑' : '↓'} {Math.abs(trendExpenses).toFixed(0)}%
@@ -683,8 +685,8 @@ export default function RevenuePage() {
             <TrendingUp className="h-4 w-4" />
           </div>
           <p className={`text-xl font-bold ${profit >= 0 ? 'text-gray-900' : 'text-red-600'}`}>${profit.toLocaleString()}</p>
-          <p className="text-xs text-gray-400 mt-0.5">Net Profit</p>
-          <p className="text-xs text-gray-300 mt-0.5">Revenue − All Costs</p>
+          <p className="text-xs text-gray-400 mt-0.5">{t('netProfit')}</p>
+          <p className="text-xs text-gray-300 mt-0.5">{t('revenueMinusExpenses')}</p>
           {trendProfit !== null && (
             <span className={`text-xs font-bold mt-1 block ${trendProfit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
               {trendProfit >= 0 ? '↑' : '↓'} {Math.abs(trendProfit).toFixed(0)}%
@@ -719,8 +721,8 @@ export default function RevenuePage() {
             <AlertCircle className="h-4 w-4" />
           </div>
           <p className="text-xl font-bold text-gray-900">${outstandingTotal.toLocaleString()}</p>
-          <p className="text-xs text-gray-400 mt-0.5">Outstanding</p>
-          <p className="text-xs text-gray-300 mt-0.5">{outstandingInvoices.length} invoices</p>
+          <p className="text-xs text-gray-400 mt-0.5">{t('outstanding')}</p>
+          <p className="text-xs text-gray-300 mt-0.5">{t('invoiceCount', { count: outstandingInvoices.length })}</p>
           {trendOutstanding !== null && (
             <span className={`text-xs font-bold mt-1 block ${trendOutstanding <= 0 ? 'text-green-600' : 'text-red-500'}`}>
               {trendOutstanding >= 0 ? '↑' : '↓'} {Math.abs(trendOutstanding).toFixed(0)}%
@@ -775,21 +777,21 @@ export default function RevenuePage() {
 
       {/* Loads per period */}
       <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
-        <h2 className="font-semibold text-sm text-gray-900 mb-0.5">Loads Over Time</h2>
-        <p className="text-xs text-gray-400 mb-4">{rangeLabels[dateRange]} · all loads</p>
+        <h2 className="font-semibold text-sm text-gray-900 mb-0.5">{t('loadsPerDay')}</h2>
+        <p className="text-xs text-gray-400 mb-4">{rangeLabels[dateRange]} · {t('allLoads30Days')}</p>
         <LoadsPerDayChart data={loadsChartData} />
       </div>
 
       {/* Revenue vs Expenses + Revenue by Driver */}
       <div className="grid lg:grid-cols-2 gap-6 mb-6">
         <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <h2 className="font-semibold text-sm text-gray-900 mb-0.5">Revenue vs Expenses</h2>
-          <p className="text-xs text-gray-400 mb-4">{rangeLabels[dateRange]} · by invoice date</p>
+          <h2 className="font-semibold text-sm text-gray-900 mb-0.5">{t('revenueVsExpenses')}</h2>
+          <p className="text-xs text-gray-400 mb-4">{rangeLabels[dateRange]} · {t('paidVsExpenses')}</p>
           <RevenueByMonthChart data={chartData} />
         </div>
         <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <h2 className="font-semibold text-sm text-gray-900 mb-0.5">Revenue by Driver</h2>
-          <p className="text-xs text-gray-400 mb-4">Billable loads (approved / invoiced / paid)</p>
+          <h2 className="font-semibold text-sm text-gray-900 mb-0.5">{t('revenueByDriver')}</h2>
+          <p className="text-xs text-gray-400 mb-4">{t('billableLoads')}</p>
           <RevenueByDriverChart data={driverData} />
         </div>
       </div>
@@ -797,15 +799,15 @@ export default function RevenuePage() {
       {/* Revenue by Job + Top Contractors */}
       <div className="grid lg:grid-cols-2 gap-6 mb-6">
         <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <h2 className="font-semibold text-sm text-gray-900 mb-0.5">Revenue by Job</h2>
-          <p className="text-xs text-gray-400 mb-4">Billable loads by job name</p>
+          <h2 className="font-semibold text-sm text-gray-900 mb-0.5">{t('revenueByJob')}</h2>
+          <p className="text-xs text-gray-400 mb-4">{t('billableByJob')}</p>
           <RevenueByJobChart data={jobData} />
         </div>
         <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <h2 className="font-semibold text-sm text-gray-900 mb-0.5">Top Contractors</h2>
-          <p className="text-xs text-gray-400 mb-4">By contractor ticket revenue</p>
+          <h2 className="font-semibold text-sm text-gray-900 mb-0.5">{t('topContractors')}</h2>
+          <p className="text-xs text-gray-400 mb-4">{t('byContractorRevenue')}</p>
           {contractorData.length === 0 ? (
-            <div className="flex items-center justify-center h-48 text-gray-300 text-sm">No contractor tickets yet</div>
+            <div className="flex items-center justify-center h-48 text-gray-300 text-sm">{t('noContractorTickets')}</div>
           ) : (
             <div className="space-y-3 pt-2">
               {contractorData.map((c, i) => (
@@ -862,14 +864,14 @@ export default function RevenuePage() {
       {outstandingInvoices.length > 0 && (
         <div className="bg-white rounded-xl border border-orange-100 overflow-hidden mb-6">
           <div className="px-5 py-4 border-b border-orange-100 bg-orange-50/50">
-            <h2 className="font-semibold text-sm text-orange-800">Outstanding Invoices</h2>
-            <p className="text-xs text-orange-500">{outstandingInvoices.length} invoices · ${outstandingTotal.toLocaleString()} owed</p>
+            <h2 className="font-semibold text-sm text-orange-800">{t('outstandingInvoices')}</h2>
+            <p className="text-xs text-orange-500">{t('invoicesOwed', { count: outstandingInvoices.length, total: outstandingTotal.toLocaleString() })}</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[480px] text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  {['Invoice #', 'Client', 'Amount', 'Status', 'Due Date'].map(h => (
+                  {[t('invoiceTable.number'), t('invoiceTable.client'), t('invoiceTable.amount'), t('invoiceTable.status'), t('invoiceTable.dueDate')].map(h => (
                     <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
@@ -1015,7 +1017,7 @@ export default function RevenuePage() {
         <div className="mt-2 p-4 bg-gray-50 rounded-xl border border-gray-200">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Top Expenses This Period</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">{t('expenseTracker')}</p>
               <div className="flex gap-4 flex-wrap">
                 {topExpenseCategories.map(([cat, amount]) => {
                   const catConfig = getCategoryConfig(cat)
@@ -1032,8 +1034,8 @@ export default function RevenuePage() {
         </div>
       ) : (
         <div className="mt-2 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between gap-4">
-          <p className="text-sm text-amber-800">No expenses tracked this period — add costs to see real margins.</p>
-          <a href="/dashboard/expenses" className="text-sm font-bold text-amber-700 hover:underline whitespace-nowrap">Add Expenses →</a>
+          <p className="text-sm text-amber-800">{t('noExpenses')}</p>
+          <a href="/dashboard/expenses" className="text-sm font-bold text-amber-700 hover:underline whitespace-nowrap">{t('addExpense')} →</a>
         </div>
       )}
 

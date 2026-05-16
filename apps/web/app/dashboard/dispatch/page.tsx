@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState, useRef } from 'react'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import {
   Plus, Pencil, Trash2, Loader2, X, MapPin, Users, Truck,
@@ -271,6 +272,7 @@ function TimelineView({ dispatches, drivers, jobs }: { dispatches: Dispatch[]; d
 // ─── Live activity feed (Step 11) ─────────────────────────────────────────────
 
 function DispatchActivityFeed({ companyId, collapsed, onToggle }: { companyId: string; collapsed: boolean; onToggle: () => void }) {
+  const t = useTranslations('dispatch')
   const supabase = createClient()
   const [activities, setActivities] = useState<{ id: string; type: string; message: string; created_at: string }[]>([])
 
@@ -291,10 +293,10 @@ function DispatchActivityFeed({ companyId, collapsed, onToggle }: { companyId: s
 
   function timeAgo(ts: string) {
     const m = Math.floor((Date.now() - new Date(ts).getTime()) / 60000)
-    if (m < 1) return 'just now'
-    if (m < 60) return `${m}m ago`
+    if (m < 1) return t('justNow')
+    if (m < 60) return t('minutesAgo', { m })
     const h = Math.floor(m / 60)
-    return h < 24 ? `${h}h ago` : `${Math.floor(h / 24)}d ago`
+    return h < 24 ? t('hoursAgo', { h }) : `${Math.floor(h / 24)}d ago`
   }
 
   return (
@@ -324,6 +326,7 @@ function DispatchActivityFeed({ companyId, collapsed, onToggle }: { companyId: s
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DispatchPage() {
+  const t = useTranslations('dispatch')
   const supabase = createClient()
   const today = new Date().toISOString().split('T')[0]!
 
@@ -768,7 +771,7 @@ export default function DispatchPage() {
 
   async function handleDeleteJob(id: string, e: React.MouseEvent) {
     e.stopPropagation()
-    if (!confirm('Delete this job?')) return
+    if (!confirm(t('deleteJobConfirm'))) return
     const { error } = await supabase.from('jobs').delete().eq('id', id)
     if (error) { toast.error(error.message); return }
     toast.success('Job deleted')
@@ -1221,7 +1224,7 @@ export default function DispatchPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dispatch</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
@@ -1242,7 +1245,7 @@ export default function DispatchPage() {
           <button
             onClick={fetchData}
             className="h-9 w-9 rounded-xl border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors"
-            aria-label="Refresh"
+            aria-label={t('refresh')}
           >
             <RefreshCw className="h-4 w-4" />
           </button>
@@ -1250,7 +1253,7 @@ export default function DispatchPage() {
             onClick={openAddJob}
             className="flex items-center gap-2 bg-[var(--brand-dark)] text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-[var(--brand-primary-hover)] transition-colors"
           >
-            <Plus className="h-4 w-4" /> New Job
+            <Plus className="h-4 w-4" /> {t('newJob')}
           </button>
         </div>
       </div>
@@ -1259,10 +1262,10 @@ export default function DispatchPage() {
       {!loading && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 px-6 pb-4">
           {[
-            { icon: Send,          iconColor: 'text-blue-600',       bg: 'bg-blue-50',         label: 'Dispatched Today', value: String(dispatches.length),   alert: false },
-            { icon: Truck,         iconColor: 'text-[var(--brand-primary)]',      bg: 'bg-[var(--brand-primary)]/10',    label: "Jobs Today",       value: String(todayLoads.length),    alert: false },
-            { icon: TrendingUp,    iconColor: 'text-[var(--brand-primary)]',      bg: 'bg-[var(--brand-primary)]/10',    label: "Today's Revenue",  value: `$${fmtMoney(todayRevenue)}`, alert: false },
-            { icon: AlertTriangle, iconColor: noResponseCount > 0 ? 'text-yellow-600' : 'text-gray-400', bg: noResponseCount > 0 ? 'bg-yellow-100' : 'bg-gray-50', label: 'No Response', value: String(noResponseCount), alert: noResponseCount > 0 },
+            { icon: Send,          iconColor: 'text-blue-600',       bg: 'bg-blue-50',         label: t('dispatchedToday'), value: String(dispatches.length),   alert: false },
+            { icon: Truck,         iconColor: 'text-[var(--brand-primary)]',      bg: 'bg-[var(--brand-primary)]/10',    label: t('loadsToday'),       value: String(todayLoads.length),    alert: false },
+            { icon: TrendingUp,    iconColor: 'text-[var(--brand-primary)]',      bg: 'bg-[var(--brand-primary)]/10',    label: t('todaysRevenue'),  value: `$${fmtMoney(todayRevenue)}`, alert: false },
+            { icon: AlertTriangle, iconColor: noResponseCount > 0 ? 'text-yellow-600' : 'text-gray-400', bg: noResponseCount > 0 ? 'bg-yellow-100' : 'bg-gray-50', label: t('noResponse'), value: String(noResponseCount), alert: noResponseCount > 0 },
           ].map(({ icon: Icon, iconColor, bg, label, value, alert }) => (
             <div key={label} className={`rounded-2xl border p-4 ${alert ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-gray-100'}`}>
               <div className="flex items-center gap-2 mb-1.5">
@@ -1299,10 +1302,10 @@ export default function DispatchPage() {
       {/* Main tabs */}
       <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit mx-6 mb-5 flex-wrap">
         {([
-          ['board',    'Dispatch Board', null],
-          ['today',    'Your Drivers',   driverDispatches.length],
-          ['subs',     'Subcontractors', subDispatches.length],
-          ['received', 'Received',       receivedDispatches.filter(r => r.status === 'pending').length],
+          ['board',    t('board'),         null],
+          ['today',    t('yourDrivers'),   driverDispatches.length],
+          ['subs',     t('subcontractors'),subDispatches.length],
+          ['received', 'Received',         receivedDispatches.filter(r => r.status === 'pending').length],
         ] as [string, string, number | null][]).map(([tab, label, count]) => (
           <button
             key={tab}
@@ -1372,7 +1375,7 @@ export default function DispatchPage() {
                         jobFilter === tab ? 'bg-[var(--brand-dark)] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                       }`}
                     >
-                      {tab === 'on_hold' ? 'On Hold' : tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                      {tab === 'on_hold' ? t('onHold') : tab === 'all' ? t('all') : tab === 'active' ? t('active') : t('completed')}
                       {tab !== 'all' && (
                         <span className={`ml-1 ${jobFilter === tab ? 'text-white/60' : 'text-gray-400'}`}>
                           {jobs.filter(j => j.status === tab).length}
@@ -1396,9 +1399,9 @@ export default function DispatchPage() {
               {displayedJobs.length === 0 ? (
                 <div className="text-center py-20 bg-white rounded-2xl border border-gray-100">
                   <Truck className="h-10 w-10 mx-auto mb-3 text-gray-200" />
-                  <p className="font-medium text-gray-400">No jobs</p>
-                  <p className="text-sm text-gray-300 mt-1">Create a job to start dispatching</p>
-                  <button onClick={openAddJob} className="mt-4 text-sm text-[var(--brand-primary)] font-medium">+ New Job</button>
+                  <p className="font-medium text-gray-400">{t('noJobs')}</p>
+                  <p className="text-sm text-gray-300 mt-1">{t('createJobToStart')}</p>
+                  <button onClick={openAddJob} className="mt-4 text-sm text-[var(--brand-primary)] font-medium">+ {t('newJobBtn')}</button>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -1461,7 +1464,7 @@ export default function DispatchPage() {
                               onClick={e => openDispatchFromJob(job, e)}
                               className="flex items-center gap-1.5 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
                             >
-                              <Send className="h-3 w-3" /> Dispatch
+                              <Send className="h-3 w-3" /> {t('newDispatch')}
                             </button>
                             <button
                               onClick={e => openBulkDispatch(job, e)}
@@ -1531,14 +1534,14 @@ export default function DispatchPage() {
                         {expanded && (
                           <div className="border-t border-gray-100 bg-gray-50 p-4 space-y-4">
                             <div>
-                              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Job Status</p>
+                              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{t('jobStatus')}</p>
                               <div className="flex gap-2 flex-wrap">
                                 {JOB_STATUSES.map(s => (
                                   <button key={s} onClick={() => updateJobStatus(job.id, s)}
                                     className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                                       job.status === s ? 'bg-[var(--brand-dark)] text-white border-[#1e3a2a]' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
                                     }`}>
-                                    {s === 'on_hold' ? 'On Hold' : s.charAt(0).toUpperCase() + s.slice(1)}
+                                    {s === 'on_hold' ? t('onHold') : s === 'active' ? t('active') : t('completed')}
                                   </button>
                                 ))}
                               </div>
@@ -1549,16 +1552,16 @@ export default function DispatchPage() {
 
                             {(job.start_date || job.end_date) && (
                               <div>
-                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Schedule</p>
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{t('schedule')}</p>
                                 <div className="flex gap-4 text-sm text-gray-600">
-                                  {job.start_date && <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5 text-gray-400" />Start: {new Date(job.start_date + 'T00:00:00').toLocaleDateString()}</span>}
-                                  {job.end_date   && <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5 text-gray-400" />End: {new Date(job.end_date + 'T00:00:00').toLocaleDateString()}</span>}
+                                  {job.start_date && <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5 text-gray-400" />{t('startDate', { date: new Date(job.start_date + 'T00:00:00').toLocaleDateString() })}</span>}
+                                  {job.end_date   && <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5 text-gray-400" />{t('endDate', { date: new Date(job.end_date + 'T00:00:00').toLocaleDateString() })}</span>}
                                 </div>
                               </div>
                             )}
                             {job.notes && (
                               <div>
-                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Notes</p>
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{t('notes')}</p>
                                 <p className="text-sm text-gray-600">{job.notes}</p>
                               </div>
                             )}
@@ -1577,7 +1580,7 @@ export default function DispatchPage() {
                 <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Radio className="h-4 w-4 text-[var(--brand-primary)]" />
-                    <h3 className="text-sm font-semibold text-gray-900">Driver Status</h3>
+                    <h3 className="text-sm font-semibold text-gray-900">{t('driverStatus')}</h3>
                   </div>
                   <span className="text-xs text-gray-400">{drivers.length} active</span>
                 </div>
@@ -1606,13 +1609,13 @@ export default function DispatchPage() {
                                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                                   {disp.status === 'working' && (
                                     <span className="text-[10px] font-bold text-green-700 bg-green-50 px-1.5 py-0.5 rounded-full">
-                                      {disp.loads_completed} loads
+                                      {t('loads', { count: disp.loads_completed })}
                                     </span>
                                   )}
                                   {disp.status === 'working' && minsAgo !== null && minsAgo < 120 && (
                                     <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
                                       <Clock className="h-2.5 w-2.5" />
-                                      {minsAgo < 1 ? 'just now' : `${minsAgo}m ago`}
+                                      {minsAgo < 1 ? t('justNow') : t('minutesAgo', { m: minsAgo })}
                                     </span>
                                   )}
                                 </div>
@@ -1630,7 +1633,7 @@ export default function DispatchPage() {
                 {availableDrivers.length > 0 && (
                   <div className="px-4 py-2.5 border-t border-gray-100 bg-green-50">
                     <p className="text-xs text-green-700 font-medium">
-                      {availableDrivers.length} driver{availableDrivers.length !== 1 ? 's' : ''} available to dispatch
+                      {availableDrivers.length === 1 ? t('availableDrivers', { count: availableDrivers.length }) : t('availableDriversPlural', { count: availableDrivers.length })}
                     </p>
                   </div>
                 )}
@@ -1656,7 +1659,7 @@ export default function DispatchPage() {
           {/* Step 3 — View toggle + dispatch button */}
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <div className="flex items-center gap-2">
-              <p className="text-sm text-gray-500">{filteredDispatches.length} dispatch{filteredDispatches.length !== 1 ? 'es' : ''}</p>
+              <p className="text-sm text-gray-500">{filteredDispatches.length === 1 ? t('dispatchedDrivers', { count: filteredDispatches.length }) : t('dispatchedDriversPlural', { count: filteredDispatches.length })}</p>
               <div className="flex bg-gray-100 rounded-lg p-0.5">
                 {(['list', 'timeline'] as const).map(mode => (
                   <button
@@ -1673,7 +1676,7 @@ export default function DispatchPage() {
               onClick={() => openNewDispatch('driver')}
               className="flex items-center gap-2 bg-[var(--brand-dark)] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[var(--brand-primary-hover)] transition-colors"
             >
-              <Plus className="h-4 w-4" /> Dispatch Driver
+              <Plus className="h-4 w-4" /> {t('dispatchDriver')}
             </button>
           </div>
 
@@ -1708,8 +1711,8 @@ export default function DispatchPage() {
           {driverDispatches.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-2xl border border-gray-100">
               <Send className="h-10 w-10 mx-auto mb-3 text-gray-200" />
-              <p className="font-medium text-gray-400">No dispatches today</p>
-              <p className="text-sm text-gray-300 mt-1">Click "Dispatch" on a job card to assign drivers</p>
+              <p className="font-medium text-gray-400">{t('noDispatchesToday')}</p>
+              <p className="text-sm text-gray-300 mt-1">{t('clickDispatch')}</p>
             </div>
           ) : viewMode === 'timeline' ? (
             <TimelineView dispatches={filteredDispatches} drivers={drivers} jobs={jobs} />
@@ -1722,7 +1725,7 @@ export default function DispatchPage() {
                   const job      = d.job_id ? jobs.find(j => j.id === d.job_id) : null
                   const minsAgo  = Math.floor((Date.now() - new Date(d.updated_at).getTime()) / 60000)
                   const lastTicketLabel = d.status === 'working'
-                    ? (minsAgo < 1 ? 'just now' : minsAgo < 60 ? `${minsAgo}m ago` : `${Math.floor(minsAgo / 60)}h ago`)
+                    ? (minsAgo < 1 ? t('justNow') : minsAgo < 60 ? t('minutesAgo', { m: minsAgo }) : t('hoursAgo', { h: Math.floor(minsAgo / 60) }))
                     : null
                   const ticketsForDispatch = todayLoads.filter(l => l.driver_name === d.driver_name).length
                   const missingCount       = Math.max(0, d.loads_completed - ticketsForDispatch)
@@ -1754,11 +1757,11 @@ export default function DispatchPage() {
                             {sc.label}
                           </span>
                           {d.status === 'working' && (
-                            <span className="text-xs font-bold text-green-700">{d.loads_completed} loads</span>
+                            <span className="text-xs font-bold text-green-700">{t('loads', { count: d.loads_completed })}</span>
                           )}
                           {lastTicketLabel && (
                             <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
-                              <Clock className="h-2.5 w-2.5" /> last ticket {lastTicketLabel}
+                              <Clock className="h-2.5 w-2.5" /> {t('lastTicket', { label: lastTicketLabel })}
                             </span>
                           )}
                         </div>
@@ -1829,7 +1832,7 @@ export default function DispatchPage() {
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 border-b border-gray-100">
                     <tr>
-                      {['Driver', 'Truck', 'Job', 'Start', 'Jobs', 'Last Ticket', 'Status', ''].map(h => (
+                      {[t('table.driver'), t('table.truck'), t('table.job'), t('table.start'), t('table.loads'), t('table.lastTicket'), t('table.status'), ''].map(h => (
                         <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -1871,7 +1874,7 @@ export default function DispatchPage() {
                           </td>
                           <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs">
                             {d.status === 'working'
-                              ? (minsAgo < 1 ? 'just now' : minsAgo < 60 ? `${minsAgo}m ago` : `${Math.floor(minsAgo / 60)}h ago`)
+                              ? (minsAgo < 1 ? t('justNow') : minsAgo < 60 ? t('minutesAgo', { m: minsAgo }) : t('hoursAgo', { h: Math.floor(minsAgo / 60) }))
                               : <span className="text-gray-300">—</span>}
                           </td>
                           <td className="px-4 py-3">
@@ -1924,27 +1927,27 @@ export default function DispatchPage() {
         ══════════════════════════════════════════════════════════════ */
         <div className="px-6 pb-8">
           <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-gray-500">{subDispatches.length} subcontractor dispatch{subDispatches.length !== 1 ? 'es' : ''} today</p>
+            <p className="text-sm text-gray-500">{subDispatches.length === 1 ? t('subDispatchedToday', { count: subDispatches.length }) : t('subDispatchedTodayPlural', { count: subDispatches.length })}</p>
             <button
               onClick={() => openNewDispatch('subcontractor')}
               className="flex items-center gap-2 bg-[var(--brand-dark)] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[var(--brand-primary-hover)] transition-colors"
             >
-              <Plus className="h-4 w-4" /> Dispatch Sub
+              <Plus className="h-4 w-4" /> {t('dispatchSub')}
             </button>
           </div>
 
           {subDispatches.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-2xl border border-gray-100">
               <Users className="h-10 w-10 mx-auto mb-3 text-gray-200" />
-              <p className="font-medium text-gray-400">No subcontractors dispatched today</p>
-              <p className="text-sm text-gray-300 mt-1">Click "Dispatch Sub" to assign a subcontractor to a job</p>
+              <p className="font-medium text-gray-400">{t('noSubsToday')}</p>
+              <p className="text-sm text-gray-300 mt-1">{t('clickDispatchSub')}</p>
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
-                    {['Subcontractor', 'Job', 'Start', 'Jobs', 'Status', ''].map(h => (
+                    {[t('table.subcontractor'), t('table.job'), t('table.start'), t('table.loads'), t('table.status'), ''].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -2034,7 +2037,7 @@ export default function DispatchPage() {
             <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
               <div>
                 <h2 className="text-lg font-bold text-gray-900">
-                  {editingDispatch ? 'Edit Dispatch' : dispFormType === 'subcontractor' ? 'Dispatch Subcontractor' : 'Dispatch a Driver'}
+                  {editingDispatch ? t('editDispatch') : dispFormType === 'subcontractor' ? t('dispatchSubcontractor') : t('dispatchADriver')}
                 </h2>
                 {dispForm.job_id && (
                   <p className="text-sm text-gray-500 mt-0.5">{jobs.find(j => j.id === dispForm.job_id)?.job_name}</p>
@@ -2101,7 +2104,7 @@ export default function DispatchPage() {
                   onChange={e => setDispForm(f => ({ ...f, job_id: e.target.value }))}
                   className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
                 >
-                  <option value="">— No specific job —</option>
+                  <option value="">— {t('noSpecificJob')} —</option>
                   {jobs.filter(j => j.status === 'active').map(j => (
                     <option key={j.id} value={j.id}>{j.job_name}{j.location ? ` · ${j.location}` : ''}</option>
                   ))}
@@ -2161,7 +2164,7 @@ export default function DispatchPage() {
                       onChange={e => setDispForm(f => ({ ...f, driver_id: e.target.value }))}
                       className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
                     >
-                      <option value="">— Select a driver —</option>
+                      <option value="">— {t('selectDriverPlaceholder')} —</option>
                       {availableDrivers.map(d => (
                         <option key={d.id} value={d.id}>{d.name}</option>
                       ))}
@@ -2183,13 +2186,13 @@ export default function DispatchPage() {
                     onChange={e => setSubcontractorId(e.target.value)}
                     className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
                   >
-                    <option value="">— Select a subcontractor —</option>
+                    <option value="">— {t('selectSubPlaceholder')} —</option>
                     {contractors.map(c => (
                       <option key={c.id} value={c.id}>{c.name}{c.phone ? ` · ${c.phone}` : ''}</option>
                     ))}
                   </select>
                   {contractors.length === 0 && (
-                    <p className="text-xs text-amber-600 mt-1">No subcontractors found. Add them in the Subcontractors section.</p>
+                    <p className="text-xs text-amber-600 mt-1">{t('noSubsFound')}</p>
                   )}
                 </div>
               )}
@@ -2211,7 +2214,7 @@ export default function DispatchPage() {
               {/* Truck + Time */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Truck #</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('truckNum')}</label>
                   <input
                     value={dispForm.truck_number}
                     onChange={e => setDispForm(f => ({ ...f, truck_number: e.target.value }))}
@@ -2220,7 +2223,7 @@ export default function DispatchPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('startTime')}</label>
                   <input
                     type="time"
                     value={dispForm.start_time}
@@ -2256,7 +2259,7 @@ export default function DispatchPage() {
 
               {/* Instructions */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Special Instructions</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('specialInstructions')}</label>
                 <textarea
                   value={dispForm.instructions}
                   onChange={e => setDispForm(f => ({ ...f, instructions: e.target.value }))}
@@ -2331,7 +2334,7 @@ export default function DispatchPage() {
                   className="flex-1 h-11 rounded-xl bg-[var(--brand-dark)] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[var(--brand-primary-hover)] disabled:opacity-60"
                 >
                   {savingDispatch && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {savingDispatch ? 'Saving…' : editingDispatch ? 'Save Changes' : 'Dispatch Now'}
+                  {savingDispatch ? 'Saving…' : editingDispatch ? t('saveChanges') : t('dispatchNow')}
                 </button>
               </div>
             </form>
@@ -2427,7 +2430,7 @@ export default function DispatchPage() {
                           />
                           <label htmlFor={`bulk-${d.id}`} className="flex-1 min-w-0 cursor-pointer">
                             <p className="text-sm font-medium text-gray-900 truncate">{d.name}</p>
-                            {alreadyDispatched && <p className="text-[10px] text-amber-600">Already dispatched today</p>}
+                            {alreadyDispatched && <p className="text-[10px] text-amber-600">{t('alreadyDispatchedGroup')}</p>}
                           </label>
                           {sel?.selected && (
                             <input
@@ -2499,20 +2502,20 @@ export default function DispatchPage() {
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
           <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
-              <h2 className="text-lg font-bold text-gray-900">{editingJob ? 'Edit Job' : 'New Job'}</h2>
+              <h2 className="text-lg font-bold text-gray-900">{editingJob ? 'Edit Job' : t('newJobModal')}</h2>
               <button onClick={() => setShowJobForm(false)} className="h-8 w-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400">
                 <X className="h-4 w-4" />
               </button>
             </div>
             <form onSubmit={handleSaveJob} className="p-5 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Job Name *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('jobNameRequired')}</label>
                 <input required value={jobForm.job_name} onChange={e => setJobForm(f => ({ ...f, job_name: e.target.value }))} placeholder="e.g. Downtown Grading Phase 1" className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]" />
               </div>
               {/* Working Under (Company) */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-sm font-medium text-gray-700">Working Under (Company)</label>
+                  <label className="block text-sm font-medium text-gray-700">{t('contractor')}</label>
                   {clientCompanies.length > 0 && (
                     <button
                       type="button"
@@ -2555,11 +2558,11 @@ export default function DispatchPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Material</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('material')}</label>
                   <input value={jobForm.material} onChange={e => setJobForm(f => ({ ...f, material: e.target.value }))} placeholder="e.g. Gravel, Dirt" className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('jobStatus')}</label>
                   <select value={jobForm.status} onChange={e => setJobForm(f => ({ ...f, status: e.target.value as Job['status'] }))} className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30">
                     <option value="active">Active</option>
                     <option value="on_hold">On Hold</option>
@@ -2569,11 +2572,11 @@ export default function DispatchPage() {
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Rate</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('rate')}</label>
                   <input type="number" value={jobForm.rate} onChange={e => setJobForm(f => ({ ...f, rate: e.target.value }))} placeholder="0.00" className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Per</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('per')}</label>
                   <select value={jobForm.rate_type} onChange={e => setJobForm(f => ({ ...f, rate_type: e.target.value }))} className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30">
                     {RATE_TYPES.map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
@@ -2591,23 +2594,23 @@ export default function DispatchPage() {
               )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('startDateLabel')}</label>
                   <input type="date" value={jobForm.start_date} onChange={e => setJobForm(f => ({ ...f, start_date: e.target.value }))} className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('endDateLabel')}</label>
                   <input type="date" value={jobForm.end_date} onChange={e => setJobForm(f => ({ ...f, end_date: e.target.value }))} className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('notes')}</label>
                 <textarea value={jobForm.notes} onChange={e => setJobForm(f => ({ ...f, notes: e.target.value }))} rows={3} placeholder="Any notes about this job…" className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]" />
               </div>
               <div className="flex gap-3 pt-1">
                 <button type="button" onClick={() => setShowJobForm(false)} className="flex-1 h-11 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
                 <button type="submit" disabled={savingJob} className="flex-1 h-11 rounded-xl bg-[var(--brand-dark)] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[var(--brand-primary-hover)] disabled:opacity-60">
                   {savingJob && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {savingJob ? 'Saving…' : editingJob ? 'Save Changes' : 'Create Job'}
+                  {savingJob ? 'Saving…' : editingJob ? t('saveChanges') : t('createJob')}
                 </button>
               </div>
             </form>

@@ -779,5 +779,89 @@
     "reasonHint": "This will be shown to the driver.",
     "notifications": "Notifications",
     "noNotifications": "No notifications yet"
+  },
+  "documents": {
+    "title": "Documents",
+    "subtitle": "All files uploaded or generated in your account",
+    "uploadDocument": "Upload Document",
+    "selectDocuments": "Select documents",
+    "folders": "Folders",
+    "allDocuments": "All Documents",
+    "noFoldersYet": "No folders yet",
+    "folderNamePlaceholder": "Folder name…",
+    "create": "Create",
+    "cancel": "Cancel",
+    "noDocsInFolder": "No documents in \"{name}\"",
+    "noDocsFound": "No documents found",
+    "moveFolderHint": "Move documents here using the folder icon on any document card",
+    "tryDifferentSearch": "Try a different search term",
+    "getStarted": "Upload ticket photos or import AI documents to get started",
+    "searchPlaceholder": "Search documents…",
+    "selected": "{count} selected",
+    "deselectAll": "Deselect all",
+    "selectAll": "Select all",
+    "download": "Download",
+    "deleting": "Deleting…",
+    "delete": "Delete",
+    "moveToFolder": "Move to folder",
+    "noFoldersInSidebar": "No folders yet — create one in the sidebar",
+    "noFoldersShort": "No folders yet",
+    "removeFromFolder": "Remove from folder",
+    "table": {
+      "name": "Name",
+      "type": "Type",
+      "category": "Category",
+      "expiry": "Expiry",
+      "date": "Date"
+    },
+    "sort": {
+      "newest": "Newest first",
+      "oldest": "Oldest first",
+      "name": "Name A–Z",
+      "type": "Doc type",
+      "expiry": "Expiry date"
+    },
+    "categories": {
+      "all": "All",
+      "ai_import": "AI Imports",
+      "ticket_photo": "Ticket Photos",
+      "subcontractor_photo": "Sub Photos",
+      "received_invoice": "Received Inv.",
+      "uploaded": "Uploaded",
+      "coi": "COI",
+      "expiring": "Expiring Soon"
+    },
+    "categoryLabels": {
+      "all": "All",
+      "ai_import": "AI Import",
+      "ticket_photo": "Ticket Photo",
+      "subcontractor_photo": "Sub Photo",
+      "received_invoice": "Invoice",
+      "uploaded": "Uploaded",
+      "coi": "COI",
+      "expiring": "Expiring"
+    },
+    "upload": {
+      "title": "Upload Document",
+      "fileLabel": "File",
+      "chooseFile": "Click to choose a file",
+      "fileTypes": "Images, PDFs, or any file type",
+      "clickToChange": "click to change",
+      "nameLabel": "Document Name",
+      "typeLabel": "Document Type",
+      "selectType": "Select type…",
+      "autoDetected": "Auto-detected from filename — change if needed",
+      "expiryLabel": "Expiry Date",
+      "linkLabel": "Link to",
+      "noLink": "No link",
+      "notesLabel": "Notes",
+      "uploading": "Uploading…",
+      "upload": "Upload"
+    },
+    "preview": {
+      "openPdf": "Open PDF",
+      "openFile": "Open File"
+    },
+    "versionBanner": "saved as version {version} — previous version marked as superseded."
   }
 }

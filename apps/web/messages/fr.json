@@ -779,5 +779,89 @@
     "reasonHint": "Cela sera montré au chauffeur.",
     "notifications": "Notifications",
     "noNotifications": "Pas encore de notifications"
+  },
+  "documents": {
+    "title": "Documents",
+    "subtitle": "Tous les fichiers téléchargés ou générés dans votre compte",
+    "uploadDocument": "Télécharger un Document",
+    "selectDocuments": "Sélectionner des documents",
+    "folders": "Dossiers",
+    "allDocuments": "Tous les Documents",
+    "noFoldersYet": "Pas encore de dossiers",
+    "folderNamePlaceholder": "Nom du dossier…",
+    "create": "Créer",
+    "cancel": "Annuler",
+    "noDocsInFolder": "Aucun document dans \"{name}\"",
+    "noDocsFound": "Aucun document trouvé",
+    "moveFolderHint": "Déplacez des documents ici via l'icône de dossier sur chaque carte",
+    "tryDifferentSearch": "Essayez un autre terme de recherche",
+    "getStarted": "Téléchargez des photos de bons ou importez des documents IA pour commencer",
+    "searchPlaceholder": "Rechercher des documents…",
+    "selected": "{count} sélectionné(s)",
+    "deselectAll": "Tout désélectionner",
+    "selectAll": "Tout sélectionner",
+    "download": "Télécharger",
+    "deleting": "Suppression…",
+    "delete": "Supprimer",
+    "moveToFolder": "Déplacer vers un dossier",
+    "noFoldersInSidebar": "Pas encore de dossiers — créez-en un dans la barre latérale",
+    "noFoldersShort": "Pas encore de dossiers",
+    "removeFromFolder": "Retirer du dossier",
+    "table": {
+      "name": "Nom",
+      "type": "Type",
+      "category": "Catégorie",
+      "expiry": "Expiration",
+      "date": "Date"
+    },
+    "sort": {
+      "newest": "Plus récents d'abord",
+      "oldest": "Plus anciens d'abord",
+      "name": "Nom A–Z",
+      "type": "Type de doc.",
+      "expiry": "Date d'expiration"
+    },
+    "categories": {
+      "all": "Tous",
+      "ai_import": "Imports IA",
+      "ticket_photo": "Photos de Bons",
+      "subcontractor_photo": "Photos Sous-trait.",
+      "received_invoice": "Factures Reçues",
+      "uploaded": "Téléchargés",
+      "coi": "COI",
+      "expiring": "Expirant Bientôt"
+    },
+    "categoryLabels": {
+      "all": "Tous",
+      "ai_import": "Import IA",
+      "ticket_photo": "Photo de Bon",
+      "subcontractor_photo": "Photo Sous-trait.",
+      "received_invoice": "Facture",
+      "uploaded": "Téléchargé",
+      "coi": "COI",
+      "expiring": "Expirant"
+    },
+    "upload": {
+      "title": "Télécharger un Document",
+      "fileLabel": "Fichier",
+      "chooseFile": "Cliquez pour choisir un fichier",
+      "fileTypes": "Images, PDFs ou tout type de fichier",
+      "clickToChange": "cliquer pour changer",
+      "nameLabel": "Nom du Document",
+      "typeLabel": "Type de Document",
+      "selectType": "Sélectionner le type…",
+      "autoDetected": "Détecté automatiquement — modifiez si nécessaire",
+      "expiryLabel": "Date d'Expiration",
+      "linkLabel": "Lier à",
+      "noLink": "Aucun lien",
+      "notesLabel": "Notes",
+      "uploading": "Téléchargement…",
+      "upload": "Télécharger"
+    },
+    "preview": {
+      "openPdf": "Ouvrir PDF",
+      "openFile": "Ouvrir le Fichier"
+    },
+    "versionBanner": "enregistré comme version {version} — version précédente marquée comme remplacée."
   }
 }

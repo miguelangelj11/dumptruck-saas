@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { getCompanyId } from '@/lib/get-company-id'
 import { Plus, Pencil, Trash2, Loader2, Truck, ChevronLeft, Camera, X, ImageIcon, ChevronRight, Phone, Mail, FileText, Shield, CheckCircle } from 'lucide-react'
@@ -127,6 +128,7 @@ function makeEmptySlip(): SlipRow {
 }
 
 export default function ContractorsPage() {
+  const t = useTranslations('contractors')
   const [userId, setUserId] = useState('')
   const [contractors, setContractors] = useState<Contractor[]>([])
   const [loading, setLoading] = useState(true)
@@ -245,9 +247,9 @@ export default function ContractorsPage() {
       .select('*, contractor_ticket_slips(*)')
       .eq('contractor_id', contractorId)
       .order('date', { ascending: false })
-    const t = (data ?? []) as ContractorTicket[]
-    setTickets(t)
-    setAllTickets(t)
+    const tickets = (data ?? []) as ContractorTicket[]
+    setTickets(tickets)
+    setAllTickets(tickets)
     setLoadingTickets(false)
   }
 
@@ -385,7 +387,7 @@ export default function ContractorsPage() {
   }
 
   async function handleDeleteContractor(id: string, name: string) {
-    if (!confirm(`Delete "${name}" and all their tickets?`)) return
+    if (!confirm(t('confirmDeleteSub', { name }))) return
     const { error } = await supabase.from('contractors').delete().eq('id', id)
     if (error) { toast.error('Delete failed: ' + error.message); return }
     toast.success(`"${name}" deleted`)
@@ -523,7 +525,7 @@ export default function ContractorsPage() {
   }
 
   async function handleDeleteTicket(id: string) {
-    if (!confirm('Delete this ticket?')) return
+    if (!confirm(t('confirmDeleteTicket'))) return
     await supabase.from('contractor_ticket_slips').delete().eq('ticket_id', id)
     const { error } = await supabase.from('contractor_tickets').delete().eq('id', id)
     if (error) { toast.error('Delete failed: ' + error.message); return }
@@ -612,11 +614,11 @@ export default function ContractorsPage() {
               {selected.address && <span className="text-xs text-gray-400">{selected.address}</span>}
               {selected.phone && <span className="flex items-center gap-1 text-xs text-gray-400"><Phone className="h-3 w-3" />{selected.phone}</span>}
               {selected.email && <span className="flex items-center gap-1 text-xs text-gray-400"><Mail className="h-3 w-3" />{selected.email}</span>}
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${selected.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{selected.status}</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${selected.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{selected.status === 'active' ? t('status.active') : selected.status === 'inactive' ? t('status.inactive') : selected.status === 'pending' ? t('status.pending') : selected.status === 'invoiced' ? t('status.invoiced') : t('status.paid')}</span>
             </div>
           </div>
           <button onClick={openAddTicket} className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors">
-            <Plus className="h-4 w-4" /> Add Ticket
+            <Plus className="h-4 w-4" /> {t('addTicket')}
           </button>
         </div>
 
@@ -666,7 +668,7 @@ export default function ContractorsPage() {
                 onClick={() => { setAddingContractorTruck(false); setNewContractorTruckNumber('') }}
                 className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-colors"
               >
-                Cancel
+                {t('cancel')}
               </button>
             </div>
           )}
@@ -713,7 +715,7 @@ export default function ContractorsPage() {
         {/* Section tabs: Tickets / Documents */}
         <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 w-fit">
           <button onClick={() => setDetailSection('tickets')} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 ${detailSection === 'tickets' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-            <Truck className="h-3.5 w-3.5" /> Tickets
+            <Truck className="h-3.5 w-3.5" /> {t('viewTickets')}
           </button>
           <button onClick={() => setDetailSection('documents')} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 ${detailSection === 'documents' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
             <FileText className="h-3.5 w-3.5" /> Documents
@@ -821,8 +823,8 @@ export default function ContractorsPage() {
                 <p className="font-bold text-sm">{selectedForPay.length} ticket{selectedForPay.length !== 1 ? 's' : ''} selected</p>
                 <p className="text-green-300 text-xs">Total: ${selectedTotal.toLocaleString()}</p>
               </div>
-              <button onClick={() => setPaymentModal(true)} className="ml-auto px-4 py-2 bg-green-500 hover:bg-green-400 text-white font-bold rounded-xl text-sm">💵 Record Payment</button>
-              <button onClick={() => setSelectedForPay([])} className="text-green-400 hover:text-white text-sm">Clear ✕</button>
+              <button onClick={() => setPaymentModal(true)} className="ml-auto px-4 py-2 bg-green-500 hover:bg-green-400 text-white font-bold rounded-xl text-sm">💵 {t('paymentModal')}</button>
+              <button onClick={() => setSelectedForPay([])} className="text-green-400 hover:text-white text-sm">{t('cancel')} ✕</button>
             </div>
           )
         })()}
@@ -838,9 +840,9 @@ export default function ContractorsPage() {
               <div className="text-center py-16">
                 <Truck className="h-10 w-10 text-gray-200 mx-auto mb-3" />
                 <p className="text-sm font-medium text-gray-400">
-                  {tickets.length === 0 ? `No tickets yet for ${selected.name}` : `No ${ticketTab} tickets`}
+                  {tickets.length === 0 ? t('noTickets', { name: selected.name }) : `No ${ticketTab} tickets`}
                 </p>
-                {tickets.length === 0 && <button onClick={openAddTicket} className="mt-3 text-sm text-[var(--brand-primary)]">Add first ticket →</button>}
+                {tickets.length === 0 && <button onClick={openAddTicket} className="mt-3 text-sm text-[var(--brand-primary)]">{t('addFirstTicket')} →</button>}
               </div>
             ) : (
             <div className="overflow-x-auto">
@@ -848,7 +850,7 @@ export default function ContractorsPage() {
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
                     {ticketTab === 'pending' && <th className="w-8 px-4 py-3"></th>}
-                    {['Photos', 'Job', 'Ticket #', 'Company', 'Truck #', 'Material', 'Job Rate', 'Total Pay', 'Tickets', 'Hours', 'Date', 'Status', ticketTab === 'paid' ? 'Payment' : ''].map(h => (
+                    {[t('table.photos'), t('table.job'), 'Ticket #', t('table.company'), 'Truck #', t('table.material'), t('table.rate'), t('totalPay'), t('table.tickets'), t('table.hours'), t('table.date'), t('table.status'), ticketTab === 'paid' ? 'Payment' : ''].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                     ))}
                   </tr>
@@ -899,7 +901,7 @@ export default function ContractorsPage() {
                         <td className="px-4 py-3 text-gray-500 text-xs">{t.hours_worked || <span className="text-gray-300">—</span>}</td>
                         <td className="px-4 py-3 text-gray-500">{fmtDate(t.date)}</td>
                         <td className="px-4 py-3">
-                          <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${statusColor[t.status as keyof typeof statusColor] ?? 'bg-gray-100 text-gray-600'}`}>{t.status}</span>
+                          <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${statusColor[t.status as keyof typeof statusColor] ?? 'bg-gray-100 text-gray-600'}`}>{t.status === 'active' ? t('status.active') : t.status === 'inactive' ? t('status.inactive') : t.status === 'pending' ? t('status.pending') : t.status === 'invoiced' ? t('status.invoiced') : t('status.paid')}</span>
                         </td>
                         {ticketTab === 'paid' ? (
                           <td className="px-4 py-3 text-right text-xs">
@@ -934,18 +936,18 @@ export default function ContractorsPage() {
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
               <div className="absolute inset-0 bg-black/50" onClick={() => setPaymentModal(false)} />
               <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-                <h2 className="text-lg font-bold mb-1">Record Payment</h2>
+                <h2 className="text-lg font-bold mb-1">{t('paymentModal')}</h2>
                 <p className="text-sm text-gray-500 mb-5">
-                  {selected.name} · {selectedTickets.length} ticket{selectedTickets.length !== 1 ? 's' : ''} · <strong className="text-green-700">${total.toLocaleString()}</strong>
+                  {selected.name} · {selectedTickets.length !== 1 ? t('ticketCountPlural', { count: selectedTickets.length }) : t('ticketCount', { count: selectedTickets.length })} · <strong className="text-green-700">${total.toLocaleString()}</strong>
                 </p>
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-700 block mb-1">Payment Method</label>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">{t('method')}</label>
                     <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20">
-                      <option value="check">Check</option>
+                      <option value="check">{t('methods.check')}</option>
                       <option value="ach">ACH / Bank Transfer</option>
-                      <option value="cash">Cash</option>
-                      <option value="zelle">Zelle</option>
+                      <option value="cash">{t('methods.cash')}</option>
+                      <option value="zelle">{t('methods.zelle')}</option>
                       <option value="other">Other</option>
                     </select>
                   </div>
@@ -954,19 +956,19 @@ export default function ContractorsPage() {
                     <input type="text" value={paymentReference} onChange={e => setPaymentReference(e.target.value)} placeholder="e.g. Check #1042" className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700 block mb-1">Payment Date</label>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">{t('paymentDate')}</label>
                     <input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700 block mb-1">Notes (optional)</label>
-                    <input type="text" value={paymentNotes} onChange={e => setPaymentNotes(e.target.value)} placeholder="Any notes about this payment..." className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
+                    <label className="text-sm font-medium text-gray-700 block mb-1">{t('notesLabel')}</label>
+                    <input type="text" value={paymentNotes} onChange={e => setPaymentNotes(e.target.value)} placeholder={t('notesPlaceholder')} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
                   </div>
                 </div>
                 <div className="flex gap-3 mt-6">
-                  <button onClick={() => setPaymentModal(false)} className="flex-1 py-3 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                  <button onClick={() => setPaymentModal(false)} className="flex-1 py-3 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50">{t('cancel')}</button>
                   <button onClick={handleRecordPayment} disabled={savingPayment} className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
                     {savingPayment && <Loader2 className="h-4 w-4 animate-spin" />}
-                    {savingPayment ? 'Saving…' : 'Record Payment'}
+                    {savingPayment ? t('saving') : t('paymentModal')}
                   </button>
                 </div>
               </div>
@@ -979,31 +981,31 @@ export default function ContractorsPage() {
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
             <div className="bg-white w-full sm:rounded-2xl sm:max-w-lg shadow-2xl max-h-[95vh] overflow-y-auto">
               <div className="sticky top-0 bg-white px-6 py-4 border-b border-gray-100 flex items-center justify-between z-10">
-                <h2 className="font-semibold text-gray-900">{editingTicket ? 'Edit Ticket' : 'New Ticket'} — {selected.name}</h2>
+                <h2 className="font-semibold text-gray-900">{editingTicket ? t('editTicket') : t('newTicketFor', { name: selected.name })}</h2>
                 <button onClick={() => setShowTicketForm(false)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
               </div>
               <form onSubmit={handleSaveTicket} className="p-6 space-y-5">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
                     <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-medium text-gray-700">Working Under (Company)</label>
-                      <a href="/dashboard/settings" target="_blank" className="text-xs text-[var(--brand-primary)]">+ Manage companies</a>
+                      <label className="block text-xs font-medium text-gray-700">{t('workingUnder')}</label>
+                      <a href="/dashboard/settings" target="_blank" className="text-xs text-[var(--brand-primary)]">+ {t('manageCompanies')}</a>
                     </div>
                     {clientCompanies.length === 0 ? (
                       <div className="w-full rounded-lg border border-dashed border-gray-200 px-3 py-2.5 text-sm text-gray-400 flex items-center justify-between">
-                        <span>No companies added yet</span>
-                        <a href="/dashboard/settings" target="_blank" className="text-xs text-[var(--brand-primary)] shrink-0">Add in Settings →</a>
+                        <span>{t('noCompanies')}</span>
+                        <a href="/dashboard/settings" target="_blank" className="text-xs text-[var(--brand-primary)] shrink-0">{t('addInSettings')} →</a>
                       </div>
                     ) : (
                       <select value={ticketForm.client_company} onChange={e => setTicketForm(p => ({ ...p, client_company: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white">
-                        <option value="">— Select a company —</option>
+                        <option value="">{t('selectCompany')}</option>
                         {clientCompanies.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                       </select>
                     )}
                   </div>
                   <div className="col-span-2">
                     <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-medium text-gray-700">Job Name *</label>
+                      <label className="block text-xs font-medium text-gray-700">{t('jobName')} *</label>
                       <button
                         type="button"
                         onClick={() => setJobMode(m => m === 'dropdown' ? 'manual' : 'dropdown')}
@@ -1040,7 +1042,7 @@ export default function ContractorsPage() {
                     )}
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Date *</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">{t('date')} *</label>
                     <input required type="date" value={ticketForm.date} onChange={e => setTicketForm(p => ({ ...p, date: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" />
                   </div>
                   <div>
@@ -1108,9 +1110,9 @@ export default function ContractorsPage() {
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Material</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">{t('material')}</label>
                     <select value={ticketForm.material} onChange={e => setTicketForm(p => ({ ...p, material: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white">
-                      <option value="">Select material</option>
+                      <option value="">{t('selectMaterial')}</option>
                       {materials.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                   </div>
@@ -1137,7 +1139,7 @@ export default function ContractorsPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">
-                      {ticketForm.rate_type === 'hr' ? 'Hourly Rate' : ticketForm.rate_type === 'ton' ? 'Rate per Ton' : 'Job Rate'}
+                      {ticketForm.rate_type === 'hr' ? t('perHour') : ticketForm.rate_type === 'ton' ? t('perTon') : t('perLoad')}
                     </label>
                     <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/20 focus-within:border-[var(--brand-primary)]">
                       <span className="flex items-center px-3 bg-gray-50 text-sm text-gray-500 border-r border-gray-200">$</span>
@@ -1146,7 +1148,7 @@ export default function ContractorsPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">
-                      {ticketForm.rate_type === 'hr' ? 'Hours Worked' : ticketForm.rate_type === 'ton' ? 'Total Tons' : '# of Jobs'}
+                      {ticketForm.rate_type === 'hr' ? t('hoursWorked') : ticketForm.rate_type === 'ton' ? 'Total Tons' : '# of Jobs'}
                     </label>
                     <input
                       type="number" min="0" step="0.01"
@@ -1165,7 +1167,7 @@ export default function ContractorsPage() {
                     </div>
                   )}
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Total Pay ($) *</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">{t('totalPay')} ($) *</label>
                     <div className="flex rounded-lg border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/20 focus-within:border-[var(--brand-primary)]">
                       <span className="flex items-center px-3 bg-gray-50 text-sm text-gray-500 border-r border-gray-200">$</span>
                       <input required type="number" min="0" step="0.01" value={ticketForm.rate} onChange={e => setTicketForm(p => ({ ...p, rate: e.target.value }))} className="flex-1 px-3 py-2.5 text-sm focus:outline-none bg-white" placeholder="450.00" />
@@ -1175,30 +1177,30 @@ export default function ContractorsPage() {
                     </p>
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">{t('statusLabel')}</label>
                     <select value={ticketForm.status} onChange={e => setTicketForm(p => ({ ...p, status: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white">
-                      <option value="pending">Pending</option>
-                      <option value="invoiced">Invoiced</option>
-                      <option value="paid">Paid</option>
+                      <option value="pending">{t('status.pending')}</option>
+                      <option value="invoiced">{t('status.invoiced')}</option>
+                      <option value="paid">{t('status.paid')}</option>
                     </select>
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
-                    <textarea value={ticketForm.notes} onChange={e => setTicketForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] resize-none" placeholder="Optional notes..." />
+                    <label className="block text-xs font-medium text-gray-700 mb-1">{t('notesLabel')}</label>
+                    <textarea value={ticketForm.notes} onChange={e => setTicketForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] resize-none" placeholder={t('notesPlaceholder')} />
                   </div>
                 </div>
 
                 {/* Ticket slips */}
                 <div>
-                  <p className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3">Load Ticket</p>
+                  <p className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3">{t('mainTicket')}</p>
                   {/* Main slip */}
                   {(() => {
                     const main = slipRows[0]!
                     return (
                       <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
-                        <span className="text-xs font-semibold text-[var(--brand-primary)] bg-[var(--brand-primary)]/10 px-2 py-0.5 rounded-full">Main Ticket</span>
+                        <span className="text-xs font-semibold text-[var(--brand-primary)] bg-[var(--brand-primary)]/10 px-2 py-0.5 rounded-full">{t('mainTicket')}</span>
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-2">Ticket Photo <span className="text-gray-400 font-normal">(tap to snap)</span></label>
+                          <label className="block text-xs font-medium text-gray-600 mb-2">{t('photoHint')}</label>
                           {main.imagePreview ? (
                             <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-white">
                               <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
@@ -1208,7 +1210,7 @@ export default function ContractorsPage() {
                                 <X className="h-3.5 w-3.5" />
                               </button>
                               <button type="button" onClick={() => fileInputRefs.current.get(main.id)?.click()} className="absolute bottom-2 right-2 inline-flex items-center gap-1.5 rounded-lg bg-black/60 px-3 py-1.5 text-xs font-medium text-white hover:bg-black/80">
-                                <Camera className="h-3 w-3" /> Retake
+                                <Camera className="h-3 w-3" /> {t('retake')}
                               </button>
                             </div>
                           ) : (
@@ -1225,7 +1227,7 @@ export default function ContractorsPage() {
                           <input ref={el => { if (el) fileInputRefs.current.set(main.id, el); else fileInputRefs.current.delete(main.id) }} type="file" accept="image/*" onChange={e => handleSlipImageChange(main.id, e)} className="hidden" />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Tonnage / Count</label>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">{t('tonnage')}</label>
                           <input type="number" min="0" step="0.01" value={main.tonnage} onChange={e => updateSlipRow(main.id, { tonnage: e.target.value })} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white" placeholder="14.5" />
                         </div>
                       </div>
@@ -1236,12 +1238,12 @@ export default function ContractorsPage() {
                   {slipRows.slice(1).map((row, i) => (
                     <div key={row.id} className="mt-3 rounded-xl border border-gray-100 bg-gray-50 p-4">
                       <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-medium text-gray-400">Extra Ticket #{i + 2}</span>
+                        <span className="text-xs font-medium text-gray-400">{t('extraTicket', { num: i + 2 })}</span>
                         <button type="button" onClick={() => setSlipRows(prev => prev.filter(r => r.id !== row.id))} className="text-gray-300 hover:text-red-400 transition-colors"><X className="h-4 w-4" /></button>
                       </div>
                       <div className="flex gap-3 items-start">
                         <div className="flex-1">
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Tonnage / Count</label>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">{t('tonnage')}</label>
                           <input type="number" min="0" step="0.01" value={row.tonnage} onChange={e => updateSlipRow(row.id, { tonnage: e.target.value })} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white" placeholder="14.5" />
                         </div>
                         <div className="shrink-0">
@@ -1263,15 +1265,15 @@ export default function ContractorsPage() {
                   ))}
 
                   <button type="button" onClick={() => setSlipRows(prev => [...prev, makeEmptySlip()])} className="mt-3 w-full rounded-xl border-2 border-dashed border-gray-200 py-2.5 text-sm font-medium text-gray-400 hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)] transition-all flex items-center justify-center gap-2">
-                    <Plus className="h-4 w-4" /> Add Extra Ticket
+                    <Plus className="h-4 w-4" /> {t('addExtraTicket')}
                   </button>
                 </div>
 
                 <div className="flex gap-3 pt-1">
-                  <button type="button" onClick={() => setShowTicketForm(false)} className="flex-1 rounded-lg border border-gray-200 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
+                  <button type="button" onClick={() => setShowTicketForm(false)} className="flex-1 rounded-lg border border-gray-200 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">{t('cancel')}</button>
                   <button type="submit" disabled={savingTicket || uploadingImage} className="flex-1 rounded-lg bg-[var(--brand-primary)] py-3 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                     {(savingTicket || uploadingImage) && <Loader2 className="h-4 w-4 animate-spin" />}
-                    {savingTicket ? 'Saving…' : uploadingImage ? 'Uploading…' : editingTicket ? 'Update Ticket' : 'Add Ticket'}
+                    {savingTicket ? t('saving') : uploadingImage ? 'Uploading…' : editingTicket ? t('updateTicket') : t('addTicket')}
                   </button>
                 </div>
               </form>
@@ -1325,19 +1327,19 @@ export default function ContractorsPage() {
     <div className="p-6 md:p-8 max-w-7xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Subcontractors</h1>
-          <p className="text-gray-500 text-sm mt-0.5">Manage your independent operators</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
+          <p className="text-gray-500 text-sm mt-0.5">{t('subtitle')}</p>
         </div>
         <button onClick={openAddContractor} className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] transition-colors">
-          <Plus className="h-4 w-4" /> Add Subcontractor
+          <Plus className="h-4 w-4" /> {t('add')}
         </button>
       </div>
 
       {contractors.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-100 text-center py-16">
           <Truck className="h-10 w-10 text-gray-200 mx-auto mb-3" />
-          <p className="text-sm font-medium text-gray-400">No subcontractors yet</p>
-          <button onClick={openAddContractor} className="mt-3 text-sm text-[var(--brand-primary)]">Add your first subcontractor →</button>
+          <p className="text-sm font-medium text-gray-400">{t('none')}</p>
+          <button onClick={openAddContractor} className="mt-3 text-sm text-[var(--brand-primary)]">{t('addFirst')} →</button>
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1362,7 +1364,7 @@ export default function ContractorsPage() {
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900 text-sm">{c.name}</p>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{c.status}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{c.status === 'active' ? t('status.active') : t('status.inactive')}</span>
                   </div>
                 </div>
                 <div className="flex gap-1">
@@ -1389,7 +1391,7 @@ export default function ContractorsPage() {
                 {thisMonthJobs > 0 && <span className="text-green-600 font-medium">{thisMonthJobs} job{thisMonthJobs !== 1 ? 's' : ''} this month</span>}
               </div>
               <button onClick={() => selectContractor(c)} className="w-full rounded-lg bg-[var(--brand-primary)]/10 hover:bg-[var(--brand-primary)]/20 text-[var(--brand-primary)] text-sm font-medium py-2 transition-colors">
-                View Tickets →
+                {t('viewTickets')} →
               </button>
             </div>
             )
@@ -1402,12 +1404,12 @@ export default function ContractorsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-semibold text-gray-900">{editingContractor ? 'Edit Subcontractor' : 'New Subcontractor'}</h2>
+              <h2 className="font-semibold text-gray-900">{editingContractor ? t('editModal') : t('newModal')}</h2>
               <button onClick={() => setShowContractorForm(false)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
             </div>
             <form onSubmit={handleSaveContractor} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Name *</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">{t('name')} *</label>
                 <input required value={contractorForm.name} onChange={e => setContractorForm(p => ({ ...p, name: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="Danny Schultz" />
               </div>
               <div>
@@ -1416,24 +1418,24 @@ export default function ContractorsPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('phone')}</label>
                   <input type="tel" value={contractorForm.phone} onChange={e => setContractorForm(p => ({ ...p, phone: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="(555) 000-0000" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('statusLabel')}</label>
                   <select value={contractorForm.status} onChange={e => setContractorForm(p => ({ ...p, status: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] bg-white">
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
+                    <option value="active">{t('status.active')}</option>
+                    <option value="inactive">{t('status.inactive')}</option>
                   </select>
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">{t('email')}</label>
                 <input type="email" value={contractorForm.email} onChange={e => setContractorForm(p => ({ ...p, email: e.target.value }))} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]" placeholder="danny@atlashauling.com" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
-                <textarea value={contractorForm.notes} onChange={e => setContractorForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] resize-none" placeholder="Optional notes..." />
+                <label className="block text-xs font-medium text-gray-700 mb-1">{t('notesLabel')}</label>
+                <textarea value={contractorForm.notes} onChange={e => setContractorForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)] resize-none" placeholder={t('notesPlaceholder')} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -1452,10 +1454,10 @@ export default function ContractorsPage() {
                 </div>
               </div>
               <div className="flex gap-3 pt-1">
-                <button type="button" onClick={() => setShowContractorForm(false)} className="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                <button type="button" onClick={() => setShowContractorForm(false)} className="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">{t('cancel')}</button>
                 <button type="submit" disabled={savingContractor} className="flex-1 rounded-lg bg-[var(--brand-primary)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-primary-hover)] disabled:opacity-50 flex items-center justify-center gap-2">
                   {savingContractor && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {savingContractor ? 'Saving…' : editingContractor ? 'Update' : 'Add Subcontractor'}
+                  {savingContractor ? t('saving') : editingContractor ? t('update') : t('addSub')}
                 </button>
               </div>
             </form>

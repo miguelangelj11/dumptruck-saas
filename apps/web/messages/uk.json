@@ -779,5 +779,89 @@
     "reasonHint": "Це буде показано водію.",
     "notifications": "Сповіщення",
     "noNotifications": "Сповіщень ще немає"
+  },
+  "documents": {
+    "title": "Документи",
+    "subtitle": "Всі файли, завантажені або створені у вашому акаунті",
+    "uploadDocument": "Завантажити Документ",
+    "selectDocuments": "Вибрати документи",
+    "folders": "Теки",
+    "allDocuments": "Всі Документи",
+    "noFoldersYet": "Тек ще немає",
+    "folderNamePlaceholder": "Назва теки…",
+    "create": "Створити",
+    "cancel": "Скасувати",
+    "noDocsInFolder": "Немає документів у \"{name}\"",
+    "noDocsFound": "Документів не знайдено",
+    "moveFolderHint": "Переміщуйте документи сюди за допомогою іконки теки на картці",
+    "tryDifferentSearch": "Спробуйте інший пошуковий запит",
+    "getStarted": "Завантажте фото квитків або імпортуйте документи через ШІ для початку",
+    "searchPlaceholder": "Пошук документів…",
+    "selected": "{count} вибрано",
+    "deselectAll": "Зняти вибір",
+    "selectAll": "Вибрати все",
+    "download": "Завантажити",
+    "deleting": "Видалення…",
+    "delete": "Видалити",
+    "moveToFolder": "Перемістити до теки",
+    "noFoldersInSidebar": "Тек немає — створіть у бічній панелі",
+    "noFoldersShort": "Тек ще немає",
+    "removeFromFolder": "Видалити з теки",
+    "table": {
+      "name": "Назва",
+      "type": "Тип",
+      "category": "Категорія",
+      "expiry": "Термін",
+      "date": "Дата"
+    },
+    "sort": {
+      "newest": "Спочатку нові",
+      "oldest": "Спочатку старі",
+      "name": "Назва А–Я",
+      "type": "Тип документа",
+      "expiry": "Дата закінчення"
+    },
+    "categories": {
+      "all": "Всі",
+      "ai_import": "Імпорт ШІ",
+      "ticket_photo": "Фото Квитків",
+      "subcontractor_photo": "Фото Субпідр.",
+      "received_invoice": "Вх. Рахунки",
+      "uploaded": "Завантажені",
+      "coi": "ССО",
+      "expiring": "Незабаром Закінч."
+    },
+    "categoryLabels": {
+      "all": "Всі",
+      "ai_import": "Імпорт ШІ",
+      "ticket_photo": "Фото Квитка",
+      "subcontractor_photo": "Фото Субпідр.",
+      "received_invoice": "Рахунок",
+      "uploaded": "Завантажено",
+      "coi": "ССО",
+      "expiring": "Закінчується"
+    },
+    "upload": {
+      "title": "Завантажити Документ",
+      "fileLabel": "Файл",
+      "chooseFile": "Натисніть, щоб вибрати файл",
+      "fileTypes": "Зображення, PDF або будь-які файли",
+      "clickToChange": "натисніть для заміни",
+      "nameLabel": "Назва Документа",
+      "typeLabel": "Тип Документа",
+      "selectType": "Виберіть тип…",
+      "autoDetected": "Визначено автоматично — змініть за потреби",
+      "expiryLabel": "Термін Дії",
+      "linkLabel": "Прив'язати до",
+      "noLink": "Без прив'язки",
+      "notesLabel": "Нотатки",
+      "uploading": "Завантаження…",
+      "upload": "Завантажити"
+    },
+    "preview": {
+      "openPdf": "Відкрити PDF",
+      "openFile": "Відкрити Файл"
+    },
+    "versionBanner": "збережено як версія {version} — попередня версія позначена як застаріла."
   }
 }

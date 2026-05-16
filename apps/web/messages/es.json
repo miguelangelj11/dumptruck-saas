@@ -779,5 +779,89 @@
     "reasonHint": "Esto será mostrado al conductor.",
     "notifications": "Notificaciones",
     "noNotifications": "Sin notificaciones todavía"
+  },
+  "documents": {
+    "title": "Documentos",
+    "subtitle": "Todos los archivos subidos o generados en tu cuenta",
+    "uploadDocument": "Subir Documento",
+    "selectDocuments": "Seleccionar documentos",
+    "folders": "Carpetas",
+    "allDocuments": "Todos los Documentos",
+    "noFoldersYet": "Sin carpetas todavía",
+    "folderNamePlaceholder": "Nombre de carpeta…",
+    "create": "Crear",
+    "cancel": "Cancelar",
+    "noDocsInFolder": "Sin documentos en \"{name}\"",
+    "noDocsFound": "No se encontraron documentos",
+    "moveFolderHint": "Mueve documentos aquí usando el ícono de carpeta en cualquier tarjeta",
+    "tryDifferentSearch": "Intenta con otro término de búsqueda",
+    "getStarted": "Sube fotos de boletos o importa documentos con IA para comenzar",
+    "searchPlaceholder": "Buscar documentos…",
+    "selected": "{count} seleccionados",
+    "deselectAll": "Deseleccionar todo",
+    "selectAll": "Seleccionar todo",
+    "download": "Descargar",
+    "deleting": "Eliminando…",
+    "delete": "Eliminar",
+    "moveToFolder": "Mover a carpeta",
+    "noFoldersInSidebar": "Sin carpetas — crea una en la barra lateral",
+    "noFoldersShort": "Sin carpetas todavía",
+    "removeFromFolder": "Quitar de carpeta",
+    "table": {
+      "name": "Nombre",
+      "type": "Tipo",
+      "category": "Categoría",
+      "expiry": "Vencimiento",
+      "date": "Fecha"
+    },
+    "sort": {
+      "newest": "Más recientes primero",
+      "oldest": "Más antiguos primero",
+      "name": "Nombre A–Z",
+      "type": "Tipo de doc.",
+      "expiry": "Fecha de vencimiento"
+    },
+    "categories": {
+      "all": "Todos",
+      "ai_import": "Importaciones IA",
+      "ticket_photo": "Fotos de Boletos",
+      "subcontractor_photo": "Fotos de Subs",
+      "received_invoice": "Fact. Recibidas",
+      "uploaded": "Subidos",
+      "coi": "COI",
+      "expiring": "Por Vencer"
+    },
+    "categoryLabels": {
+      "all": "Todos",
+      "ai_import": "Importación IA",
+      "ticket_photo": "Foto de Boleto",
+      "subcontractor_photo": "Foto de Sub",
+      "received_invoice": "Factura",
+      "uploaded": "Subido",
+      "coi": "COI",
+      "expiring": "Por Vencer"
+    },
+    "upload": {
+      "title": "Subir Documento",
+      "fileLabel": "Archivo",
+      "chooseFile": "Haz clic para elegir un archivo",
+      "fileTypes": "Imágenes, PDFs, o cualquier tipo de archivo",
+      "clickToChange": "clic para cambiar",
+      "nameLabel": "Nombre del Documento",
+      "typeLabel": "Tipo de Documento",
+      "selectType": "Seleccionar tipo…",
+      "autoDetected": "Detectado automáticamente del nombre — cambia si es necesario",
+      "expiryLabel": "Fecha de Vencimiento",
+      "linkLabel": "Vincular a",
+      "noLink": "Sin vínculo",
+      "notesLabel": "Notas",
+      "uploading": "Subiendo…",
+      "upload": "Subir"
+    },
+    "preview": {
+      "openPdf": "Abrir PDF",
+      "openFile": "Abrir Archivo"
+    },
+    "versionBanner": "guardado como versión {version} — versión anterior marcada como reemplazada."
   }
 }

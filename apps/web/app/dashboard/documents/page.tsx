@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getCompanyId } from '@/lib/get-company-id'
 import LockedFeature from '@/components/dashboard/locked-feature'
 import { DOCUMENT_TYPES, getDocType, suggestDocType, getExpiryStatus } from '@/lib/documents/types'
+import { useTranslations } from 'next-intl'
 
 type Category = 'all' | 'ai_import' | 'ticket_photo' | 'subcontractor_photo' | 'received_invoice' | 'uploaded' | 'coi' | 'expiring'
 
@@ -42,15 +43,15 @@ type DocFolder = {
 type ViewMode = 'grid' | 'list'
 type SortBy = 'newest' | 'oldest' | 'name' | 'type' | 'expiry'
 
-const CATEGORY_TABS: { id: Category; label: string; icon: React.ElementType }[] = [
-  { id: 'all',                 label: 'All',             icon: FolderOpen  },
-  { id: 'ai_import',           label: 'AI Imports',      icon: Bot         },
-  { id: 'ticket_photo',        label: 'Ticket Photos',   icon: Truck       },
-  { id: 'subcontractor_photo', label: 'Sub Photos',      icon: ImageIcon   },
-  { id: 'received_invoice',    label: 'Received Inv.',   icon: Receipt     },
-  { id: 'uploaded',            label: 'Uploaded',        icon: Upload      },
-  { id: 'coi',                 label: 'COI',             icon: Shield      },
-  { id: 'expiring',            label: 'Expiring Soon',   icon: Clock       },
+const CATEGORY_TAB_IDS: { id: Category; icon: React.ElementType }[] = [
+  { id: 'all',                 icon: FolderOpen  },
+  { id: 'ai_import',           icon: Bot         },
+  { id: 'ticket_photo',        icon: Truck       },
+  { id: 'subcontractor_photo', icon: ImageIcon   },
+  { id: 'received_invoice',    icon: Receipt     },
+  { id: 'uploaded',            icon: Upload      },
+  { id: 'coi',                 icon: Shield      },
+  { id: 'expiring',            icon: Clock       },
 ]
 
 const CATEGORY_BADGE: Record<string, string> = {
@@ -64,24 +65,6 @@ const CATEGORY_BADGE: Record<string, string> = {
   expiring:            'bg-amber-100 text-amber-700',
 }
 
-const CATEGORY_LABEL: Record<string, string> = {
-  all:                 'All',
-  ai_import:           'AI Import',
-  ticket_photo:        'Ticket Photo',
-  subcontractor_photo: 'Sub Photo',
-  received_invoice:    'Invoice',
-  uploaded:            'Uploaded',
-  coi:                 'COI',
-  expiring:            'Expiring',
-}
-
-const SORT_OPTIONS: { id: SortBy; label: string }[] = [
-  { id: 'newest', label: 'Newest first'  },
-  { id: 'oldest', label: 'Oldest first'  },
-  { id: 'name',   label: 'Name A–Z'      },
-  { id: 'type',   label: 'Doc type'      },
-  { id: 'expiry', label: 'Expiry date'   },
-]
 
 const FOLDER_COLORS = [
   '#6366f1', '#f59e0b', '#10b981', '#3b82f6',
@@ -151,6 +134,7 @@ function applyVirtualFilter(docs: DocumentItem[], cat: Category): DocumentItem[]
 }
 
 export default function DocumentsPage() {
+  const t = useTranslations('documents')
   const [planLocked, setPlanLocked] = useState<null | { plan: string; price: number }>(null)
   const [docs, setDocs]             = useState<DocumentItem[]>([])
   const [loading, setLoading]       = useState(true)
@@ -437,6 +421,39 @@ export default function DocumentsPage() {
   const activeFolder = folders.find(f => f.id === activeFolderId)
   const selectedDocType = getDocType(uploadDocType)
 
+  const CATEGORY_TABS = CATEGORY_TAB_IDS.map(({ id, icon }) => {
+    const labelMap: Record<string, string> = {
+      all:                 t('categories.all'),
+      ai_import:           t('categories.ai_import'),
+      ticket_photo:        t('categories.ticket_photo'),
+      subcontractor_photo: t('categories.subcontractor_photo'),
+      received_invoice:    t('categories.received_invoice'),
+      uploaded:            t('categories.uploaded'),
+      coi:                 t('categories.coi'),
+      expiring:            t('categories.expiring'),
+    }
+    return { id, icon, label: labelMap[id] ?? id }
+  })
+
+  const CATEGORY_LABEL: Record<string, string> = {
+    all:                 t('categoryLabels.all'),
+    ai_import:           t('categoryLabels.ai_import'),
+    ticket_photo:        t('categoryLabels.ticket_photo'),
+    subcontractor_photo: t('categoryLabels.subcontractor_photo'),
+    received_invoice:    t('categoryLabels.received_invoice'),
+    uploaded:            t('categoryLabels.uploaded'),
+    coi:                 t('categoryLabels.coi'),
+    expiring:            t('categoryLabels.expiring'),
+  }
+
+  const SORT_OPTIONS: { id: SortBy; label: string }[] = [
+    { id: 'newest', label: t('sort.newest') },
+    { id: 'oldest', label: t('sort.oldest') },
+    { id: 'name',   label: t('sort.name')   },
+    { id: 'type',   label: t('sort.type')   },
+    { id: 'expiry', label: t('sort.expiry') },
+  ]
+
   return (
     <div className="p-6 md:p-8 max-w-7xl">
 
@@ -445,7 +462,7 @@ export default function DocumentsPage() {
         <div className="mb-4 flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
           <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
           <p className="text-sm text-amber-800 flex-1">
-            <strong>{versionBanner.name}</strong> saved as version {versionBanner.version} — previous version marked as superseded.
+            <strong>{versionBanner.name}</strong> {t('versionBanner', { version: versionBanner.version })}
           </p>
           <button onClick={() => setVersionBanner(null)} className="text-amber-500 hover:text-amber-700">
             <X className="h-4 w-4" />
@@ -458,39 +475,39 @@ export default function DocumentsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <FolderOpen className="h-6 w-6 text-[var(--brand-primary)]" />
-            Documents
+            {t('title')}
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">All files uploaded or generated in your account</p>
+          <p className="text-sm text-gray-500 mt-0.5">{t('subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           {bulkMode ? (
             <>
-              <span className="text-sm text-gray-600 font-medium">{selectedDocs.size} selected</span>
+              <span className="text-sm text-gray-600 font-medium">{t('selected', { count: selectedDocs.size })}</span>
               <button
                 onClick={toggleSelectAll}
                 className="px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
               >
-                {selectedDocs.size === displayedDocs.length ? 'Deselect all' : 'Select all'}
+                {selectedDocs.size === displayedDocs.length ? t('deselectAll') : t('selectAll')}
               </button>
               <button
                 onClick={handleBulkDownload}
                 disabled={selectedDocs.size === 0}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-40"
               >
-                <Download className="h-3.5 w-3.5" /> Download
+                <Download className="h-3.5 w-3.5" /> {t('download')}
               </button>
               <button
                 onClick={handleBulkDelete}
                 disabled={selectedDocs.size === 0 || bulkDeleting}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-red-200 text-sm text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
               >
-                <Trash2 className="h-3.5 w-3.5" /> {bulkDeleting ? 'Deleting…' : 'Delete'}
+                <Trash2 className="h-3.5 w-3.5" /> {bulkDeleting ? t('deleting') : t('delete')}
               </button>
               <button
                 onClick={exitBulkMode}
                 className="px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 transition-colors"
               >
-                Cancel
+                {t('cancel')}
               </button>
             </>
           ) : (
@@ -500,12 +517,12 @@ export default function DocumentsPage() {
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--brand-primary)] text-white text-sm font-semibold hover:bg-[var(--brand-primary-hover)] transition-colors shadow-sm"
               >
                 <Plus className="h-4 w-4" />
-                Upload Document
+                {t('uploadDocument')}
               </button>
               <button
                 onClick={() => setBulkMode(true)}
                 className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
-                title="Select documents"
+                title={t('selectDocuments')}
               >
                 <CheckSquare className="h-4 w-4" />
               </button>
@@ -539,7 +556,7 @@ export default function DocumentsPage() {
         <aside className="w-full md:w-52 md:shrink-0">
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Folders</span>
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t('folders')}</span>
               <button
                 onClick={() => setNewFolderOpen(true)}
                 className="p-1 rounded-lg text-gray-400 hover:text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/10 transition-colors"
@@ -557,11 +574,11 @@ export default function DocumentsPage() {
                 }`}
               >
                 <FolderOpen className="h-4 w-4 shrink-0" />
-                <span className="flex-1 text-left truncate">All Documents</span>
+                <span className="flex-1 text-left truncate">{t('allDocuments')}</span>
               </button>
 
               {folders.length === 0 && (
-                <p className="px-4 py-3 text-xs text-gray-400 italic">No folders yet</p>
+                <p className="px-4 py-3 text-xs text-gray-400 italic">{t('noFoldersYet')}</p>
               )}
               {folders.map(folder => (
                 <div key={folder.id} className="group relative flex items-center">
@@ -598,7 +615,7 @@ export default function DocumentsPage() {
                   value={newFolderName}
                   onChange={e => setNewFolderName(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') handleCreateFolder(); if (e.key === 'Escape') setNewFolderOpen(false) }}
-                  placeholder="Folder name…"
+                  placeholder={t('folderNamePlaceholder')}
                   className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
                 />
                 <div className="flex gap-1 flex-wrap">
@@ -615,12 +632,12 @@ export default function DocumentsPage() {
                   <button
                     onClick={() => { setNewFolderOpen(false); setNewFolderName('') }}
                     className="flex-1 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-500 hover:bg-gray-50"
-                  >Cancel</button>
+                  >{t('cancel')}</button>
                   <button
                     onClick={handleCreateFolder}
                     disabled={!newFolderName.trim() || creatingFolder}
                     className="flex-1 py-1.5 rounded-lg bg-[var(--brand-primary)] text-white text-xs font-semibold disabled:opacity-50"
-                  >{creatingFolder ? '…' : 'Create'}</button>
+                  >{creatingFolder ? '…' : t('create')}</button>
                 </div>
               </div>
             )}
@@ -632,7 +649,7 @@ export default function DocumentsPage() {
 
           {activeFolder && (
             <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-4">
-              <button onClick={() => setActiveFolderId(null)} className="hover:text-gray-800 transition-colors">All Documents</button>
+              <button onClick={() => setActiveFolderId(null)} className="hover:text-gray-800 transition-colors">{t('allDocuments')}</button>
               <ChevronRight className="h-3.5 w-3.5" />
               <span className="font-semibold flex items-center gap-1.5" style={{ color: activeFolder.color }}>
                 <Folder className="h-3.5 w-3.5" style={{ color: activeFolder.color }} />
@@ -647,7 +664,7 @@ export default function DocumentsPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
               <input
                 type="text"
-                placeholder="Search documents…"
+                placeholder={t('searchPlaceholder')}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)] bg-white"
@@ -724,12 +741,12 @@ export default function DocumentsPage() {
             <div className="text-center py-24">
               <FolderOpen className="h-12 w-12 text-gray-200 mx-auto mb-3" />
               <p className="text-gray-500 font-medium">
-                {activeFolder ? `No documents in "${activeFolder.name}"` : 'No documents found'}
+                {activeFolder ? t('noDocsInFolder', { name: activeFolder.name }) : t('noDocsFound')}
               </p>
               <p className="text-sm text-gray-400 mt-1">
                 {activeFolder
-                  ? 'Move documents here using the folder icon on any document card'
-                  : search ? 'Try a different search term' : 'Upload ticket photos or import AI documents to get started'}
+                  ? t('moveFolderHint')
+                  : search ? t('tryDifferentSearch') : t('getStarted')}
               </p>
             </div>
           ) : view === 'grid' ? (
@@ -819,9 +836,9 @@ export default function DocumentsPage() {
                             className="absolute bottom-full right-0 mb-1 w-48 bg-white rounded-xl border border-gray-200 shadow-lg z-20 overflow-hidden"
                             onClick={e => e.stopPropagation()}
                           >
-                            <p className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">Move to folder</p>
+                            <p className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">{t('moveToFolder')}</p>
                             {folders.length === 0 && (
-                              <p className="px-3 py-2 text-xs text-gray-400">No folders yet — create one in the sidebar</p>
+                              <p className="px-3 py-2 text-xs text-gray-400">{t('noFoldersInSidebar')}</p>
                             )}
                             {folders.map(f => (
                               <button
@@ -841,7 +858,7 @@ export default function DocumentsPage() {
                                   className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors"
                                 >
                                   <X className="h-3.5 w-3.5" />
-                                  Remove from folder
+                                  {t('removeFromFolder')}
                                 </button>
                               </>
                             )}
@@ -869,7 +886,7 @@ export default function DocumentsPage() {
                         </button>
                       </th>
                     )}
-                    {['Name', 'Type', 'Category', 'Expiry', 'Date', ''].map(h => (
+                    {[t('table.name'), t('table.type'), t('table.category'), t('table.expiry'), t('table.date'), ''].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                     ))}
                   </tr>
@@ -941,9 +958,9 @@ export default function DocumentsPage() {
                                   className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl border border-gray-200 shadow-lg z-20 overflow-hidden"
                                   onClick={e => e.stopPropagation()}
                                 >
-                                  <p className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">Move to folder</p>
+                                  <p className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100">{t('moveToFolder')}</p>
                                   {folders.length === 0 && (
-                                    <p className="px-3 py-2 text-xs text-gray-400">No folders yet</p>
+                                    <p className="px-3 py-2 text-xs text-gray-400">{t('noFoldersShort')}</p>
                                   )}
                                   {folders.map(f => (
                                     <button
@@ -963,7 +980,7 @@ export default function DocumentsPage() {
                                         className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-500 hover:bg-red-50"
                                       >
                                         <X className="h-3.5 w-3.5" />
-                                        Remove from folder
+                                        {t('removeFromFolder')}
                                       </button>
                                     </>
                                   )}
@@ -1000,7 +1017,7 @@ export default function DocumentsPage() {
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
               <h2 className="font-semibold text-gray-900 flex items-center gap-2">
                 <Upload className="h-4 w-4 text-[var(--brand-primary)]" />
-                Upload Document
+                {t('upload.title')}
               </h2>
               <button onClick={() => setUploadOpen(false)} disabled={uploading} className="text-gray-400 hover:text-gray-600">
                 <X className="h-4 w-4" />
@@ -1010,7 +1027,7 @@ export default function DocumentsPage() {
             <div className="p-5 space-y-4">
               {/* File picker */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">File <span className="text-red-500">*</span></label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">{t('upload.fileLabel')} <span className="text-red-500">*</span></label>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -1026,13 +1043,13 @@ export default function DocumentsPage() {
                     <>
                       <FileText className="h-8 w-8 text-[var(--brand-primary)]" />
                       <span className="text-sm font-medium text-gray-900 truncate max-w-[280px]">{uploadFile.name}</span>
-                      <span className="text-xs text-gray-400">{(uploadFile.size / 1024).toFixed(0)} KB — click to change</span>
+                      <span className="text-xs text-gray-400">{(uploadFile.size / 1024).toFixed(0)} KB — {t('upload.clickToChange')}</span>
                     </>
                   ) : (
                     <>
                       <Upload className="h-8 w-8" />
-                      <span className="text-sm font-medium">Click to choose a file</span>
-                      <span className="text-xs text-gray-400">Images, PDFs, or any file type</span>
+                      <span className="text-sm font-medium">{t('upload.chooseFile')}</span>
+                      <span className="text-xs text-gray-400">{t('upload.fileTypes')}</span>
                     </>
                   )}
                 </button>
@@ -1040,7 +1057,7 @@ export default function DocumentsPage() {
 
               {/* Name */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Document Name</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">{t('upload.nameLabel')}</label>
                 <input
                   type="text"
                   value={uploadName}
@@ -1052,20 +1069,20 @@ export default function DocumentsPage() {
 
               {/* Document Type */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Document Type</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">{t('upload.typeLabel')}</label>
                 <select
                   value={uploadDocType}
                   onChange={e => setUploadDocType(e.target.value)}
                   className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)] bg-white"
                 >
-                  <option value="">Select type…</option>
+                  <option value="">{t('upload.selectType')}</option>
                   {DOCUMENT_TYPES.map(dt => (
                     <option key={dt.id} value={dt.id}>{dt.emoji} {dt.label}</option>
                   ))}
                 </select>
                 {uploadDocType && (
                   <p className="mt-1 text-[11px] text-gray-400">
-                    Auto-detected from filename — change if needed
+                    {t('upload.autoDetected')}
                   </p>
                 )}
               </div>
@@ -1074,7 +1091,7 @@ export default function DocumentsPage() {
               {selectedDocType.hasExpiry && (
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                    Expiry Date <span className="text-gray-400 font-normal">(optional)</span>
+                    {t('upload.expiryLabel')} <span className="text-gray-400 font-normal">(optional)</span>
                   </label>
                   <input
                     type="date"
@@ -1088,14 +1105,14 @@ export default function DocumentsPage() {
               {/* Entity link */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Link to <span className="text-gray-400 font-normal">(optional)</span>
+                  {t('upload.linkLabel')} <span className="text-gray-400 font-normal">(optional)</span>
                 </label>
                 <select
                   value={uploadEntityType}
                   onChange={e => { setUploadEntityType(e.target.value); setUploadEntityId(''); setUploadEntityName('') }}
                   className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)] bg-white mb-2"
                 >
-                  <option value="">No link</option>
+                  <option value="">{t('upload.noLink')}</option>
                   {ENTITY_TYPES.map(et => (
                     <option key={et.id} value={et.id}>{et.label}</option>
                   ))}
@@ -1126,7 +1143,7 @@ export default function DocumentsPage() {
 
               {/* Notes */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Notes <span className="text-gray-400 font-normal">(optional)</span></label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">{t('upload.notesLabel')} <span className="text-gray-400 font-normal">(optional)</span></label>
                 <textarea
                   rows={2}
                   value={uploadNotes}
@@ -1143,7 +1160,7 @@ export default function DocumentsPage() {
                 disabled={uploading}
                 className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 onClick={handleUpload}
@@ -1151,9 +1168,9 @@ export default function DocumentsPage() {
                 className="flex-1 py-2.5 rounded-xl bg-[var(--brand-primary)] text-white text-sm font-semibold hover:bg-[var(--brand-primary-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {uploading ? (
-                  <><div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" /> Uploading…</>
+                  <><div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" /> {t('upload.uploading')}</>
                 ) : (
-                  <><Upload className="h-4 w-4" /> Upload</>
+                  <><Upload className="h-4 w-4" /> {t('upload.upload')}</>
                 )}
               </button>
             </div>
@@ -1247,7 +1264,7 @@ export default function DocumentsPage() {
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--brand-primary)] text-white text-sm font-medium hover:bg-[var(--brand-primary-hover)] transition-colors"
                   >
                     <ExternalLink className="h-4 w-4" />
-                    Open PDF
+                    {t('preview.openPdf')}
                   </a>
                 </div>
               ) : (
@@ -1260,7 +1277,7 @@ export default function DocumentsPage() {
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--brand-primary)] text-white text-sm font-medium hover:bg-[var(--brand-primary-hover)] transition-colors"
                   >
                     <ExternalLink className="h-4 w-4" />
-                    Open File
+                    {t('preview.openFile')}
                   </a>
                 </div>
               )}
